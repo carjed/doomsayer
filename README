@@ -1,0 +1,83 @@
+<!-- # DOOMSAYER -->
+
+![](assets/doomsayer_logo.png)
+
+**DOOMSAYER** (**D**etection **O**f **O**utliers using **M**utation **S**pectrum **A**nal**Y**sis in **E**xtremely **R**are variants) is a quality control application for next-generation sequencing data. Unlike other QC strategies, which focus on
+
+## Download and Installation
+
+To begin using DOOMSAYER, simply clone this repository with the following command:
+`git clone https://github.com/carjed/doomsayer.git`
+
+You will then need to enter the directory and run the setup to install any missing dependencies: (`pip install pyvcf cyvcf numpy Biopython`)
+
+`cd doomsayer`
+`bash setup.sh`
+
+### Dependencies
+
+DOOMSAYER requires the following python libraries:
+- [CyVCF2](https://github.com/brentp/cyvcf2) (or [PyVCF](https://github.com/jamescasbon/PyVCF))
+- [numpy](https://docs.scipy.org/doc/numpy/reference/)
+- [Biopython](https://github.com/biopython/biopython)
+
+Note that we include two options for VCF parsing: CyVCF2 and PyVCF. CyVCF2 (the default) is a python wrapper for the [htslib](https://github.com/samtools/htslib) C++ libraries, and is much faster than PyVCF, which parses VCFs natively in python.
+
+If necessary, you can force DOOMSAYER to use the PyVCF library with the `-no` (`--nonoptimized`) flag.
+
+The following R packages must also be installed, all of which are available on the CRAN repository:
+- [NMF]
+- [dplyr]
+- [tidyr]
+- [ggplot2]
+- [devtools]
+
+## Usage instructions
+
+DOOMSAYER requires an input VCF file containing standard fields (CHR, POS, REF, ALT, QUAL, FILTER) and individual genotypes.
+
+Because DOOMSAYER analyzes patterns present in singleton SNVs, please ensure that your variant calling and filtering pipeline has not dropped singletons or placed them in a separate file. (INFO/AC=1).
+
+DOOMSAYER requires three user-specified arguments: an input VCF, a reference genome in fasta format, and a directory where you wish to store the output:
+
+`./doomsayer --inputfile /path/to/data.vcf.gz --fastafile /path/to/genome.fasta --outdir /path/to/project`
+
+The shell script runs two background scripts sequentially. First, `process.py` reads the input VCF and builds a matrix of 3-mer mutation spectra for each sample (storing this matrix in `/path/to/project/spectra.txt`). Second, the `signatures.R` script reads the `spectra.txt` file, runs the non-negative matrix factorization (NMF) to extract the dominant signatures, and applies a filter to identify samples with abnormal singleton distributions. The output consists of two files: `/path/to/project/keep_ids.txt`, containing the IDs of samples that passed the filter, and `/path/to/project/drop_ids.txt`, containing the IDs of samples that failed the filter.
+
+You must also supply a fasta sequence file, corresponding to the same genome and build used in the input vcf. The fasta file must be either decompressed or compressed with [bgzip](http://www.htslib.org/doc/tabix.html) in order to be read properly.
+
+DOOMSAYER can accept input vcfs from a file on the disk or from STDIN, allowing it to be easily integrated into existing VCF processing pipelines.
+
+### Parameter options
+
+DOOMSAYER should be stable out-of-the-box, and in most cases, changing the default parameters is not necessary. If you do wish to customize DOOMSAYER, parameters can be specified in the `config/config.yaml` file.
+
+- `rank = 3`
+  - this specifies the number of signatures to obtain in the NMF decomposition
+- `filter = 2`
+  - This option specifies the stringency of the signature filter. The default value of 2 means we drop all samples where a signature contribution is more than 2 standard deviations away from the mean. Lower values correspond to more stringent filters.
+- `diagnostics = FALSE`
+  - when set to `TRUE`, enables diagnostic plots in the R script
+- `pedfile = /path/to/samples.ped`
+  - If a `.ped` file is specified, the R script will include additional diagnostics to determine if outlier mutation signatures correlate with other sample-level summary statistics contained in the `.ped` file.
+- `sigfile = spectra.txt`
+  - Here, you can change the name of the file containing the mutation spectra matrix produced by `process.py`
+
+You can also save different configurations as separate YAML files, and pass the config file as an argument with the `--opts` option:
+`doomsayer.py --vcf /path/to/data.vcf.gz --outdir /path/to/project --opts config/config2.yaml`
+
+## Demonstration
+
+Sample VCF and reference files can be downloaded using the `download_demo_data.sh` script. Files will be placed in `doomsayer/demo`.
+
+To run the demonstration,
+
+## Citation
+
+If you use DOOMSAYER in your research, please cite our paper:
+
+[citation here]
+
+## Contact
+
+jed.e.carlson@gmail.com, or submit an issue in this repository.

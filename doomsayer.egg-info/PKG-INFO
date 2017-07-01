@@ -1,0 +1,11 @@
+Metadata-Version: 1.0
+Name: doomsayer
+Version: 0.1
+Summary: Genome sequencing outlier detection using NMF
+Home-page: https://github.com/carjed/doomsayer
+Author: Jedidiah Carlson
+Author-email: jed.e.carlson@gmail.com
+License: MIT
+Description: UNKNOWN
+Keywords: NMF genome sequencing
+Platform: UNKNOWN
