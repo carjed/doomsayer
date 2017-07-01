@@ -1,13 +1,9 @@
----
-title: "doomsayer_diagnostics"
-author: "jed c."
-date: "July 1, 2017"
-output: 
-  html_document:
-    keep_md: true
----
+# doomsayer_diagnostics
+jed c.  
+July 1, 2017  
 
-```{r setup}
+
+```r
 # knitr::opts_chunk$set(echo = TRUE)
 
 #specify the packages of interest
@@ -24,8 +20,46 @@ package.check <- lapply(packages, FUN = function(x) {
 })
 ```
 
+```
+## Loading required package: dplyr
+```
 
-```{r load}
+```
+## 
+## Attaching package: 'dplyr'
+```
+
+```
+## The following objects are masked from 'package:stats':
+## 
+##     filter, lag
+```
+
+```
+## The following objects are masked from 'package:base':
+## 
+##     intersect, setdiff, setequal, union
+```
+
+```
+## Loading required package: tidyr
+```
+
+```
+## Loading required package: ggplot2
+```
+
+```
+## Loading required package: yaml
+```
+
+```
+## Loading required package: devtools
+```
+
+
+
+```r
 # cmd_args <- commandArgs(TRUE)
 # yaml_cfg <- as.double(cmd_args[1])
 
@@ -54,7 +88,8 @@ sig_contribs <- read.table(W_path, header=T, stringsAsFactors=F)
 sig_loads <- read.table(H_path, header=T, stringsAsFactors=F)
 ```
 
-```{r dist}
+
+```r
 # overall distribution
 spectra2 <- spectra %>%
   gather(subtype, count, 2:ncol(spectra)) %>%
@@ -71,7 +106,10 @@ ggplot(spectra2, aes(x=motif, y=count, fill=category))+
     legend.position="none")
 ```
 
-```{r sigs}
+![](diagnostics_files/figure-html/dist-1.png)<!-- -->
+
+
+```r
 # signature contributions across samples
 sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),]
 sig_contribs2 <- sig_contribs2 %>%
@@ -79,7 +117,11 @@ sig_contribs2 <- sig_contribs2 %>%
 
 ggplot(sig_contribs2, aes(x=ID, y=contribution, colour=signature))+
   geom_point()
+```
 
+![](diagnostics_files/figure-html/sigs-1.png)<!-- -->
+
+```r
 # signature loadings
 sig_loads_long <- sig_loads %>%
    gather(subtype, loading, 2:ncol(sig_loads)) %>%
@@ -94,9 +136,9 @@ ggplot(sig_loads_long, aes(x=motif, y=loading, fill=Sig))+
     legend.position="none")
 ```
 
+![](diagnostics_files/figure-html/sigs-2.png)<!-- -->
 
 
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
+
+![](diagnostics_files/figure-html/pressure-1.png)<!-- -->
 

@@ -2,7 +2,7 @@
 
 ![](assets/doomsayer_logo.png)
 
-***DOOMSAYER** (**D**etection **O**f **O**utliers using **M**utation **S**pectrum **A**nal**Y**sis in **E**xtremely **R**are variants) is a quality control application for next-generation sequencing (NGS) data. Doomsayer uses non-negative matrix factorization (NMF) to identify samples with abnormal distributions of rare single-nucleotide variants. These outlying samples are likely a result of cryptic error biases or batch effects, which can negatively impact any number of downstream analyses. By identifying and filtering these problem samples, Doomsayer helps ensure rigor and reproducibility in the analysis of NGS data.*
+_**DOOMSAYER** ( **D**etection **O**f **O**utliers using **M**utation **S**pectrum **A**nal**Y**sis in **E**xtremely **R**are variants) is a quality control application for next-generation sequencing (NGS) data. Doomsayer uses non-negative matrix factorization (NMF) to identify samples with abnormal distributions of rare single-nucleotide variants. These outlying samples are likely a result of cryptic error biases or batch effects, which can negatively impact any number of downstream analyses. By identifying and filtering these problem samples, Doomsayer helps ensure rigor and reproducibility in the analysis of NGS data._
 
 *This program is currently under active development*
 
