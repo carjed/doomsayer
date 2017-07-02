@@ -74,7 +74,8 @@ def indexSubtypes(args):
             # subtype = category + "-" + kmer[0] + ref + kmer[1]
             if motiflength > 1:
                 subtype = category + "-" \
-                    + kmerstr[0:flank] + ref + kmerstr[flank:(motiflength-1)]
+                    + kmerstr[0:int(flank)] \
+                    + ref + kmerstr[flank:int((motiflength-1))]
             else:
                 subtype = category
 
