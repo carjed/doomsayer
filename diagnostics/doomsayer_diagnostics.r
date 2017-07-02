@@ -2,6 +2,8 @@
 # but need to update the commandArgs:
 
 # commandArgs <- function(...) c("./demo/output/config.yaml")
+# commandArgs <- function(...) c("C:/Users/jedidiah/Dropbox/Github/doomsayer/demo/output/config.yaml")
+
 
 # check and load packages
 packages <- c("rmarkdown")
@@ -22,7 +24,7 @@ proj_dir <- dirname(yaml_cfg)
 # proj_dir <- "C:/Users/jedidiah/Dropbox/Github/doomsayer/demo/output"
 
 # Copy the RMarkdown template to the specified output folder
-file.copy("./diagnostics.Rmd",
+file.copy("./diagnostics/diagnostics.Rmd",
           paste0(proj_dir, "/diagnostics.Rmd"),
           overwrite = TRUE, copy.mode = TRUE, copy.date = FALSE)
 

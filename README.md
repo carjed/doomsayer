@@ -62,18 +62,20 @@ bcftools concatenate /path/to/input/vcfs/chr*.vcf.gz | \
 ```
 
 #### Fasta reference file
-You must also supply a fasta sequence file with the `--fastafile` option. This **must** corresponding to the same reference genome build used in the input VCF. The fasta file may be either uncompressed or bgzip-compressed.
+Doomsayer also requires a fasta sequence file be specified with the `--fastafile` option. This **must** corresponding to the same reference genome build used in the input VCF. The fasta file may be either uncompressed or bgzip-compressed.
 
 ### Output options
 -------------
-By default, doomsayer creates a subfolder named `doomsayer_output/` in your current directory. To change the name/location of this output directory, use the `--projectdir` command line option:
+By default, doomsayer creates a subfolder named `doomsayer_output/` in your current directory. To change the name/location of this output directory, use the `--projectdir` command line option. The following example will send output to a folder named `my_doomsayer_output` in your home directory:
 
 ```{sh id:"chj4lkfg8u"}
 python /path/to/doomsayer.py \
   --inputvcf /path/to/input_data.vcf.gz \
   --fastafile /path/to/genome.fasta \
-  --projectdir /path/to/custom_doomsayer_output_dir
+  --projectdir ~/my_doomsayer_output
 ```
+
+Be sure to remove the trailing "/" from any directory specified.
 
 #### Keep and drop files
 The basic function of Doomsayer is to provide sample-level filtering by identifying individuals with abnormal distributions of singleton variants. The results of this analysis are parsed into two plain-text files: `doomsayer_output/keep_ids.txt`, containing the IDs of samples that passed the filter, and `doomsayer_output/drop_ids.txt`, containing the IDs of samples that failed the filter. These lists can be easily integrated into bcftools, vcftools, PLINK, and other downstream analysis tools.
@@ -86,6 +88,7 @@ With the `--outputtovcf` flag, Doomsayer can automatically filter the input VCF 
 python /path/to/doomsayer.py \
   --inputvcf /path/to/input_data.vcf.gz \
   --fastafile /path/to/genome.fasta \
+  --projectdir ~/my_doomsayer_output \
   --outputtovcf
 ```
 
@@ -103,20 +106,21 @@ As far as possible, all records present in the original input will be preserved 
 #### NMF output (optional)
 You may wish to analyze the intermediate data used in the NMF decomposition to understand why particular samples were determined to be outliers, or to derive more customized filtering rules.
 
-Adding the `--diagnostics` flag to your command will write three data files to the `doomsayer_output/` directory:
+Adding the `--diagnostics` flag to your command will write three data files to the output directory:
 1. the M matrix of observed mutation spectra per sample
 2. the H matrix containing loadings of the mutation subtypes in each signature
 3. the W matrix containing the contributions of each signature within each sample's mutation spectrum
 
 ```{sh id:"chj4lkjmny"}
 python doomsayer.py \
-  --inputvcf demo/input/chr20.singletons.sample.vcf \
-  --fastafile demo/input/chr20.fasta.gz \
+  --inputvcf /path/to/input_data.vcf.gz \
+  --fastafile /path/to/genome.fasta \
+  --projectdir ~/my_doomsayer_output \
   --diagnostics
 ```
 
-##### Additonal diagnostic plots (optional)
-This repository also includes an example R script, `doomsayer_diagnostics.r`, for further evaluation of the observed mutation signatures, and how they contribute to individual samples. Running with the `--diagnostics` flag will also write a YAML configuration file named `diagnostics.yaml` to `doomsayer_output/`, which can then be passed to `doomsayer_diagnostics.r`. See `diagnostics.md` for further information.
+##### Generating diagnostic reports (optional)
+The `--diagnostics` flag will also create a YAML configuration file that can optionally be passed to an R script for generating more detailed diagnostic reports from the NMF data files. See the [diagnostics](diagnostics) directory for further documentation and usage examples.
 
 
 ### Other Options
@@ -184,7 +188,7 @@ Once complete, you can run the diagnostic script to generate diagnostic reports:
 Rscript diagnostics/doomsayer_diagnostics.r demo/output/diagnostics.yaml
 ```
 
-An example of this report is availabe [here](diagnostics/diagnostics.md).
+An example of a final report is availabe [here](diagnostics/diagnostics.md).
 
 ## Contact
 

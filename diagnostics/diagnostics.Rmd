@@ -1,10 +1,12 @@
 ---
 title: "doomsayer_diagnostics"
-date: "`r format(Sys.Date())`"
 output:
+  # pdf_document:
   html_document:
-    keep_md: true
+    keep_md: yes
+date: '`r format(Sys.Date())`'
 params:
+  dev: no
   yaml_cfg: x
 ---
 
@@ -22,9 +24,11 @@ package.check <- lapply(packages, FUN = function(x) {
 })
 
 
-yaml_cfg <- params$yaml_cfg
-# alternatively, use static path for development
-# yaml_cfg <- "./demo/output/config.yaml"
+if(params$dev){
+  yaml_cfg <- "../demo/output/config.yaml"
+} else {
+  yaml_cfg <- params$yaml_cfg
+}
 
 # debug--paths generated from doomsayer.py refer are formatted for bash on Windows
 # the sys.info check updates these paths with Windows format for proper loading in R
@@ -41,9 +45,7 @@ attach(yaml_args)
 ```
 
 
-### Load input data
-
-```{r load}
+```{r load, echo=FALSE}
 # read tables
 keep_ids <- read.table(keep_path, header=F, stringsAsFactors=F)
 # drop_ids <- read.table(drop_path, header=F, stringsAsFactors=F)
@@ -53,9 +55,36 @@ sig_contribs <- read.table(W_path, header=T, stringsAsFactors=F)
 sig_loads <- read.table(H_path, header=T, stringsAsFactors=F)
 ```
 
-Plot the distribution 
 
-```{r dist}
+#### Mutation spectrum per sample (M matrix)
+
+Heatmap to visualize mutational spectra across all samples
+
+```{r M, echo=FALSE, fig.height = 12, fig.width = 24}
+# overall distribution
+spectra_long <- spectra %>%
+  gather(subtype, count, 2:ncol(spectra)) %>%
+  separate(subtype, c("category", "motif"), sep = "[.]")
+
+# heatmap(as.matrix(spectra[,-1]))
+
+ggplot(spectra_long, aes(x=motif, y=ID, fill=count))+
+  geom_raster()+
+  facet_wrap(~category, ncol=6, scales="free_x")+
+  xlab("Subtypes")+
+  ylab("IDs")+
+  theme_bw()+
+  theme(axis.text.x=element_blank(),
+        axis.text.y=element_blank())
+```
+
+### Combined mutation spectrum
+
+These plots shows the total number of observations in each subtype, combined across all samples
+
+#### All samples
+
+```{r dist, echo=FALSE, fig.height = 12, fig.width = 24}
 # overall distribution
 spectra2 <- spectra %>%
   gather(subtype, count, 2:ncol(spectra)) %>%
@@ -67,20 +96,77 @@ ggplot(spectra2, aes(x=motif, y=count, fill=category))+
   geom_bar(stat="identity")+
   facet_wrap(~category, ncol=6, scales="free_x")+
   theme_bw()+
-  theme(axis.text.x=element_text(angle=90, hjust=1),
-    strip.text=element_text(size=16),
-    legend.position="none")
+  theme(axis.text.x=element_text(angle=90, vjust=0, size=20),
+        axis.text.y=element_text(size=20),
+        axis.title.x=element_text(size=24),
+        axis.title.y=element_text(size=24),
+        strip.text=element_text(size=24),
+        legend.position="none")
 ```
 
-```{r sigs}
-# signature contributions across samples
-sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),]
-sig_contribs2 <- sig_contribs2 %>%
-  gather(signature, contribution, S1:S3)
+#### Kept samples
 
-ggplot(sig_contribs2, aes(x=ID, y=contribution, colour=signature))+
-  geom_point()
+```{r dist_keep, echo=FALSE, fig.height = 12, fig.width = 24}
+# overall distribution
+spectra2_keep <- spectra %>%
+  dplyr::filter(ID %in% keep_ids$V1) %>%
+  gather(subtype, count, 2:ncol(spectra)) %>%
+  separate(subtype, c("category", "motif"), sep = "[.]") %>%
+  group_by(category, motif) %>%
+  summarise(count=sum(count))
+  # gather(subtype, count, 2:ncol(spectra)) %>%
+  # separate(subtype, c("category", "motif"), sep = "[.]") %>%
+  # group_by(category, motif) %>%
+  # summarise(count=sum(count))
 
+ggplot(spectra2_keep, aes(x=motif, y=count, fill=category))+
+  geom_bar(stat="identity")+
+  facet_wrap(~category, ncol=6, scales="free_x")+
+  theme_bw()+
+  theme(axis.text.x=element_text(angle=90, vjust=0, size=20),
+        axis.text.y=element_text(size=20),
+        axis.title.x=element_text(size=24),
+        axis.title.y=element_text(size=24),
+        strip.text=element_text(size=24),
+        legend.position="none")
+```
+
+#### Dropped samples
+
+```{r dist_drop, echo=FALSE, fig.height = 12, fig.width = 24}
+# overall distribution
+spectra2_drop <- spectra %>%
+  dplyr::filter(!(ID %in% keep_ids$V1)) %>%
+  gather(subtype, count, 2:ncol(spectra)) %>%
+  separate(subtype, c("category", "motif"), sep = "[.]") %>%
+  group_by(category, motif) %>%
+  summarise(count=sum(count))
+  # gather(subtype, count, 2:ncol(spectra)) %>%
+  # separate(subtype, c("category", "motif"), sep = "[.]") %>%
+  # group_by(category, motif) %>%
+  # summarise(count=sum(count))
+
+if(nrow(spectra2_drop)!=0){
+  ggplot(spectra2_drop, aes(x=motif, y=count, fill=category))+
+    geom_bar(stat="identity")+
+    facet_wrap(~category, ncol=6, scales="free_x")+
+    theme_bw()+
+    theme(axis.text.x=element_text(angle=90, vjust=0, size=20),
+          axis.text.y=element_text(size=20),
+          axis.title.x=element_text(size=24),
+          axis.title.y=element_text(size=24),
+          strip.text=element_text(size=24),
+          legend.position="none")
+} else {
+  cat("No samples in drop list\n")
+}
+```
+
+### Signature loadings (H matrix)
+
+Describes how each mutation subtype is loaded into the r signatures
+
+```{r sigloads, echo=FALSE, fig.height = 6, fig.width = 14}
 # signature loadings
 sig_loads_long <- sig_loads %>%
    gather(subtype, loading, 2:ncol(sig_loads)) %>%
@@ -90,7 +176,34 @@ ggplot(sig_loads_long, aes(x=motif, y=loading, fill=Sig))+
   geom_bar(stat="identity")+
   facet_grid(Sig~category)+
   theme_bw()+
-  theme(axis.text.x=element_text(angle=90, hjust=1),
-    strip.text=element_text(size=16),
-    legend.position="none")
+  theme(axis.text.x=element_text(angle=90, vjust=0, size=10),
+        axis.text.y=element_text(size=20),
+        axis.title.x=element_text(size=24),
+        axis.title.y=element_text(size=24),
+        strip.text=element_text(size=24),
+        legend.position="none")
 ```
+
+### Signature contributions per sample (W matrix)
+
+Proportion each signature contributes to the mutation spectrum in each individual sample
+
+```{r sigs, echo=FALSE, fig.height = 12, fig.width = 24}
+# signature contributions across samples
+sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),]
+sig_contribs2 <- sig_contribs2 %>%
+  gather(signature, contribution, S1:S3)
+
+ggplot(sig_contribs2, aes(x=ID, y=contribution,
+                          group=signature, colour=signature))+
+  geom_line()+
+  theme_bw()+
+  theme(axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+      axis.text.y=element_text(size=20),
+      axis.title.x=element_text(size=24),
+      axis.title.y=element_text(size=24),
+      strip.text=element_text(size=24))
+```
+
+
