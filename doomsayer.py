@@ -278,7 +278,7 @@ if args.autodiagnostics:
         eprint("Rscript will run the following command:")
         eprint("Rscript " + cmd)
         eprint("Auto-generating diagnostic report...")
-    subprocess.call("/usr/bin/Rscript --vanilla " + cmd, shell=True)
+    call("/usr/bin/Rscript --vanilla " + cmd, shell=True)
 
 
 stop = timeit.default_timer()
