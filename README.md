@@ -12,6 +12,8 @@ _**DOOMSAYER** ( **D**etection **O**f **O**utliers using **M**utation **S**pectr
 
 If you use DOOMSAYER in your research, please cite our [paper](#) (citation pending). -->
 
+## Contents
+
 - [Download and Installation](#download-and-installation)
 - [Tutorial](#tutorial)
   - [Input options](#input-options)
