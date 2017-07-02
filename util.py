@@ -151,7 +151,7 @@ def diagWrite(projdir, M, M_f, W, H, subtypes_dict, samples, args):
         eprint("Saving H matrix (feature loadings per signature)")
 
     # add signature ID as firsat column
-    H_rownames = ["S" + str(i) for i in xrange(1,args.rank+1)]
+    H_rownames = ["S" + str(i) for i in range(1,args.rank+1)]
     H_fmt = np.concatenate((np.array([H_rownames]).T, H), axis=1)
 
     # add header
