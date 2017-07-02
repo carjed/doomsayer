@@ -137,7 +137,7 @@ def diagWrite(projdir, M, M_f, W, H, subtypes_dict, samples, args):
     W_fmt = np.concatenate((np.array([samples]).T, W), axis=1)
 
     # add header
-    W_colnames = colnames + ["S" + str(i) for i in xrange(1,args.rank+1)]
+    W_colnames = colnames + ["S" + str(i) for i in range(1,args.rank+1)]
     W_fmt = np.concatenate((np.array([W_colnames]), W_fmt), axis=0)
 
     # write out
