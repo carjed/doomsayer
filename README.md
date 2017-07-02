@@ -188,7 +188,7 @@ Once complete, you can run the diagnostic script to generate diagnostic reports:
 Rscript diagnostics/doomsayer_diagnostics.r demo/output/diagnostics.yaml
 ```
 
-An example of a final report is availabe [here](diagnostics/diagnostics.md).
+An example of a final report is available [here](diagnostics/diagnostics.md).
 
 ## Contact
 

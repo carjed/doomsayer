@@ -11,7 +11,7 @@ Unless you are running this script from within the `doomsayer_output` directory,
 
 This script will copy an [RMarkdown template](diagnostics.Rmd) into `~/doomsayer_output/`, which reads the files listed in `~/doomsayer_output/diagnostics.yaml` and renders diagnostic reports (in Markdown, PDF, and HTML formats) detailing the results of your Doomsayer run.
 
-An example of a final report is availabe [here](diagnostics.md).
+An example of a final report is available [here](diagnostics.md).
 
 All plots shown in this report will be available as standalone .png images, located in `~/doomsayer_output/diagnostics/diagnostics_files/figure-html/`
 
