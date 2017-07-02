@@ -7,6 +7,7 @@ import argparse
 import itertools
 import timeit
 import numpy as np
+from subprocess import call
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.Alphabet import generic_dna
