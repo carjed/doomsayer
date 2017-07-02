@@ -203,7 +203,7 @@ python doomsayer.py \
 
 Once complete, you can run the diagnostic script to generate diagnostic reports:
 ```{sh id:"chj4lm2fcv"}
-Rscript diagnostics/doomsayer_diagnostics.r demo/output/diagnostics.yaml
+Rscript diagnostics/doomsayer_diagnostics.r demo/output/config.yaml
 ```
 
 An example of a final report is available [here](diagnostics/diagnostics.md).
