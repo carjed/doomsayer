@@ -2,6 +2,8 @@
 
 ![](assets/doomsayer_logo.png)
 
+## Introduction
+
 _**DOOMSAYER** ( **D**etection **O**f **O**utliers using **M**utation **S**pectrum **A**nal**Y**sis in **E**xtremely **R**are variants) is a quality control application for next-generation sequencing (NGS) data. Doomsayer uses non-negative matrix factorization (NMF) to identify samples with abnormal distributions of rare single-nucleotide variants. These outlying samples are likely a result of cryptic error biases or batch effects, which can negatively impact any number of downstream analyses. By identifying and filtering these problem samples, Doomsayer helps ensure rigor and reproducibility in the analysis of NGS data._
 
 *This program is currently under active development*
@@ -9,6 +11,20 @@ _**DOOMSAYER** ( **D**etection **O**f **O**utliers using **M**utation **S**pectr
 <!-- ## Citation
 
 If you use DOOMSAYER in your research, please cite our [paper](#) (citation pending). -->
+
+- [Download and Installation](#download-and-installation)
+- [Tutorial](#tutorial)
+  - [Input options](#input-options)
+    - [VCF](#vcf)
+    - [Fasta reference file](#fasta-reference-file)
+  - [Output options](#output-options)
+    - [Keep and drop files](#keep-and-drop-files)
+    - [Auto-filtered VCF (optional)](#auto-filtered-vcf-optional)
+    - [NMF output (optional)](#nmf-output-optional)
+      - [Generating diagnostic reports (optional)](#generating-diagnostic-reports-optional)
+  - [Other Options](#other-options)
+- [Demonstration](#demonstration)
+- [Contact](#contact)
 
 ## Download and Installation
 To begin using Doomsayer, clone this repository with the following command:
@@ -35,7 +51,7 @@ python setup.py install
 
 Doomsayer is compatible with both Python 2.7+/Python 3.5+
 
-## Usage instructions
+## Tutorial
 
 Doomsayer requires two mandatory user-specified arguments: 1) a [Variant Call Format](https://en.m.wikipedia.org/wiki/Variant_Call_Format) (VCF) input file, and 2) a fasta-format reference genome. A basic command line might look like this:
 
