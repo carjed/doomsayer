@@ -1,9 +1,13 @@
-# doomsayer_diagnostics
-jed c.  
-July 1, 2017  
-
-
-```r
+#' ---
+#' title: "doomsayer_diagnostics"
+#' author: "jed c."
+#' date: "July 1, 2017"
+#' output:
+#'   html_document:
+#'     keep_md: true
+#' ---
+#'
+#'
 # knitr::opts_chunk$set(echo = TRUE)
 
 #specify the packages of interest
@@ -18,48 +22,10 @@ package.check <- lapply(packages, FUN = function(x) {
         library(x, character.only = TRUE)
     }
 })
-```
-
-```
-## Loading required package: dplyr
-```
-
-```
-## 
-## Attaching package: 'dplyr'
-```
-
-```
-## The following objects are masked from 'package:stats':
-## 
-##     filter, lag
-```
-
-```
-## The following objects are masked from 'package:base':
-## 
-##     intersect, setdiff, setequal, union
-```
-
-```
-## Loading required package: tidyr
-```
-
-```
-## Loading required package: ggplot2
-```
-
-```
-## Loading required package: yaml
-```
-
-```
-## Loading required package: devtools
-```
-
-
-
-```r
+#'
+#'
+#'
+#'
 # cmd_args <- commandArgs(TRUE)
 # yaml_cfg <- as.double(cmd_args[1])
 
@@ -69,7 +35,7 @@ yaml_cfg <- "/mnt/c/Users/jedidiah/Dropbox/Github/doomsayer/demo/output/config.y
 # debug--paths generated from doomsayer.py refer are formatted for bash on Windows
 # the sys.info check updates these paths with Windows format for proper loading in R
 if(Sys.info()['sysname']=="Windows"){
-  yaml_cfg <- gsub("/mnt/c", "C:", yaml_cfg)  
+  yaml_cfg <- gsub("/mnt/c", "C:", yaml_cfg)
 }
 
 yaml_args <- yaml.load_file(yaml_cfg)
@@ -86,11 +52,7 @@ spectra <- read.table(M_path, header=T, stringsAsFactors=F)
 spectra_rates <- read.table(M_path_rates, header=T, stringsAsFactors=F)
 sig_contribs <- read.table(W_path, header=T, stringsAsFactors=F)
 sig_loads <- read.table(H_path, header=T, stringsAsFactors=F)
-```
 
-
-```r
-# overall distribution
 spectra2 <- spectra %>%
   gather(subtype, count, 2:ncol(spectra)) %>%
   separate(subtype, c("category", "motif"), sep = "[.]") %>%
@@ -104,24 +66,14 @@ ggplot(spectra2, aes(x=motif, y=count, fill=category))+
   theme(axis.text.x=element_text(angle=90, hjust=1),
     strip.text=element_text(size=16),
     legend.position="none")
-```
 
-![](diagnostics_files/figure-html/dist-1.png)<!-- -->
-
-
-```r
-# signature contributions across samples
 sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),]
 sig_contribs2 <- sig_contribs2 %>%
   gather(signature, contribution, S1:S3)
 
 ggplot(sig_contribs2, aes(x=ID, y=contribution, colour=signature))+
   geom_point()
-```
 
-![](diagnostics_files/figure-html/sigs-1.png)<!-- -->
-
-```r
 # signature loadings
 sig_loads_long <- sig_loads %>%
    gather(subtype, loading, 2:ncol(sig_loads)) %>%
@@ -134,11 +86,3 @@ ggplot(sig_loads_long, aes(x=motif, y=loading, fill=Sig))+
   theme(axis.text.x=element_text(angle=90, hjust=1),
     strip.text=element_text(size=16),
     legend.position="none")
-```
-
-![](diagnostics_files/figure-html/sigs-2.png)<!-- -->
-
-
-
-![](diagnostics_files/figure-html/pressure-1.png)<!-- -->
-

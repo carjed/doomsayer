@@ -1,4 +1,16 @@
-This script requires the following R packages:
+## Diagnostic plots for Doomsayer
+
+This directory contains R scripts for evaluating the results of a Doomsayer run where the `--diagnostics` option has been enabled.
+
+From the command line, you can run:
+
+```{sh id:"chj4m1wcp3"}
+Rscript diagnostics/doomsayer_diagnostics.r /path/to/doomsayer_output/diagnostics.yaml
+```
+
+This will copy the `diagnostics.Rmd` RMarkdown template into `/path/to/doomsayer_output` and render customized HTML and PDF reports in the output directory with useful diagnostic information. Doing so requires the `rmarkdown` package be installed.
+
+`diagnostics.Rmd` requires the following R packages:
 - [yaml]
 - [dplyr]
 - [tidyr]

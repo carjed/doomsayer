@@ -13,7 +13,7 @@ If you use DOOMSAYER in your research, please cite our [paper](#) (citation pend
 ## Download and Installation
 To begin using Doomsayer, clone this repository with the following command:
 
-```{git id:"chj4lmgsky"}
+```{sh id:"chj4lmgsky"}
 git clone https://github.com/carjed/doomsayer.git
 ```
 
@@ -162,7 +162,7 @@ optional arguments:
 
 ## Demonstration
 
-Sample VCF and reference files can be downloaded using the `download_demo_data.sh` script. Files will be placed in the `demo/input` subdirectory of the doomsayer install directory. You can also manually download the necessary files from [http://mutation.sph.umich.edu/share/doomsayer_demo/](http://mutation.sph.umich.edu/share/doomsayer_demo/).
+Sample VCF and reference files can be downloaded using the [download_demo_data.sh](download_demo_data.sh) script. Files will be placed in the `demo/input` subdirectory of the doomsayer install directory. You can also manually download the necessary files from [http://mutation.sph.umich.edu/share/doomsayer_demo/](http://mutation.sph.umich.edu/share/doomsayer_demo/).
 
 The following command will run the demo, writing all output to `demo/output`:
 
@@ -179,14 +179,12 @@ python doomsayer.py \
   --outputtovcf > demo/output/chr20.filtered.vcf
 ```
 
-Once complete, you can run the diagnostic script to generate diagnostic plots using the demonstration data:
+Once complete, you can run the diagnostic script to generate diagnostic reports:
 ```{sh id:"chj4lm2fcv"}
-Rscript doomsayer_diagnostics.r demo/output/diagnostics.yaml
+Rscript diagnostics/doomsayer_diagnostics.r demo/output/diagnostics.yaml
 ```
 
-```
-# example logging output of doomsayer_diagnostics.r
-```
+An example of this report is availabe [here](diagnostics/diagnostics.md).
 
 ## Contact
 
