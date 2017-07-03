@@ -46,6 +46,14 @@ parser.add_argument("-o", "--outputtovcf",
                         VCF to a file on disk)",
                     action="store_true")
 
+parser.add_argument("-n", "--nofilter",
+                    help="disables generation of keep/drop lists, \
+                        turns off default filtering criteria, \
+                        and evaluates all sites in the input VCF. \
+                        Useful if analyzing somatic data or pre-filtering \
+                        with another tool)",
+                    action="store_true")
+
 parser.add_argument("-d", "--diagnostics",
                     help="write the NMF matrices to the output directory \
                         and generate yaml config to be passed to \
@@ -68,10 +76,6 @@ parser.add_argument("-l", "--length",
                     type=int,
                     choices=[1,3,5,7],
                     default=3)
-
-parser.add_argument("-z", "--nonoptimized",
-                    help="Use non-optimized pyvcf library instead of cyvcf2",
-                    action="store_true")
 
 parser.add_argument("-v", "--verbose",
                     help="Enable verbose logging",
@@ -96,20 +100,10 @@ else:
 eprint("Initializing reference genome...") if args.verbose else None
 fasta_reader = SeqIO.index(args.fastafile, 'fasta')
 
-if args.nonoptimized:
-    eprint("Using pyvcf library...") if args.verbose else None
-    import vcf
-    # vcf_reader = vcf.Reader(args.inputvcf, 'rb')
-    if args.inputvcf=="-":
-        vcf_reader = vcf.Reader(sys.stdin)
-    else:
-        vcf_reader = vcf.Reader(open(args.inputvcf), 'rb')
-else:
-    eprint("Using cyvcf library...") if args.verbose else None
-    import cyvcf2 as vcf
-    from cyvcf2 import VCF
-    from cyvcf2 import Writer
-    vcf_reader = VCF(args.inputvcf, mode='rb')
+import cyvcf2 as vcf
+from cyvcf2 import VCF
+from cyvcf2 import Writer
+vcf_reader = VCF(args.inputvcf, mode='rb', gts012=True)
 
 ###############################################################################
 # index samples
@@ -142,52 +136,58 @@ chrseq = '1'
 
 for record in vcf_reader:
 
-    # pyvcf2 sets the 'AC' field as an array
-    if args.nonoptimized==True:
-        acval = record.INFO['AC'][0]
-    else:
-        acval = record.INFO['AC']
+    acval = record.INFO['AC']
+
+    # debug--testing performance for triallelic sites
+    # if(record.POS==91628): # triallelic site
+    # if(record.POS==63549):
+    #     eprint(acval)
+    #     eprint(record.gt_types.tolist().index(1))
 
     # Filter by allele count, SNP status, and FILTER column
-    if (acval==1 and record.FILTER!='SVM' and record.is_snp):
+    if record.is_snp:
+        if ((acval==1 and record.FILTER is None) or args.nofilter):
 
-        # use get_hets() function if using pyvcf, otherwise need to query
-        # record.gt_types in cyvcf2
-        if args.nonoptimized:
-            sample = record.get_hets()[0].sample
+            # check and update chromosome sequence
+            if record.CHROM != chrseq:
+                if args.verbose:
+                    eprint("Loading chromosome", record.CHROM, "reference...")
+                seq = fasta_reader[record.CHROM].seq
+                chrseq = record.CHROM
+
+            mu_type = record.REF + str(record.ALT[0])
+            category = getCategory(mu_type)
+            motif_a = getMotif(record.POS, seq)
+            subtype = str(category + "-" + motif_a)
+
+            # sample=samples[record.gt_types.tolist().index(1)]
+            sample_gts=record.gt_types.tolist()
+            s = 0;
+            for gt in sample_gts:
+                if gt == 1:
+                    M[s, subtypes_dict[subtype]] += 1
+
+                    # if samples[s] == "1497-RMM-0968":
+                    #     print(record.CHROM, record.POS,
+                    #         record.REF, record.ALT[0], samples[s], subtype)
+
+                elif gt == 2:
+                    M[s, subtypes_dict[subtype]] += 2
+                s += 1
+
+            numsites_keep += 1
         else:
-            sample=samples[record.gt_types.tolist().index(1)]
-
-        #
-        mu_type = record.REF + str(record.ALT[0])
-        category = getCategory(mu_type)
-
-        # check and update chromosome sequence
-        if record.CHROM != chrseq:
-            if args.verbose:
-                eprint("Loading chromosome", record.CHROM, "reference...")
-            seq = fasta_reader[record.CHROM].seq
-            chrseq = record.CHROM
-
-        motif_a = getMotif(record.POS, seq)
-        subtype = str(category + "-" + motif_a)
-
-        # if sample == "1497-RMM-0968":
-        #     print(record.CHROM, record.POS, record.REF, record.ALT[0], sample, subtype)
-
-        # query M matrix by sample and subtype; iterate by 1 if record matches
-        M[samples_dict[sample], subtypes_dict[subtype]] += 1
-        numsites_keep += 1
-    else:
-        numsites_skip += 1
+            numsites_skip += 1
 
 if numsites_keep == 0:
-    eprint("No singleton SNVs found. Please check your VCF file")
+    eprint("No SNVs found. Please check your VCF file")
     sys.exit()
 
 if args.verbose:
     eprint(numsites_keep, "sites kept")
     eprint(numsites_skip, "sites skipped")
+
+vcf_reader.close()
 
 ###############################################################################
 # Run NMF on final matrix
@@ -216,40 +216,40 @@ colstd = np.std(W, axis=0)
 upper = colmeans+2*colstd
 lower = colmeans-2*colstd
 
-if args.verbose:
-    eprint("Mean signature contributions: ", colmeans)
-    eprint("StdDev:", colstd)
-    eprint("Upper:", upper)
-    eprint("Lower:", lower)
-
-keep_samples = []
-drop_samples = []
-# Check for outliers
-i=0
-for n in W:
-    if(np.greater(n, upper).any() or np.less(n, lower).any()):
-        drop_samples.append(samples[i])
-    else:
-        keep_samples.append(samples[i])
-        # print(n)
-    i += 1
-
-vcf_reader.close()
-# print(keep_samples[0:10])
-# print(len(keep_samples))
-# print(drop_samples[0:10])
-
-###############################################################################
-# Write output data
-###############################################################################
-keep_path = projdir + "/keep_samples.txt"
-np.savetxt(keep_path, keep_samples, delimiter='\t', fmt="%s")
-
-drop_path = projdir + "/drop_samples.txt"
-np.savetxt(drop_path, drop_samples, delimiter='\t', fmt="%s")
-
+# output NMF results
 if(args.diagnostics or args.autodiagnostics):
+    if args.verbose:
+        eprint("Mean signature contributions: ", colmeans)
+        eprint("StdDev:", colstd)
+        eprint("Upper:", upper)
+        eprint("Lower:", lower)
+        eprint("Writing NMF results")
     diagWrite(projdir, M, M_f, W, H, subtypes_dict, samples, args)
+
+###############################################################################
+# Write keep and drop lists
+###############################################################################
+if not args.nofilter:
+    keep_samples = []
+    drop_samples = []
+    # Check for outliers
+    i=0
+    for n in W:
+        if(np.greater(n, upper).any() or np.less(n, lower).any()):
+            drop_samples.append(samples[i])
+            # eprint("Adding", samples[i], "to drop list") if args.verbose else None
+        else:
+            keep_samples.append(samples[i])
+        i += 1
+
+    eprint("Printing keep and drop lists") if args.verbose else None
+    keep_path = projdir + "/keep_samples.txt"
+    np.savetxt(keep_path, keep_samples, delimiter='\t', fmt="%s")
+
+    drop_path = projdir + "/drop_samples.txt"
+    np.savetxt(drop_path, drop_samples, delimiter='\t', fmt="%s")
+else:
+    eprint("You are running with the --nofilter option. Keep and drop lists will not be generated")
 
 ###############################################################################
 # write output vcf

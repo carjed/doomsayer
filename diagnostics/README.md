@@ -1,6 +1,6 @@
 ## Diagnostic reports for Doomsayer
 
-This directory contains R scripts for evaluating the results of a Doomsayer run where the `--diagnostics` option has been enabled. Assuming your output is contained in `~/doomsayer_output/` you can generate a diagnostic report with the following command:
+This directory contains R scripts for evaluating the results of a Doomsayer run where the `--diagnostics` or `--autodiagnostics` option has been enabled. Assuming your output is contained in `~/doomsayer_output/` you can generate a diagnostic report with the following command:
 
 ```{sh id:"chj4m1wcp3"}
 cd /path/to/doomsayer
@@ -17,12 +17,10 @@ All plots shown in this report will be available as standalone .png images, loca
 
 ### Dependencies
 
-These R scripts require the following packages:
+These R scripts require the following packages, will be installed automatically to your default library location:
 - [rmarkdown](https://cran.r-project.org/web/packages/rmarkdown/index.html)
 - [yaml](https://cran.r-project.org/web/packages/yaml/index.html)
 - [dplyr](https://cran.r-project.org/web/packages/dplyr/index.html)
 - [tidyr](https://cran.r-project.org/web/packages/tidyr/index.html)
 - [ggplot2](https://cran.r-project.org/web/packages/ggplot2/index.html)
 - [devtools](https://cran.r-project.org/web/packages/devtools/index.html)
-
-The scripts will check if they are installed, and attempt to install any that are not found. Packages will be installed to your default library location.

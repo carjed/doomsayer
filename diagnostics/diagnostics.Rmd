@@ -4,7 +4,6 @@ output:
   html_document:
       keep_md: yes
   pdf_document:
-    keep_md: yes
 date: '`r format(Sys.Date())`'
 params:
   dev: no
