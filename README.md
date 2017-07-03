@@ -50,7 +50,7 @@ bash setup.sh
 ```
 
 `setup.sh` uses pip to check for and install the following python libraries and perform additional setup tasks:
-- [CyVCF2](https://github.com/brentp/cyvcf2) (or [PyVCF](https://github.com/jamescasbon/PyVCF))
+- [CyVCF2](https://github.com/brentp/cyvcf2)
 - [numpy](https://docs.scipy.org/doc/numpy/reference/)
 - [Biopython](https://github.com/biopython/biopython)
 - [scikit-learn](http://scikit-learn.org/stable/)

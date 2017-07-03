@@ -2,7 +2,7 @@
 
 # install python dependencies
 echo "Installing python dependencies"
-# /usr/local/bin/pip install --user pyvcf cyvcf2 numpy Biopython scikit-learn
+# /usr/local/bin/pip install --user cyvcf2 numpy Biopython scikit-learn
 
 # Link rstudio pandoc libraries to path
 
