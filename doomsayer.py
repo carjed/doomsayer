@@ -106,7 +106,7 @@ fasta_reader = Fasta(args.fastafile, read_ahead=10000)
 import cyvcf2 as vcf
 from cyvcf2 import VCF
 from cyvcf2 import Writer
-vcf_reader = VCF(args.inputvcf, mode='rb', gts012=True)
+vcf_reader = VCF(args.inputvcf, mode='rb', gts012=True, threads=4)
 
 ###############################################################################
 # index samples
