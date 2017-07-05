@@ -137,6 +137,7 @@ numsites_keep = 0
 numsites_skip = 0
 chrseq = '1'
 
+batchit = 0
 for record in vcf_reader:
 
     # debug--testing performance for triallelic sites
@@ -162,7 +163,11 @@ for record in vcf_reader:
             lseq = sequence[record.POS-2:record.POS+1].seq
             mu_type = record.REF + str(record.ALT[0])
             category = getCategory(mu_type)
-            motif_a = getMotif(record.POS, lseq)
+            # motif_a = getMotif(record.POS, lseq)
+            if category[0:1] == "A":
+                motif_a = "AAA"
+            else:
+                motif_a = "ACA"
             subtype = str(category + "-" + motif_a)
 
             # use quick singleton lookup for default QC option
