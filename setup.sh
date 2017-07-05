@@ -5,7 +5,7 @@
 # by default installs to user library location (default ~/.local/bin)
 # remove --user if installing system-wide
 echo "Installing python dependencies"
-/usr/local/bin/pip install --user cyvcf2 numpy Biopython scikit-learn
+/usr/local/bin/pip install --user cyvcf2 numpy Biopython scikit-learn pyfaidx
 
 # Link rstudio pandoc libraries to path
 if [ -d /usr/lib/rstudio ]; then

@@ -101,7 +101,7 @@ else:
 eprint("Initializing reference genome...") if args.verbose else None
 # fasta_reader = SeqIO.index(args.fastafile, 'fasta')
 # fasta_reader = SeqIO.parse(args.fastafile, 'fasta')
-fasta_reader = Fasta(args.fastafile, read_ahead=10000)
+fasta_reader = Fasta(args.fastafile, read_ahead=1000000)
 
 import cyvcf2 as vcf
 from cyvcf2 import VCF
