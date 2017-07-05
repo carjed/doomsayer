@@ -136,8 +136,6 @@ chrseq = '1'
 
 for record in vcf_reader:
 
-    acval = record.INFO['AC']
-
     # debug--testing performance for triallelic sites
     # if(record.POS==91628): # triallelic site
     # if(record.POS==63549):
@@ -146,6 +144,7 @@ for record in vcf_reader:
 
     # Filter by allele count, SNP status, and FILTER column
     if record.is_snp:
+        acval = record.INFO['AC']
         if ((acval==1 and record.FILTER is None) or args.nofilter):
 
             # check and update chromosome sequence
@@ -160,24 +159,47 @@ for record in vcf_reader:
             motif_a = getMotif(record.POS, seq)
             subtype = str(category + "-" + motif_a)
 
-            # sample=samples[record.gt_types.tolist().index(1)]
-            sample_gts=record.gt_types.tolist()
-            s = 0;
-            for gt in sample_gts:
-                if gt == 1:
-                    M[s, subtypes_dict[subtype]] += 1
+            # use quick singleton lookup for default QC option
+            if not args.nofilter:
+                sample=samples[record.gt_types.tolist().index(1)]
+                M[samples_dict[sample], subtypes_dict[subtype]] += 1
 
-                    # if samples[s] == "1497-RMM-0968":
-                    #     print(record.CHROM, record.POS,
-                    #         record.REF, record.ALT[0], samples[s], subtype)
+                # sample=np.where(record.gt_types == 1)[0]
+                # M[sample, subtypes_dict[subtype]] += 1
+            else:
+                # sample=samples[record.gt_types.tolist().index(1)]
+                samples_het = np.where(record.gt_types == 1)[0]
+                M[samples_het, subtypes_dict[subtype]] += 1
+                # for s1 in samples_het:
+                #     M[s1, subtypes_dict[subtype]] += 1
 
-                elif gt == 2:
-                    M[s, subtypes_dict[subtype]] += 2
-                s += 1
+                samples_hom = np.where(record.gt_types == 2)[0]
+                M[samples_hom, subtypes_dict[subtype]] += 2
+                # for s2 in samples_hom:
+                #     M[s2, subtypes_dict[subtype]] += 2
+
+                # eprint(record.POS, s2)
+                # sample_gts=record.gt_types.tolist()
+                # s = 0;
+                # for gt in sample_gts:
+                #     if gt == 1:
+                #         M[s, subtypes_dict[subtype]] += 1
+                #
+                #         # if samples[s] == "1497-RMM-0968":
+                #         #     print(record.CHROM, record.POS,
+                #         #         record.REF, record.ALT[0], samples[s], subtype)
+                #
+                #     elif gt == 2:
+                #         M[s, subtypes_dict[subtype]] += 2
+                #     s += 1
 
             numsites_keep += 1
         else:
             numsites_skip += 1
+
+        if args.verbose:
+            if (numsites_keep > 0 and numsites_keep%100000==0):
+                eprint("Processed", numsites_keep, "sites")
 
 if numsites_keep == 0:
     eprint("No SNVs found. Please check your VCF file")

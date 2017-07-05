@@ -6,7 +6,7 @@
 
 _**DOOMSAYER** ( **D**etection **O**f **O**utliers using **M**utation **S**pectrum **A**nal**Y**sis in **E**xtremely **R**are variants) is a utility for analyzing patterns of genetic variation in next-generation sequencing (NGS) data._
 
-_Doomsayer uses non-negative matrix factorization (NMF) to summarize the distribution of rare single-nucleotide variants within each sample. In studies of standing genetic variation, this information can be a valuable indicator of cryptic error biases or batch effects. By identifying and filtering these outlier samples, Doomsayer helps ensure rigor and reproducibility in the analysis of NGS data._
+_Using non-negative matrix factorization (NMF), Doomsayer summarize the distribution of rare single-nucleotide variants within each sample. In studies of standing genetic variation, this information can be a valuable indicator of cryptic error biases or batch effects. By identifying and filtering these outlier samples, Doomsayer helps ensure rigor and reproducibility in the analysis of NGS data._
 
 _In addition to its function as a quality control program, Doomsayer can be applied more generally to study between-sample differences in somatic and germline mutation signatures._
 
