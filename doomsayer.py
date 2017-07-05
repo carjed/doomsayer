@@ -156,12 +156,13 @@ for record in vcf_reader:
                     eprint("Loading chromosome", record.CHROM, "reference...")
                 # seq = fasta_reader[record.CHROM].seq
                 # seq = SeqIO.to_dict(fasta_reader)[record.CHROM].seq
-                seq = fasta_reader[record.CHROM]
+                sequence = fasta_reader[record.CHROM]
                 chrseq = record.CHROM
 
+            lseq = sequence[record.POS-2:record.POS+1].seq
             mu_type = record.REF + str(record.ALT[0])
             category = getCategory(mu_type)
-            motif_a = getMotif(record.POS, seq)
+            motif_a = getMotif(record.POS, lseq)
             subtype = str(category + "-" + motif_a)
 
             # use quick singleton lookup for default QC option

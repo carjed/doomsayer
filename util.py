@@ -41,7 +41,8 @@ def getCategory(mu_type):
 ###############################################################################
 def getMotif(pos, sequence):
     # get 3-mer motif
-    motif = Seq(sequence[pos-2:pos+1].seq, IUPAC.unambiguous_dna)
+    # motif = Seq(sequence[pos-2:pos+1].seq, IUPAC.unambiguous_dna)
+    motif = Seq(sequence, IUPAC.unambiguous_dna)
     altmotif = motif.reverse_complement()
 
     m1 = motif[1]
