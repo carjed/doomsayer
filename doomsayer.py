@@ -98,7 +98,8 @@ else:
     eprint(projdir, "already exists") if args.verbose else None
 
 eprint("Initializing reference genome...") if args.verbose else None
-fasta_reader = SeqIO.index(args.fastafile, 'fasta')
+# fasta_reader = SeqIO.index(args.fastafile, 'fasta')
+fasta_reader = SeqIO.parse(args.fastafile, 'fasta')
 
 import cyvcf2 as vcf
 from cyvcf2 import VCF
@@ -151,7 +152,8 @@ for record in vcf_reader:
             if record.CHROM != chrseq:
                 if args.verbose:
                     eprint("Loading chromosome", record.CHROM, "reference...")
-                seq = fasta_reader[record.CHROM].seq
+                # seq = fasta_reader[record.CHROM].seq
+                seq = SeqIO.to_dict(fasta_reader)[record.CHROM].seq
                 chrseq = record.CHROM
 
             mu_type = record.REF + str(record.ALT[0])
