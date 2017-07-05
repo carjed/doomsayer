@@ -8,9 +8,10 @@ import itertools
 import timeit
 import numpy as np
 from subprocess import call
-from Bio import SeqIO
+from pyfaidx import Fasta
+# from Bio import SeqIO
 from Bio.Seq import Seq
-from Bio.Alphabet import generic_dna
+from Bio.Alphabet import IUPAC
 from sklearn.decomposition import NMF
 from util import *
 
@@ -99,7 +100,8 @@ else:
 
 eprint("Initializing reference genome...") if args.verbose else None
 # fasta_reader = SeqIO.index(args.fastafile, 'fasta')
-fasta_reader = SeqIO.parse(args.fastafile, 'fasta')
+# fasta_reader = SeqIO.parse(args.fastafile, 'fasta')
+fasta_reader = Fasta(args.fastafile)
 
 import cyvcf2 as vcf
 from cyvcf2 import VCF
@@ -153,7 +155,8 @@ for record in vcf_reader:
                 if args.verbose:
                     eprint("Loading chromosome", record.CHROM, "reference...")
                 # seq = fasta_reader[record.CHROM].seq
-                seq = SeqIO.to_dict(fasta_reader)[record.CHROM].seq
+                # seq = SeqIO.to_dict(fasta_reader)[record.CHROM].seq
+                seq = fasta_reader[record.CHROM]
                 chrseq = record.CHROM
 
             mu_type = record.REF + str(record.ALT[0])

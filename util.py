@@ -7,9 +7,10 @@ import argparse
 import itertools
 import timeit
 import numpy as np
-from Bio import SeqIO
+from pyfaidx import Fasta
+# from Bio import SeqIO
 from Bio.Seq import Seq
-from Bio.Alphabet import generic_dna
+from Bio.Alphabet import IUPAC
 
 ###############################################################################
 # print to stderr
@@ -38,9 +39,9 @@ def getCategory(mu_type):
 ###############################################################################
 # query reference genome for local sequence motif
 ###############################################################################
-def getMotif(pos, seq):
+def getMotif(pos, sequence):
     # get 3-mer motif
-    motif = seq[pos-2:pos+1]
+    motif = Seq(sequence[pos-2:pos+1].seq, IUPAC.unambiguous_dna)
     altmotif = motif.reverse_complement()
 
     m1 = motif[1]
