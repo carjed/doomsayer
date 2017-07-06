@@ -148,7 +148,7 @@ for record in vcf_reader:
     # if(record.POS==63549):
     #     eprint(acval)
     #     eprint(record.gt_types.tolist().index(1))
-
+    eprint(record.CHROM, record.POS, record.REF, record.ALT[0])
     # Filter by allele count, SNP status, and FILTER column
     if record.is_snp:
         acval = record.INFO['AC']
@@ -168,7 +168,7 @@ for record in vcf_reader:
             lseq = sequence[record.POS-2:record.POS+1].seq
             motif_a = getMotif(record.POS, lseq)
             subtype = str(category + "-" + motif_a)
-            eprint(record.CHROM, record.POS, record.REF, record.ALT[0], subtype)
+            # eprint(record.CHROM, record.POS, record.REF, record.ALT[0], subtype)
             # use quick singleton lookup for default QC option
             if not args.nofilter:
                 # sample=samples[record.gt_types.tolist().index(1)]
