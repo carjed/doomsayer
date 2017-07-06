@@ -155,7 +155,7 @@ for record in vcf_reader:
         acval = record.INFO['AC']
         eprint(record.CHROM, record.POS, record.REF, record.ALT[0], acval, record.FILTER)
         if ((acval==1 and record.FILTER is None) or args.nofilter):
-
+            eprint("Singleton check: PASS")
             # check and update chromosome sequence
             if record.CHROM != chrseq:
                 if args.verbose:
