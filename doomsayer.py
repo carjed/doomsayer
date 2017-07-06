@@ -176,17 +176,19 @@ for record in vcf_reader:
                 sample = record.gt_types.tolist().index(1)
                 # eprint(sample)
                 st = subtypes_dict[subtype]
-                # M[samples_dict[sample], st] += 1
 
-                M[sample, subtypes_dict[subtype]] += 1
-                batchit += 1
-                sample_batch.append(sample)
-                subtype_batch.append(st)
+                asbatch = True
+                if asbatch:
+                    # M[sample, subtypes_dict[subtype]] += 1
+                    batchit += 1
+                    sample_batch.append(sample)
+                    subtype_batch.append(st)
 
-                if batchit == 10000:
-                    M[sample_batch, subtype_batch] += 1
-                    batchit = 0
-
+                    if batchit == 10000:
+                        M[sample_batch, subtype_batch] += 1
+                        batchit = 0
+                else:
+                    M[sample, st] += 1
                 # sample=np.where(record.gt_types == 1)[0]
                 # M[sample, subtypes_dict[subtype]] += 1
             else:
