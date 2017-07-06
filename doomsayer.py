@@ -137,8 +137,9 @@ numsites_keep = 0
 numsites_skip = 0
 chrseq = '1'
 
-# batchit = 0
-# batchcounts = []
+batchit = 0
+sample_batch = []
+subtype_batch = []
 # from collections import Counter
 # Counter(sings)
 for record in vcf_reader:
@@ -171,9 +172,19 @@ for record in vcf_reader:
 
             # use quick singleton lookup for default QC option
             if not args.nofilter:
-                sample=samples[record.gt_types.tolist().index(1)]
+                # sample=samples[record.gt_types.tolist().index(1)]
+                sample=record.gt_types.tolist().index(1)
+                # eprint(sample)
+                st = subtypes_dict[subtype]
                 # M[samples_dict[sample], subtypes_dict[subtype]] += 1
+                M[sample, subtypes_dict[subtype]] += 1
+                batchit += 1
+                sample_batch.append(sample)
+                subtype_batch.append(st)
 
+                if batchit == 100:
+                    M[sample_batch, subtype_batch] += 1
+                    batchit = 0
                 # sample=np.where(record.gt_types == 1)[0]
                 # M[sample, subtypes_dict[subtype]] += 1
             else:
