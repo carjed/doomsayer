@@ -6,6 +6,7 @@ import sys
 import argparse
 import itertools
 import timeit
+import collections
 import numpy as np
 from pyfaidx import Fasta
 # from Bio import SeqIO
@@ -89,6 +90,147 @@ def indexSubtypes(args):
         i += 1
     return subtypes_dict
 
+def processVCF(args, subtypes_dict):
+    eprint("Initializing reference genome...") if args.verbose else None
+    fasta_reader = Fasta(args.fastafile, read_ahead=1000000)
+
+    import cyvcf2 as vcf
+    from cyvcf2 import VCF
+    from cyvcf2 import Writer
+
+    # 'demo/input/keep.txt'
+    if args.samplefile:
+        with open(args.samplefile) as f:
+            keep_samples = f.read().splitlines()
+        eprint(len(keep_samples), "samples kept") if args.verbose else None
+
+        vcf_reader = VCF(args.inputvcf,
+            mode='rb', gts012=True, lazy=True, samples=keep_samples)
+        # vcf_reader.set_samples(keep_samples) # <- set_samples() subsets VCF
+    else:
+        vcf_reader = VCF(args.inputvcf,
+            mode='rb', gts012=True, lazy=True)
+
+    ###############################################################################
+    # index samples
+    ###############################################################################
+    eprint("Indexing samples in", args.inputvcf, "...") if args.verbose else None
+    samples = vcf_reader.samples
+
+    samples_dict = {}
+    for i in range(len(samples)):
+        samples_dict[samples[i]] = i
+
+    eprint(len(samples), "samples will be processed") if args.verbose else None
+
+    ###############################################################################
+    # index subtypes
+    ###############################################################################
+    # eprint("indexing subtypes...") if args.verbose else None
+    # subtypes_dict = indexSubtypes(args)
+
+    M = np.zeros((len(samples), len(subtypes_dict)))
+
+    ###############################################################################
+    # Query records in VCF and build matrix
+    ###############################################################################
+    eprint("Parsing VCF records...") if args.verbose else None
+    numsites_keep = 0
+    numsites_skip = 0
+    chrseq = '1'
+
+    batchit = 0
+    sample_batch = []
+    subtype_batch = []
+    # from collections import Counter
+    # Counter(sings)
+    for record in vcf_reader:
+        # debug--testing performance for triallelic sites
+        # if(record.POS==91628): # triallelic site
+        # if(record.POS==63549):
+        #     eprint(acval)
+        #     eprint(record.gt_types.tolist().index(1))
+
+        # Filter by allele count, SNP status, and FILTER column
+        # if len(record.ALT[0])==1:
+        if record.is_snp:
+            # eprint("SNP check: PASS")
+            acval = record.INFO['AC']
+            # eprint(record.POS, acval)
+            # eprint(record.CHROM, record.POS, record.REF, record.ALT[0], acval, record.FILTER)
+            if ((acval==1 and record.FILTER is None) or args.nofilter):
+
+                # check and update chromosome sequence
+                if record.CHROM != chrseq:
+                    if args.verbose:
+                        eprint("Loading chromosome", record.CHROM, "reference...")
+
+                    sequence = fasta_reader[record.CHROM]
+                    chrseq = record.CHROM
+
+                mu_type = record.REF + str(record.ALT[0])
+                category = getCategory(mu_type)
+                lseq = sequence[record.POS-2:record.POS+1].seq
+                motif_a = getMotif(record.POS, lseq)
+                subtype = str(category + "-" + motif_a)
+                # eprint(record.CHROM, record.POS, record.REF, record.ALT[0], subtype)
+
+                # use quick singleton lookup for default QC option
+                if not args.nofilter:
+                    # sample=samples[record.gt_types.tolist().index(1)]
+                    # if sample == "1497-RMM-1269RD":
+                    #     print(record.CHROM, record.POS,
+                    #         record.REF, record.ALT[0], sample, subtype)
+                    # eprint(record.gt_types.tolist())
+                    # sample = record.gt_types.tolist().index(1)
+                    # sample=np.where(record.gt_types == 1)[0]
+                    # eprint(sample)
+                    st = subtypes_dict[subtype]
+
+                    # testing for speed improvements by batching updates to M
+                    asbatch = False
+                    if asbatch:
+                        # M[sample, subtypes_dict[subtype]] += 1
+                        batchit += 1
+                        sample = record.gt_types.tolist().index(1)
+                        # sample_gts = record.gt_types.tolist()
+
+                        sample_batch.append(sample)
+                        subtype_batch.append(st)
+
+                        if batchit == 10000:
+                            M[sample_batch, subtype_batch] += 1
+                            batchit = 0
+                    else:
+                        M[:,st] = M[:,st]+record.gt_types
+
+                else:
+                    samples_het = np.where(record.gt_types == 1)[0]
+                    M[samples_het, subtypes_dict[subtype]] += 1
+
+                    samples_hom = np.where(record.gt_types == 2)[0]
+                    M[samples_hom, subtypes_dict[subtype]] += 2
+
+                numsites_keep += 1
+            else:
+                numsites_skip += 1
+
+            if args.verbose:
+                if (numsites_keep > 0 and numsites_keep%10000==0):
+                    eprint("Processed", numsites_keep, "sites")
+
+    if numsites_keep == 0:
+        eprint("No SNVs found. Please check your VCF file")
+        sys.exit()
+
+    if args.verbose:
+        eprint(numsites_keep, "sites kept")
+        eprint(numsites_skip, "sites skipped")
+
+    vcf_reader.close()
+    out = collections.namedtuple('Out', ['M', 'samples'])(M, samples)
+    return out
+
 ###############################################################################
 # prepar data for diagnostics
 ###############################################################################
@@ -110,7 +252,7 @@ def diagWrite(projdir, M, M_f, W, H, subtypes_dict, samples, args):
     M_fmt = np.concatenate((np.array([M_colnames]), M_fmt), axis=0)
 
     # write out
-    M_path = projdir + "/NMF_M_spectra.txt"
+    M_path = projdir + "/" + args.mmatrixname + ".txt"
     np.savetxt(M_path, M_fmt, delimiter='\t', fmt="%s")
 
     ###############################

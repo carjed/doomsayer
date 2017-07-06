@@ -6,6 +6,7 @@ import sys
 import argparse
 import itertools
 import timeit
+# import collections
 import numpy as np
 from subprocess import call
 from pyfaidx import Fasta
@@ -31,7 +32,6 @@ parser.add_argument("-i", "--inputvcf",
 
 parser.add_argument("-f", "--fastafile",
                     help="fasta file name",
-                    required=True,
                     type=str,
                     default="chr20.fasta.gz")
 
@@ -66,6 +66,19 @@ parser.add_argument("-ad", "--autodiagnostics",
                         generates diagnostic report",
                     action="store_true")
 
+parser.add_argument("-m", "--mmatrixname",
+                    help="custom filename for M matrix [without extension] \
+                        -useful for parallelization",
+                    nargs='?',
+                    type=str,
+                    default="NMF_M_spectra")
+
+parser.add_argument("-s", "--samplefile",
+                    help="file containing sample IDs to include (one per line) \
+                        -faster than pre-filtering and piping with bcftools",
+                    nargs='?',
+                    type=str)
+
 parser.add_argument("-r", "--rank",
                     help="rank for NMF decomposition",
                     type=int,
@@ -98,149 +111,50 @@ if not os.path.exists(args.projectdir):
 else:
     eprint(projdir, "already exists") if args.verbose else None
 
-eprint("Initializing reference genome...") if args.verbose else None
-# fasta_reader = SeqIO.index(args.fastafile, 'fasta')
-# fasta_reader = SeqIO.parse(args.fastafile, 'fasta')
-fasta_reader = Fasta(args.fastafile, read_ahead=1000000)
-
-import cyvcf2 as vcf
-from cyvcf2 import VCF
-from cyvcf2 import Writer
-vcf_reader = VCF(args.inputvcf, mode='rb', gts012=True, lazy=True)
-
-###############################################################################
-# index samples
-###############################################################################
-eprint("Indexing samples in", args.inputvcf, "...") if args.verbose else None
-samples = vcf_reader.samples
-
-samples_dict = {}
-for i in range(len(samples)):
-    samples_dict[samples[i]] = i
-
-eprint(len(samples), "samples found") if args.verbose else None
-
-###############################################################################
-# index subtypes
-###############################################################################
 eprint("indexing subtypes...") if args.verbose else None
-
 subtypes_dict = indexSubtypes(args)
 
-M = np.zeros((len(samples), len(subtypes_dict)))
-
 ###############################################################################
-# Query records in VCF and build matrix
+# Check inputs
 ###############################################################################
-eprint("Parsing VCF records...") if args.verbose else None
-numsites_keep = 0
-numsites_skip = 0
-chrseq = '1'
+# vcf
+if(args.inputvcf.lower().endswith(('.vcf', '.vcf.gz')) or args.inputvcf == "-"):
+    if args.verbose:
+        eprint("Input detected as VCF file or VCF from STDIN")
+    data = processVCF(args, subtypes_dict)
+    M = data.M
+    samples = data.samples
 
-batchit = 0
-sample_batch = []
-subtype_batch = []
-# from collections import Counter
-# Counter(sings)
-for record in vcf_reader:
-    # debug--testing performance for triallelic sites
-    # if(record.POS==91628): # triallelic site
-    # if(record.POS==63549):
-    #     eprint(acval)
-    #     eprint(record.gt_types.tolist().index(1))
+# M output by sample
+elif args.inputvcf.lower().endswith('m_samples.txt'):
 
-    # Filter by allele count, SNP status, and FILTER column
-    if len(record.ALT[0])==1:
-        # eprint("SNP check: PASS")
-        # acval = int(record.INFO['AC'][0])
-        # eprint(record.CHROM, record.POS, record.REF, record.ALT[0], acval, record.FILTER)
-        if ((record.is_snp and record.FILTER is None) or args.nofilter):
-            # eprint("Singleton check: PASS")
-            # check and update chromosome sequence
-            if record.CHROM != chrseq:
-                if args.verbose:
-                    eprint("Loading chromosome", record.CHROM, "reference...")
-                # seq = fasta_reader[record.CHROM].seq
-                # seq = SeqIO.to_dict(fasta_reader)[record.CHROM].seq
-                sequence = fasta_reader[record.CHROM]
-                chrseq = record.CHROM
+    colnames = ["ID"]
+    M_colnames = colnames + list(sorted(subtypes_dict.keys()))
+    M_out = np.array([M_colnames])
 
-            mu_type = record.REF + str(record.ALT[0])
-            category = getCategory(mu_type)
-            lseq = sequence[record.POS-2:record.POS+1].seq
-            motif_a = getMotif(record.POS, lseq)
-            subtype = str(category + "-" + motif_a)
-            # eprint(record.CHROM, record.POS, record.REF, record.ALT[0], subtype)
-            # use quick singleton lookup for default QC option
-            if not args.nofilter:
-                # sample=samples[record.gt_types.tolist().index(1)]
-                # eprint(record.gt_types.tolist())
-                # sample = record.gt_types.tolist().index(1)
-                # sample=np.where(record.gt_types == 1)[0]
-                # eprint(sample)
-                st = subtypes_dict[subtype]
+    # file_list = args.inputvcf
+    with open(args.inputvcf) as f:
+        file_list = f.read().splitlines()
+    for mfile in file_list:
+        samples = np.loadtxt(mfile,
+            # dtype={'names': ('IDs'), 'formats': ('S16')},
+            dtype='S16',
+            skiprows=1,
+            delimiter='\t',
+            usecols=(0,))
 
-                asbatch = False
-                if asbatch:
-                    # M[sample, subtypes_dict[subtype]] += 1
-                    batchit += 1
-                    sample = record.gt_types.tolist().index(1)
-                    # sample_gts = record.gt_types.tolist()
+        M_it = np.loadtxt(mfile, skiprows=1, usecols=range(1,97))
+        M_it = np.concatenate((np.array([samples]).T, M_it), axis=1)
+        M_out = np.concatenate((M_out, M_it), axis=0)
 
-                    sample_batch.append(sample)
-                    subtype_batch.append(st)
+    M = M_out[1:21,1:97].astype(np.float)
+    # read/combine files from matrix file list into new M
 
-                    if batchit == 10000:
-                        M[sample_batch, subtype_batch] += 1
-                        batchit = 0
-                else:
-                    # M[sample, st] += 1
-                    M[:,st] = M[:,st]+record.gt_types
-            else:
-                # sample=samples[record.gt_types.tolist().index(1)]
-                samples_het = np.where(record.gt_types == 1)[0]
-                M[samples_het, subtypes_dict[subtype]] += 1
-                # for s1 in samples_het:
-                #     M[s1, subtypes_dict[subtype]] += 1
+# M output by region
+# elif args.inputvcf.lower().endswith('m_regions.txt'):
 
-                samples_hom = np.where(record.gt_types == 2)[0]
-                M[samples_hom, subtypes_dict[subtype]] += 2
-                # for s2 in samples_hom:
-                #     M[s2, subtypes_dict[subtype]] += 2
-
-                # eprint(record.POS, s2)
-                # sample_gts=record.gt_types.tolist()
-                # s = 0;
-                # for gt in sample_gts:
-                #     if gt == 1:
-                #         M[s, subtypes_dict[subtype]] += 1
-                #
-                #         # if samples[s] == "1497-RMM-0968":
-                #         #     print(record.CHROM, record.POS,
-                #         #         record.REF, record.ALT[0], samples[s], subtype)
-                #
-                #     elif gt == 2:
-                #         M[s, subtypes_dict[subtype]] += 2
-                #     s += 1
-
-            numsites_keep += 1
-        else:
-            numsites_skip += 1 #
-
-        if args.verbose:
-            if (numsites_keep > 0 and numsites_keep%10000==0):
-                eprint("Processed", numsites_keep, "sites")
-
-if numsites_keep == 0:
-    eprint("No SNVs found. Please check your VCF file")
-    sys.exit()
-
-if args.verbose:
-    eprint(numsites_keep, "sites kept")
-    eprint(numsites_skip, "sites skipped")
-
-vcf_reader.close()
-
+else:
+    eprint("invalid input detected. See documentation")
 ###############################################################################
 # Run NMF on final matrix
 ###############################################################################
@@ -248,40 +162,60 @@ vcf_reader.close()
 # drop rows with all zeroes
 # M = M[~(M==0).all(1)]
 
-# Convert count per entry to fraction of total per sample
-M_f = M/(M.sum(axis=1)+1e-8)[:,None]
-
-model = NMF(n_components=args.rank, init='random', random_state=0)
-model.fit(M_f)
-
-# Get loadings of subtypes per signature
-H = model.components_
-
-# Get signature contributions per sample
-W = model.fit_transform(M)
-W = W/W.sum(axis=1)[:,None]
-
-# W= W[~np.isnan(W).any(axis=1)]
-
-colmeans = np.mean(W, axis=0)
-colstd = np.std(W, axis=0)
-upper = colmeans+2*colstd
-lower = colmeans-2*colstd
-
-# output NMF results
-if(args.diagnostics or args.autodiagnostics):
+###############################
+# M matrix (counts)
+###############################
+if args.mmatrixname != "NMF_M_spectra":
     if args.verbose:
-        eprint("Mean signature contributions: ", colmeans)
-        eprint("StdDev:", colstd)
-        eprint("Upper:", upper)
-        eprint("Lower:", lower)
-        eprint("Writing NMF results")
-    diagWrite(projdir, M, M_f, W, H, subtypes_dict, samples, args)
+        eprint("Saving M matrix (observed spectra counts)")
+
+    colnames = ["ID"]
+    M_colnames = colnames + list(sorted(subtypes_dict.keys()))
+
+    # add ID as first column
+    M_fmt = np.concatenate((np.array([samples]).T, M), axis=1)
+
+    # add header
+    M_fmt = np.concatenate((np.array([M_colnames]), M_fmt), axis=0)
+
+    # write out
+    M_path = projdir + "/" + args.mmatrixname + ".txt"
+    np.savetxt(M_path, M_fmt, delimiter='\t', fmt="%s")
+else:
+    # Convert count per entry to fraction of total per sample
+    M_f = M/(M.sum(axis=1)+1e-8)[:,None]
+
+    model = NMF(n_components=args.rank, init='random', random_state=0)
+    model.fit(M_f)
+
+    # Get loadings of subtypes per signature
+    H = model.components_
+
+    # Get signature contributions per sample
+    W = model.fit_transform(M_f)
+    W = W/(W.sum(axis=1)+1e-8)[:,None]
+
+    # W= W[~np.isnan(W).any(axis=1)]
+
+    colmeans = np.mean(W, axis=0)
+    colstd = np.std(W, axis=0)
+    upper = colmeans+2*colstd
+    lower = colmeans-2*colstd
+
+    # output NMF results
+    if(args.diagnostics or args.autodiagnostics):
+        if args.verbose:
+            eprint("Mean signature contributions: ", colmeans)
+            eprint("StdDev:", colstd)
+            eprint("Upper:", upper)
+            eprint("Lower:", lower)
+            eprint("Writing NMF results")
+        diagWrite(projdir, M, M_f, W, H, subtypes_dict, samples, args)
 
 ###############################################################################
 # Write keep and drop lists
 ###############################################################################
-if not args.nofilter:
+if(not args.nofilter and not args.mmatrixname):
     keep_samples = []
     drop_samples = []
     # Check for outliers
@@ -301,8 +235,8 @@ if not args.nofilter:
     drop_path = projdir + "/drop_samples.txt"
     np.savetxt(drop_path, drop_samples, delimiter='\t', fmt="%s")
 else:
-    eprint("You are running with the --nofilter option. \
-        Keep and drop lists will not be generated")
+    eprint("You are running with the --nofilter or --mmatrixname option. " +
+        "Keep and drop lists will not be generated")
 
 ###############################################################################
 # write output vcf
@@ -325,6 +259,9 @@ if args.outputtovcf:
 
     vcf.close()
 
+###############################################################################
+# auto-generate diagnostic report in R
+###############################################################################
 if args.autodiagnostics:
     cmd = "diagnostics/doomsayer_diagnostics.r " + projdir + "/config.yaml"
     if args.verbose:
