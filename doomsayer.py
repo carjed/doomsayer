@@ -74,8 +74,9 @@ parser.add_argument("-m", "--mmatrixname",
                     default="NMF_M_spectra")
 
 parser.add_argument("-s", "--samplefile",
-                    help="file containing sample IDs to include (one per line) \
-                        -faster than pre-filtering and piping with bcftools",
+                    help="file with sample IDs to include (one per line) \
+                        this will be much faster than pre-filtering and \
+                        piping with bcftools",
                     nargs='?',
                     type=str)
 
@@ -98,7 +99,7 @@ parser.add_argument("-v", "--verbose",
 args = parser.parse_args()
 
 ###############################################################################
-# Initialize project directory fasta and vcf files
+# Initialize project directory and index subtypes
 ###############################################################################
 projdir = os.path.realpath(args.projectdir)
 if args.verbose:
@@ -137,18 +138,18 @@ elif args.inputvcf.lower().endswith('m_samples.txt'):
         file_list = f.read().splitlines()
     for mfile in file_list:
         samples = np.loadtxt(mfile,
-            # dtype={'names': ('IDs'), 'formats': ('S16')},
             dtype='S16',
             skiprows=1,
             delimiter='\t',
             usecols=(0,))
 
-        M_it = np.loadtxt(mfile, skiprows=1, usecols=range(1,97))
+        M_it = np.loadtxt(mfile, skiprows=1, usecols=range(1,len(M_colnames)))
         M_it = np.concatenate((np.array([samples]).T, M_it), axis=1)
         M_out = np.concatenate((M_out, M_it), axis=0)
 
-    M = M_out[1:21,1:97].astype(np.float)
-    # read/combine files from matrix file list into new M
+    M = np.delete(M_out, 0, 0)
+    M = np.delete(M, 0, 1)
+    M = M.astype(np.float)
 
 # M output by region
 # elif args.inputvcf.lower().endswith('m_regions.txt'):
@@ -215,7 +216,10 @@ else:
 ###############################################################################
 # Write keep and drop lists
 ###############################################################################
-if(not args.nofilter and not args.mmatrixname):
+if(args.nofilter or args.mmatrixname != "NMF_M_spectra"):
+    eprint("You are running with the --nofilter or --mmatrixname option. " +
+        "Keep and drop lists will not be generated")
+else:
     keep_samples = []
     drop_samples = []
     # Check for outliers
@@ -234,9 +238,6 @@ if(not args.nofilter and not args.mmatrixname):
 
     drop_path = projdir + "/drop_samples.txt"
     np.savetxt(drop_path, drop_samples, delimiter='\t', fmt="%s")
-else:
-    eprint("You are running with the --nofilter or --mmatrixname option. " +
-        "Keep and drop lists will not be generated")
 
 ###############################################################################
 # write output vcf
