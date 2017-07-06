@@ -143,7 +143,6 @@ subtype_batch = []
 # from collections import Counter
 # Counter(sings)
 for record in vcf_reader:
-
     # debug--testing performance for triallelic sites
     # if(record.POS==91628): # triallelic site
     # if(record.POS==63549):
@@ -169,7 +168,7 @@ for record in vcf_reader:
             lseq = sequence[record.POS-2:record.POS+1].seq
             motif_a = getMotif(record.POS, lseq)
             subtype = str(category + "-" + motif_a)
-
+            eprint(record.CHROM, record.POS, record.REF, record.ALT[0], subtype)
             # use quick singleton lookup for default QC option
             if not args.nofilter:
                 # sample=samples[record.gt_types.tolist().index(1)]
