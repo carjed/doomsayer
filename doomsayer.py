@@ -148,9 +148,9 @@ for record in vcf_reader:
     # if(record.POS==63549):
     #     eprint(acval)
     #     eprint(record.gt_types.tolist().index(1))
-    eprint(record.CHROM, record.POS, record.REF, record.ALT[0])
+    # eprint(record.CHROM, record.POS, record.REF, record.ALT[0])
     # Filter by allele count, SNP status, and FILTER column
-    if record.is_snp:
+    if len(record.ALT)==1:
         acval = record.INFO['AC']
         if ((acval==1 and record.FILTER is None) or args.nofilter):
 
