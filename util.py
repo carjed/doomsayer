@@ -85,8 +85,8 @@ def indexSubtypes(args):
     i = 0
     subtypes_dict = {}
     for subtype in sorted(subtypes_list):
-            subtypes_dict[subtype] = i
-            i += 1
+        subtypes_dict[subtype] = i
+        i += 1
     return subtypes_dict
 
 ###############################################################################

@@ -137,7 +137,10 @@ numsites_keep = 0
 numsites_skip = 0
 chrseq = '1'
 
-batchit = 0
+# batchit = 0
+# batchcounts = []
+# from collections import Counter
+# Counter(sings)
 for record in vcf_reader:
 
     # debug--testing performance for triallelic sites
@@ -147,65 +150,65 @@ for record in vcf_reader:
     #     eprint(record.gt_types.tolist().index(1))
 
     # Filter by allele count, SNP status, and FILTER column
-    # if record.is_snp:
-    acval = record.INFO['AC']
-    if ((acval==1 and record.FILTER is None) or args.nofilter):
+    if record.is_snp:
+        acval = record.INFO['AC']
+        if ((acval==1 and record.FILTER is None) or args.nofilter):
 
-        # check and update chromosome sequence
-        if record.CHROM != chrseq:
-            if args.verbose:
-                eprint("Loading chromosome", record.CHROM, "reference...")
-            # seq = fasta_reader[record.CHROM].seq
-            # seq = SeqIO.to_dict(fasta_reader)[record.CHROM].seq
-            sequence = fasta_reader[record.CHROM]
-            chrseq = record.CHROM
+            # check and update chromosome sequence
+            if record.CHROM != chrseq:
+                if args.verbose:
+                    eprint("Loading chromosome", record.CHROM, "reference...")
+                # seq = fasta_reader[record.CHROM].seq
+                # seq = SeqIO.to_dict(fasta_reader)[record.CHROM].seq
+                sequence = fasta_reader[record.CHROM]
+                chrseq = record.CHROM
 
-        mu_type = record.REF + str(record.ALT[0])
-        category = getCategory(mu_type)
-        lseq = sequence[record.POS-2:record.POS+1].seq
-        motif_a = getMotif(record.POS, lseq)
-        subtype = str(category + "-" + motif_a)
+            mu_type = record.REF + str(record.ALT[0])
+            category = getCategory(mu_type)
+            lseq = sequence[record.POS-2:record.POS+1].seq
+            motif_a = getMotif(record.POS, lseq)
+            subtype = str(category + "-" + motif_a)
 
-        # use quick singleton lookup for default QC option
-        if not args.nofilter:
-            sample=samples[record.gt_types.tolist().index(1)]
-            M[samples_dict[sample], subtypes_dict[subtype]] += 1
+            # use quick singleton lookup for default QC option
+            if not args.nofilter:
+                sample=samples[record.gt_types.tolist().index(1)]
+                # M[samples_dict[sample], subtypes_dict[subtype]] += 1
 
-            # sample=np.where(record.gt_types == 1)[0]
-            # M[sample, subtypes_dict[subtype]] += 1
+                # sample=np.where(record.gt_types == 1)[0]
+                # M[sample, subtypes_dict[subtype]] += 1
+            else:
+                # sample=samples[record.gt_types.tolist().index(1)]
+                samples_het = np.where(record.gt_types == 1)[0]
+                M[samples_het, subtypes_dict[subtype]] += 1
+                # for s1 in samples_het:
+                #     M[s1, subtypes_dict[subtype]] += 1
+
+                samples_hom = np.where(record.gt_types == 2)[0]
+                M[samples_hom, subtypes_dict[subtype]] += 2
+                # for s2 in samples_hom:
+                #     M[s2, subtypes_dict[subtype]] += 2
+
+                # eprint(record.POS, s2)
+                # sample_gts=record.gt_types.tolist()
+                # s = 0;
+                # for gt in sample_gts:
+                #     if gt == 1:
+                #         M[s, subtypes_dict[subtype]] += 1
+                #
+                #         # if samples[s] == "1497-RMM-0968":
+                #         #     print(record.CHROM, record.POS,
+                #         #         record.REF, record.ALT[0], samples[s], subtype)
+                #
+                #     elif gt == 2:
+                #         M[s, subtypes_dict[subtype]] += 2
+                #     s += 1
+
+            numsites_keep += 1
         else:
-            # sample=samples[record.gt_types.tolist().index(1)]
-            samples_het = np.where(record.gt_types == 1)[0]
-            M[samples_het, subtypes_dict[subtype]] += 1
-            # for s1 in samples_het:
-            #     M[s1, subtypes_dict[subtype]] += 1
-
-            samples_hom = np.where(record.gt_types == 2)[0]
-            M[samples_hom, subtypes_dict[subtype]] += 2
-            # for s2 in samples_hom:
-            #     M[s2, subtypes_dict[subtype]] += 2
-
-            # eprint(record.POS, s2)
-            # sample_gts=record.gt_types.tolist()
-            # s = 0;
-            # for gt in sample_gts:
-            #     if gt == 1:
-            #         M[s, subtypes_dict[subtype]] += 1
-            #
-            #         # if samples[s] == "1497-RMM-0968":
-            #         #     print(record.CHROM, record.POS,
-            #         #         record.REF, record.ALT[0], samples[s], subtype)
-            #
-            #     elif gt == 2:
-            #         M[s, subtypes_dict[subtype]] += 2
-            #     s += 1
-
-        numsites_keep += 1
-    else:
-        numsites_skip += 1 #
+            numsites_skip += 1 #
 
         if args.verbose:
-            if (numsites_keep > 0 and numsites_keep%100000==0):
+            if (numsites_keep > 0 and numsites_keep%10000==0):
                 eprint("Processed", numsites_keep, "sites")
 
 if numsites_keep == 0:
@@ -278,7 +281,8 @@ if not args.nofilter:
     drop_path = projdir + "/drop_samples.txt"
     np.savetxt(drop_path, drop_samples, delimiter='\t', fmt="%s")
 else:
-    eprint("You are running with the --nofilter option. Keep and drop lists will not be generated")
+    eprint("You are running with the --nofilter option. \
+        Keep and drop lists will not be generated")
 
 ###############################################################################
 # write output vcf
