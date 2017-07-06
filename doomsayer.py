@@ -152,7 +152,7 @@ for record in vcf_reader:
     # Filter by allele count, SNP status, and FILTER column
     if len(record.ALT[0])==1:
         eprint("SNP check: PASS")
-        acval = record.INFO['AC']
+        acval = int(record.INFO['AC'])
         eprint(record.CHROM, record.POS, record.REF, record.ALT[0], acval, record.FILTER)
         if ((acval==1 and record.FILTER is None) or args.nofilter):
             eprint("Singleton check: PASS")
