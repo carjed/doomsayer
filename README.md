@@ -164,7 +164,7 @@ As far as possible, all records present in the original input will be preserved 
 #### Run NMF on all variants in the VCF
 The `--nofilter` option will suppress creation of the keep and drop lists and include **all** biallelic SNVs from the input VCF file in the NMF analysis (even those that fail a filter).
 
-This option is useful in instances where interindividual variation is expected, and we wish to use NMF simply to characterize this heterogeneity (e.g., [comparing somatic mutation signatures in tumor samples](http://cancer.sanger.ac.uk/cosmic/signatures)). This option should usually be used in conjunction with the [`--diagnostics`](#nmf-output) flag.
+This option is useful in instances where interindividual variation is expected, and we wish to use NMF simply to characterize this heterogeneity (e.g., [comparing somatic mutation signatures in tumor samples](http://cancer.sanger.ac.uk/cosmic/signatures)), or where we have used another tool to pre-filter the set of variants to analyze. This option should usually be used in conjunction with the [`--diagnostics`](#nmf-output) flag.
 
 #### NMF output
 if you wish to analyze the results of the NMF decomposition, you must run Doomsayer with the `--diagnostics` option enabled. This will write three data files from the NMF decomposition to the output directory:
@@ -180,15 +180,33 @@ python doomsayer.py \
   --diagnostics
 ```
 
+#### Write only M matrix with custom name
+If Doomsayer is run with the `--mmatrixname [name]` option, it will only write out the mutation spectra matrix as `[name].txt` and skip the NMF decomposition and generation of keep/drop lists. This is useful in cases where large datasets are spread across several files and we wish to take advantage of the [aggregation](parallelization) functionality of Doomsayer.
+
 #### Diagnostic reports
 The `--diagnostics` flag will also create a YAML configuration file that can optionally be passed to an R script for generating more detailed diagnostic reports from the NMF data files. See the [diagnostics](diagnostics) directory for further documentation and usage examples.
 
 You can also change this to `--autodiagnostics` to have Doomsayer attempt to automatically generate the reports.
 
+### Parallelization
+Doomsayer does not explicitly implement multithreaded processing, but can be run independently and simultaneously on subsets of the same dataset and then act as an aggregator for these outputs. This is particularly necessary for very large datasets with millions of variants and thousands of samples.
+
+The `doomsayer_by_chr.sh` script provides an example of how to implement this function. This shell script will simultaneously start 22 Doomsayer runs in the background (one per chromosome). Each run is specified with the `--mmatrixname chrN`, option, so only the mutation spectra matrices for each chromsomse are written, each with a unique file name.
+
+This script also writes a file named `m_regions.txt` containing the file names/paths of the per-chromosome mutation spectra matrices.
+
+Once the per-chromosome runs are complete, this file can then be passed to Doomsayer with the `--inputfile m_regions.txt` option--when Doomsayer detects that the input file is not a VCF, it will enter a routine to aggregate the mutation spectra matrices listed in `m_regions.txt` into a single M matrix, and then proceed with the NMF decomposition (and optional diagnostics) as normal.
+
+<!-- If your data is split into N genomic regions (or if different files contain genotypes for N nonoverlapping subsets of individuals), you can run Doomsayer on each subset individually with a unique name for the M matrix, producing N unique matrix outputs.
+
+ into Doomsayer may not always be practical, so we enabled Doomsayer to act as an aggregator for output from smaller datasets. -->
+
 ### Other options
 -------------
+- `-s [SAMPLEFILE], --samplefile [SAMPLEFILE]` If you only wish to run Doomsayer on a subset of samples in the input VCF, this option will read a list of sample IDs to keep (one per line) and skip all other samples in the VCF. This will be much faster than pre-filtering the VCF with another tool (e.g., bcftools) and piping the input to Doomsayer.
 
-- `-r {2,3,4,5,6,7,8,9}, --rank {2,3,4,5,6,7,8,9}` This option specifies the rank of the NMF decomposition (up to 10). The default rank (3) should be sufficient for most QC applications, but somatic signature analysis will likely require a higher rank.
+
+- `-r {2,3,4,5,6,7,8,9,10}, --rank {2,3,4,5,6,7,8,9,10}` This option specifies the rank of the NMF decomposition (up to 10). The default rank (3) should be sufficient for most QC applications, but if you are using Doomsayer for somatic mutation signature analysis, you will likely require a higher rank.
 
 
 - `-l {1,3,5,7}, --length {1,3,5,7}` This option specifies the motif length to be considered in determining the mutation subtypes. The default (3) produces 96 3-mer subtypes, which is standard for NMF-based mutation signature analysis. Higher values are currently experimental, and will likely lead to extremely noisy or unreliable results. Setting `-l 1` will improve speed, but reduces the resolution of the NMF input matrix, and may not differentiate outliers as accurately.
@@ -197,7 +215,7 @@ You can also change this to `--autodiagnostics` to have Doomsayer attempt to aut
 - `-v, --verbose` This enables verbose logging to the STDERR stream
 
 
-- `-h --help` Access a brief description of all available options and exit:
+- `-h --help` Access a brief description of all available options and exit
 
 
 ## Demonstration
@@ -249,7 +267,7 @@ If you encounter any issues with reading in a VCF file, first confirm that it is
 Errors may occur if the chromosome records in your fasta reference file are formatted differently than the CHROM field of your VCF (e.g., if the fasta header is formatted as `>chrN`). You will need to modify the records in one or the other to be consistent.
 
 ### RMarkdown reports are not rendering
-Rendering RMarkdown reports directly from the command line requires the pandoc binaries. If you have sudo access, running `sudo setup.sh` will look for an installation of RStudio or RStudio Server, and attempt to soft-link the included pandoc binaries from `/usr/lib/rstudio/bin/` or `/usr/lib/rstudio-server/bin/` to `/usr/local/bin`. Failing this, the setup will attempt to install compatible standalone pandoc binaries: `apt-get install pandoc pandoc-citeproc`. If you do not have sudo access and RStudio is installed on your server, you can try adding the RStudio paths to the $PATH variable in `~/.bashrc`.
+Rendering RMarkdown reports directly from the command line requires the pandoc binaries be accessible from your system path. If you have sudo access, running `sudo setup.sh` will look for an installation of RStudio or RStudio Server, and attempt to soft-link the included pandoc binaries from `/usr/lib/rstudio/bin/` or `/usr/lib/rstudio-server/bin/` to `/usr/local/bin`. Failing this, the setup will attempt to install compatible standalone pandoc binaries: `apt-get install pandoc pandoc-citeproc`. If you do not have sudo access and RStudio is installed on your server, you can try adding the RStudio paths to the $PATH variable in `~/.bashrc`.
 
 Additional information for enabling command-line RMarkdown/pandoc rendering can be found [here](https://github.com/rstudio/rmarkdown/blob/master/PANDOC.md).
 

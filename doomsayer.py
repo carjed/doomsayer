@@ -51,7 +51,7 @@ parser.add_argument("-n", "--nofilter",
                     help="disables generation of keep/drop lists, \
                         turns off default filtering criteria, \
                         and evaluates all sites in the input VCF. \
-                        Useful if analyzing somatic data or pre-filtering \
+                        (Useful if analyzing somatic data or pre-filtering \
                         with another tool)",
                     action="store_true")
 
@@ -67,16 +67,13 @@ parser.add_argument("-ad", "--autodiagnostics",
                     action="store_true")
 
 parser.add_argument("-m", "--mmatrixname",
-                    help="custom filename for M matrix [without extension] \
-                        -useful for parallelization",
+                    help="custom filename for M matrix [without extension]",
                     nargs='?',
                     type=str,
                     default="NMF_M_spectra")
 
 parser.add_argument("-s", "--samplefile",
-                    help="file with sample IDs to include (one per line) \
-                        this will be much faster than pre-filtering and \
-                        piping with bcftools",
+                    help="file with sample IDs to include (one per line)",
                     nargs='?',
                     type=str)
 
@@ -128,7 +125,8 @@ if(args.inputvcf.lower().endswith(('.vcf', '.vcf.gz')) or args.inputvcf == "-"):
 
 # M output by sample
 elif args.inputvcf.lower().endswith('m_samples.txt'):
-
+    if args.verbose:
+        eprint("Aggregating sample subset spectra matrices")
     colnames = ["ID"]
     M_colnames = colnames + list(sorted(subtypes_dict.keys()))
     M_out = np.array([M_colnames])
@@ -152,10 +150,33 @@ elif args.inputvcf.lower().endswith('m_samples.txt'):
     M = M.astype(np.float)
 
 # M output by region
-# elif args.inputvcf.lower().endswith('m_regions.txt'):
+elif args.inputvcf.lower().endswith('m_regions.txt'):
+    if args.verbose:
+        eprint("Aggregating regional subset spectra matrices")
+    colnames = ["ID"]
+    M_colnames = colnames + list(sorted(subtypes_dict.keys()))
+    M_out = np.array([M_colnames])
 
+    # file_list = args.inputvcf
+    with open(args.inputvcf) as f:
+        file_list = f.read().splitlines()
+    for mfile in file_list:
+        samples = np.loadtxt(mfile,
+            dtype='S16',
+            skiprows=1,
+            delimiter='\t',
+            usecols=(0,))
+
+        M_it = np.loadtxt(mfile, skiprows=1, usecols=range(1,len(M_colnames)))
+        M_it = np.concatenate((np.array([samples]).T, M_it), axis=1)
+        M_out = np.concatenate((M_out, M_it), axis=0)
+
+    M = np.delete(M_out, 0, 0)
+    M = np.delete(M, 0, 1)
+    M = M.astype(np.float)
 else:
     eprint("invalid input detected. See documentation")
+
 ###############################################################################
 # Run NMF on final matrix
 ###############################################################################
@@ -227,7 +248,6 @@ else:
     for n in W:
         if(np.greater(n, upper).any() or np.less(n, lower).any()):
             drop_samples.append(samples[i])
-            # eprint("Adding", samples[i], "to drop list") if args.verbose else None
         else:
             keep_samples.append(samples[i])
         i += 1
@@ -242,7 +262,9 @@ else:
 ###############################################################################
 # write output vcf
 ###############################################################################
-if args.outputtovcf:
+if(args.outputtovcf and
+        (args.inputvcf.lower().endswith(('.vcf', '.vcf.gz')) or
+        args.inputvcf == "-")):
     eprint("Filtering VCF by drop list...") if args.verbose else None
     keep_test = keep_samples[0:10]
     vcf = VCF(args.inputvcf, samples=keep_test, mode='rb')
