@@ -77,6 +77,10 @@ parser.add_argument("-s", "--samplefile",
                     nargs='?',
                     type=str)
 
+parser.add_argument("-ns", "--noscale",
+                    help="do not scale H and W matrices",
+                    action="store_true")
+
 parser.add_argument("-r", "--rank",
                     help="rank for NMF decomposition",
                     type=int,
@@ -204,18 +208,18 @@ if args.mmatrixname != "NMF_M_spectra":
     M_path = projdir + "/" + args.mmatrixname + ".txt"
     np.savetxt(M_path, M_fmt, delimiter='\t', fmt="%s")
 else:
-    # Convert count per entry to fraction of total per sample
     M_f = M/(M.sum(axis=1)+1e-8)[:,None]
-
     model = NMF(n_components=args.rank, init='random', random_state=0)
     model.fit(M_f)
 
     # Get loadings of subtypes per signature
-    H = model.components_
-
     # Get signature contributions per sample
+    H = model.components_
     W = model.fit_transform(M_f)
-    W = W/(W.sum(axis=1)+1e-8)[:,None]
+
+    if not args.noscale:
+        H = H/(H.sum(axis=1)+1e-8)[:,None]
+        W = W/(W.sum(axis=1)+1e-8)[:,None]
 
     # W= W[~np.isnan(W).any(axis=1)]
 

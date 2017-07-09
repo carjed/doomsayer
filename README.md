@@ -109,7 +109,7 @@ The VCF input can either be read from a file on disk or piped from STDIN (using 
 If your data are spread across multiple files (e.g., one VCF per chromosome), you will need to combine them into a single VCF file using [bcftools](https://samtools.github.io/bcftools/) or a similar utility. The following command demonstrates how to concatenate a set of VCFs with bcftools and pipe the output to Doomsayer:
 
 ```{sh id:"chj4lkh8gx"}
-bcftools concatenate /path/to/input/vcfs/chr*.vcf.gz | \
+bcftools concat /path/to/input/vcfs/chr*.vcf.gz | \
   python /path/to/doomsayer.py \
     --inputvcf - \
     --fastafile /path/to/genome.fasta

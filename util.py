@@ -7,6 +7,9 @@ import argparse
 import itertools
 import timeit
 import collections
+import cyvcf2 as vcf
+from cyvcf2 import VCF
+from cyvcf2 import Writer
 import numpy as np
 from pyfaidx import Fasta
 # from Bio import SeqIO
@@ -45,9 +48,10 @@ def getMotif(pos, sequence):
     # motif = Seq(sequence[pos-2:pos+1].seq, IUPAC.unambiguous_dna)
     motif = Seq(sequence, IUPAC.unambiguous_dna)
     altmotif = motif.reverse_complement()
+    central_base = (len(motif)-1)//2
 
-    m1 = motif[1]
-    m2 = altmotif[1]
+    m1 = motif[central_base]
+    m2 = altmotif[central_base]
 
     if m1 < m2:
         motif_a = motif
@@ -66,37 +70,40 @@ def indexSubtypes(args):
     motiflength = args.length
     flank = (motiflength-1)//2
 
-    kmers = itertools.product(bases, repeat=motiflength-1)
+    if motiflength > 1:
+        kmers = itertools.product(bases, repeat=motiflength-1)
 
-    subtypes_list = []
-    # i = 0
-    for kmer in kmers:
-        kmerstr = ''.join(kmer)
-        for category in categories:
-            ref = category[0]
-            # subtype = category + "-" + kmer[0] + ref + kmer[1]
-            if motiflength > 1:
+        subtypes_list = []
+        # i = 0
+        for kmer in kmers:
+            kmerstr = ''.join(kmer)
+            # eprint(kmerstr)
+            for category in categories:
+                ref = category[0]
+                # subtype = category + "-" + kmer[0] + ref + kmer[1]
+
                 subtype = category + "-" \
                     + kmerstr[0:flank] + ref + kmerstr[flank:(motiflength-1)]
-            else:
-                subtype = category
 
-            subtypes_list.append(subtype)
+
+                subtypes_list.append(subtype)
+    else:
+        ext = ["-A", "-C"]
+        extr = list(np.repeat(ext,3))
+        subtypes_list = [m+n for m,n in zip(categories,extr)]
+        # eprint(subtypes_list)
 
     i = 0
     subtypes_dict = {}
     for subtype in sorted(subtypes_list):
         subtypes_dict[subtype] = i
         i += 1
+    # eprint(subtypes_dict)
     return subtypes_dict
 
 def processVCF(args, subtypes_dict):
     eprint("Initializing reference genome...") if args.verbose else None
     fasta_reader = Fasta(args.fastafile, read_ahead=1000000)
-
-    import cyvcf2 as vcf
-    from cyvcf2 import VCF
-    from cyvcf2 import Writer
 
     # 'demo/input/keep.txt'
     if args.samplefile:
@@ -157,9 +164,9 @@ def processVCF(args, subtypes_dict):
             # eprint("SNP check: PASS")
             acval = record.INFO['AC']
             # eprint(record.POS, acval)
-            # eprint(record.CHROM, record.POS, record.REF, record.ALT[0], acval, record.FILTER)
-            if ((acval==1 and record.FILTER is None) or args.nofilter):
 
+            if ((acval==1 and record.FILTER is None) or args.nofilter):
+                # eprint(record.CHROM, record.POS, record.REF, record.ALT[0], acval, record.FILTER)
                 # check and update chromosome sequence
                 if record.CHROM != chrseq:
                     if args.verbose:
@@ -168,9 +175,14 @@ def processVCF(args, subtypes_dict):
                     sequence = fasta_reader[record.CHROM]
                     chrseq = record.CHROM
 
+                nbp = (args.length-1)//2
                 mu_type = record.REF + str(record.ALT[0])
                 category = getCategory(mu_type)
-                lseq = sequence[record.POS-2:record.POS+1].seq
+                if nbp > 0:
+                    lseq = sequence[record.POS-(nbp+1):record.POS+nbp].seq
+                else:
+                    lseq = sequence[record.POS-1].seq
+                    # eprint("lseq:", lseq)
                 motif_a = getMotif(record.POS, lseq)
                 subtype = str(category + "-" + motif_a)
                 # eprint(record.CHROM, record.POS, record.REF, record.ALT[0], subtype)
