@@ -144,7 +144,7 @@ def processVCF(args, subtypes_dict):
     eprint("Parsing VCF records...") if args.verbose else None
     numsites_keep = 0
     numsites_skip = 0
-    chrseq = '1'
+    chrseq = '0'
 
     batchit = 0
     sample_batch = []
