@@ -1,4 +1,11 @@
-Sys.setenv(RSTUDIO_PANDOC="/usr/lib/rstudio/bin/pandoc")
+rstdir <- "/usr/lib/rstudio/bin/pandoc"
+rstsrvdir <- "/usr/lib/rstudio-server/bin/pandoc"
+
+if(dir.exists(rstdir)){
+  Sys.setenv(RSTUDIO_PANDOC=rstdir)
+} else if(dir.exists(rstsrvdir)){
+  Sys.setenv(RSTUDIO_PANDOC=rstsrvdir)
+}
 
 # check and load packages
 packages <- c("rmarkdown", "knitr")

@@ -64,7 +64,7 @@ Heatmap to visualize mutational spectra across all samples
 # overall distribution
 spectra_long <- spectra %>%
   gather(subtype, count, 2:ncol(spectra)) %>%
-  separate(subtype, c("category", "motif"), sep = "[.]")
+  separate(subtype, c("category", "motif"), sep = "[-]")
 
 # heatmap(as.matrix(spectra[,-1]))
 
@@ -88,7 +88,7 @@ These plots shows the total number of observations in each subtype, combined acr
 # overall distribution
 spectra2 <- spectra %>%
   gather(subtype, count, 2:ncol(spectra)) %>%
-  separate(subtype, c("category", "motif"), sep = "[.]") %>%
+  separate(subtype, c("category", "motif"), sep = "[-]") %>%
   group_by(category, motif) %>%
   summarise(count=sum(count))
 
@@ -111,7 +111,7 @@ ggplot(spectra2, aes(x=motif, y=count, fill=category))+
 spectra2_keep <- spectra %>%
   dplyr::filter(ID %in% keep_ids$V1) %>%
   gather(subtype, count, 2:ncol(spectra)) %>%
-  separate(subtype, c("category", "motif"), sep = "[.]") %>%
+  separate(subtype, c("category", "motif"), sep = "[-]") %>%
   group_by(category, motif) %>%
   summarise(count=sum(count))
   # gather(subtype, count, 2:ncol(spectra)) %>%
@@ -138,7 +138,7 @@ ggplot(spectra2_keep, aes(x=motif, y=count, fill=category))+
 spectra2_drop <- spectra %>%
   dplyr::filter(!(ID %in% keep_ids$V1)) %>%
   gather(subtype, count, 2:ncol(spectra)) %>%
-  separate(subtype, c("category", "motif"), sep = "[.]") %>%
+  separate(subtype, c("category", "motif"), sep = "[-]") %>%
   group_by(category, motif) %>%
   summarise(count=sum(count))
   # gather(subtype, count, 2:ncol(spectra)) %>%
@@ -170,7 +170,7 @@ Describes how each mutation subtype is loaded into the r signatures
 # signature loadings
 sig_loads_long <- sig_loads %>%
    gather(subtype, loading, 2:ncol(sig_loads)) %>%
-   separate(subtype, c("category", "motif"), sep = "[.]")
+   separate(subtype, c("category", "motif"), sep = "[-]")
 
 ggplot(sig_loads_long, aes(x=motif, y=loading, fill=Sig))+
   geom_bar(stat="identity")+
@@ -205,5 +205,3 @@ ggplot(sig_contribs2, aes(x=ID, y=contribution,
       axis.title.y=element_text(size=24),
       strip.text=element_text(size=24))
 ```
-
-
