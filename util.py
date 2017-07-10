@@ -101,6 +101,9 @@ def indexSubtypes(args):
     # eprint(subtypes_dict)
     return subtypes_dict
 
+###############################################################################
+# Main function for parsing VCF
+###############################################################################
 def processVCF(args, subtypes_dict):
     eprint("Initializing reference genome...") if args.verbose else None
     fasta_reader = Fasta(args.fastafile, read_ahead=1000000)
@@ -111,18 +114,30 @@ def processVCF(args, subtypes_dict):
             keep_samples = f.read().splitlines()
         eprint(len(keep_samples), "samples kept") if args.verbose else None
 
-        vcf_reader = VCF(args.inputvcf,
+        vcf_reader = VCF(args.input,
             mode='rb', gts012=True, lazy=True, samples=keep_samples)
         # vcf_reader.set_samples(keep_samples) # <- set_samples() subsets VCF
     else:
-        vcf_reader = VCF(args.inputvcf,
+        vcf_reader = VCF(args.input,
             mode='rb', gts012=True, lazy=True)
 
     ###############################################################################
     # index samples
     ###############################################################################
-    eprint("Indexing samples in", args.inputvcf, "...") if args.verbose else None
-    samples = vcf_reader.samples
+    if args.groupfile:
+        sg_dict = {}
+        with open(args.groupfile) as sg_file:
+            for line in sg_file:
+               (key, val) = line.split()
+               sg_dict[key] = val
+        # s = set( val for dic in lis for val in sg_dict.values())
+        # s = set(chain.from_iterable(sg_dict.values() for d in dictionaries_list))
+        all_samples = vcf_reader.samples
+        samples = sorted(list(set(sg_dict.values())))
+        eprint(samples)
+    else:
+        eprint("Indexing samples in", args.input, "...") if args.verbose else None
+        samples = vcf_reader.samples
 
     samples_dict = {}
     for i in range(len(samples)):
@@ -185,10 +200,11 @@ def processVCF(args, subtypes_dict):
                     # eprint("lseq:", lseq)
                 motif_a = getMotif(record.POS, lseq)
                 subtype = str(category + "-" + motif_a)
+                st = subtypes_dict[subtype]
                 # eprint(record.CHROM, record.POS, record.REF, record.ALT[0], subtype)
 
                 # use quick singleton lookup for default QC option
-                if not args.nofilter:
+                # if not args.nofilter:
                     # sample=samples[record.gt_types.tolist().index(1)]
                     # if sample == "1497-RMM-1269RD":
                     #     print(record.CHROM, record.POS,
@@ -197,39 +213,42 @@ def processVCF(args, subtypes_dict):
                     # sample = record.gt_types.tolist().index(1)
                     # sample=np.where(record.gt_types == 1)[0]
                     # eprint(sample)
-                    st = subtypes_dict[subtype]
 
-                    # testing for speed improvements by batching updates to M
-                    asbatch = False
-                    if asbatch:
-                        # M[sample, subtypes_dict[subtype]] += 1
-                        batchit += 1
-                        sample = record.gt_types.tolist().index(1)
-                        # sample_gts = record.gt_types.tolist()
+                # testing for speed improvements by batching updates to M
+                asbatch = False
+                if(asbatch and not args.groupfile):
+                    # M[sample, subtypes_dict[subtype]] += 1
+                    batchit += 1
+                    sample = record.gt_types.tolist().index(1)
+                    # sample_gts = record.gt_types.tolist()
 
-                        sample_batch.append(sample)
-                        subtype_batch.append(st)
+                    sample_batch.append(sample)
+                    subtype_batch.append(st)
 
-                        if batchit == 10000:
-                            M[sample_batch, subtype_batch] += 1
-                            batchit = 0
-                    else:
-                        M[:,st] = M[:,st]+record.gt_types
+                    if batchit == 10000:
+                        M[sample_batch, subtype_batch] += 1
+                        batchit = 0
 
+                elif args.groupfile:
+                    sample = all_samples[record.gt_types.tolist().index(1)]
+                    # eprint(sg_dict)
+                    # eprint(sample)
+                    if sample in sg_dict:
+                        sample_gp = sg_dict[sample]
+                        ind = samples.index(sample_gp)
+                        M[ind,st] += 1
                 else:
-                    samples_het = np.where(record.gt_types == 1)[0]
-                    M[samples_het, subtypes_dict[subtype]] += 1
-
-                    samples_hom = np.where(record.gt_types == 2)[0]
-                    M[samples_hom, subtypes_dict[subtype]] += 2
+                    M[:,st] = M[:,st]+record.gt_types
 
                 numsites_keep += 1
+
+                if args.verbose:
+                    if (numsites_keep%10000==0):
+                        eprint("Processed", numsites_keep, "sites",
+                            "(Skipped", numsites_skip, "sites)")
             else:
                 numsites_skip += 1
 
-            if args.verbose:
-                if (numsites_keep > 0 and numsites_keep%10000==0):
-                    eprint("Processed", numsites_keep, "sites")
 
     if numsites_keep == 0:
         eprint("No SNVs found. Please check your VCF file")
@@ -320,8 +339,8 @@ def diagWrite(projdir, M, M_f, W, H, subtypes_dict, samples, args):
 
     yaml = open(projdir + "/config.yaml","w+")
     print("# Config file for doomsayer_diagnostics.r", file=yaml)
-    print("keep_path: " + projdir + "/keep_samples.txt", file=yaml)
-    print("drop_path: " + projdir + "/drop_samples.txt", file=yaml)
+    print("keep_path: " + projdir + "/doomsayer_keep.txt", file=yaml)
+    print("drop_path: " + projdir + "/doomsayer_drop.txt", file=yaml)
     print("M_path: " + M_path, file=yaml)
     print("M_path_rates: " + M_path_rates, file=yaml)
     print("W_path: " + W_path, file=yaml)

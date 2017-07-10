@@ -1,5 +1,5 @@
 # check and load packages
-packages <- c("rmarkdown")
+packages <- c("rmarkdown", "knitr")
 
 package.check <- lapply(packages, FUN = function(x) {
     if (!require(x, character.only = TRUE)) {

@@ -23,8 +23,11 @@ start = timeit.default_timer()
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument("-i", "--inputvcf",
-                    help="input vcf file (use - for STDIN)",
+parser.add_argument("-i", "--input",
+                    help="input file, usually a VCF. Can accept input from \
+                        STDIN  with \"--input -\". If using in aggregation \
+                        mode, input should be a text file containing the file \
+                        paths of the M matrices to aggregate",
                     required=True,
                     nargs='?',
                     type=str,
@@ -61,7 +64,7 @@ parser.add_argument("-d", "--diagnostics",
                         diagnostic script",
                     action="store_true")
 
-parser.add_argument("-ad", "--autodiagnostics",
+parser.add_argument("-a", "--autodiagnostics",
                     help="same as the --diagnostics option, but automatically \
                         generates diagnostic report",
                     action="store_true")
@@ -74,6 +77,13 @@ parser.add_argument("-m", "--mmatrixname",
 
 parser.add_argument("-s", "--samplefile",
                     help="file with sample IDs to include (one per line)",
+                    nargs='?',
+                    type=str)
+
+parser.add_argument("-g", "--groupfile",
+                    help="two-column tab-delimited file containing sample IDs \
+                        (column 1) and group membership (column 2) for pooled \
+                        analysis",
                     nargs='?',
                     type=str)
 
@@ -120,7 +130,7 @@ subtypes_dict = indexSubtypes(args)
 # Check inputs
 ###############################################################################
 # vcf
-if(args.inputvcf.lower().endswith(('.vcf', '.vcf.gz')) or args.inputvcf == "-"):
+if(args.input.lower().endswith(('.vcf', '.vcf.gz')) or args.input == "-"):
     if args.verbose:
         eprint("Input detected as VCF file or VCF from STDIN")
     data = processVCF(args, subtypes_dict)
@@ -128,15 +138,15 @@ if(args.inputvcf.lower().endswith(('.vcf', '.vcf.gz')) or args.inputvcf == "-"):
     samples = data.samples
 
 # M output by sample
-elif args.inputvcf.lower().endswith('m_samples.txt'):
+elif args.input.lower().endswith('m_samples.txt'):
     if args.verbose:
         eprint("Aggregating sample subset spectra matrices")
     colnames = ["ID"]
     M_colnames = colnames + list(sorted(subtypes_dict.keys()))
     M_out = np.array([M_colnames])
 
-    # file_list = args.inputvcf
-    with open(args.inputvcf) as f:
+    # file_list = args.input
+    with open(args.input) as f:
         file_list = f.read().splitlines()
     for mfile in file_list:
         samples = np.loadtxt(mfile,
@@ -154,15 +164,15 @@ elif args.inputvcf.lower().endswith('m_samples.txt'):
     M = M.astype(np.float)
 
 # M output by region
-elif args.inputvcf.lower().endswith('m_regions.txt'):
+elif args.input.lower().endswith('m_regions.txt'):
     if args.verbose:
         eprint("Aggregating regional subset spectra matrices")
     colnames = ["ID"]
     M_colnames = colnames + list(sorted(subtypes_dict.keys()))
     M_out = np.array([M_colnames])
 
-    # file_list = args.inputvcf
-    with open(args.inputvcf) as f:
+    # file_list = args.input
+    with open(args.input) as f:
         file_list = f.read().splitlines()
     for mfile in file_list:
         samples = np.loadtxt(mfile,
@@ -257,22 +267,22 @@ else:
         i += 1
 
     eprint("Printing keep and drop lists") if args.verbose else None
-    keep_path = projdir + "/keep_samples.txt"
+    keep_path = projdir + "/doomsayer_keep.txt"
     np.savetxt(keep_path, keep_samples, delimiter='\t', fmt="%s")
 
-    drop_path = projdir + "/drop_samples.txt"
+    drop_path = projdir + "/doomsayer_drop.txt"
     np.savetxt(drop_path, drop_samples, delimiter='\t', fmt="%s")
 
 ###############################################################################
 # write output vcf
 ###############################################################################
 if(args.outputtovcf and
-        (args.inputvcf.lower().endswith(('.vcf', '.vcf.gz')) or
-        args.inputvcf == "-")):
+        (args.input.lower().endswith(('.vcf', '.vcf.gz')) or
+        args.input == "-")):
     eprint("Filtering VCF by drop list...") if args.verbose else None
     keep_test = keep_samples[0:10]
-    vcf = VCF(args.inputvcf, samples=keep_test, mode='rb')
-    # vcf = VCF(args.inputvcf, samples=keep_samples, mode='rb')
+    vcf = VCF(args.input, samples=keep_test, mode='rb')
+    # vcf = VCF(args.input, samples=keep_samples, mode='rb')
 
     print(vcf.raw_header.rstrip())
     for v in vcf:
