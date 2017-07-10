@@ -91,6 +91,13 @@ parser.add_argument("-ns", "--noscale",
                     help="do not scale H and W matrices",
                     action="store_true")
 
+parser.add_argument("-t", "--threshold",
+                    help="threshold for dropping samples, in standard \
+                    deviations away from the mean signature contribution. \
+                    The default is 2--lower values are more stringent",
+                    type=int,
+                    default=2)
+
 parser.add_argument("-r", "--rank",
                     help="rank for NMF decomposition",
                     type=int,
@@ -235,8 +242,8 @@ else:
 
     colmeans = np.mean(W, axis=0)
     colstd = np.std(W, axis=0)
-    upper = colmeans+2*colstd
-    lower = colmeans-2*colstd
+    upper = colmeans+args.threshold*colstd
+    lower = colmeans-args.threshold*colstd
 
     # output NMF results
     if(args.diagnostics or args.autodiagnostics):
