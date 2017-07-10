@@ -241,6 +241,9 @@ else:
     W = model_fit.basis()
     H = model_fit.coef()
 
+    eprint(H)
+    eprint(W)
+
     W_f = W
     W = W/np.sum(W, axis=1)
     # H = H/np.sum(H, axis=1)
