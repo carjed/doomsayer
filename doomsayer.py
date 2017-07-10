@@ -13,7 +13,8 @@ from pyfaidx import Fasta
 # from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.Alphabet import IUPAC
-from sklearn.decomposition import NMF
+# from sklearn.decomposition import NMF
+import nimfa
 from util import *
 
 ###############################################################################
@@ -226,33 +227,40 @@ if args.mmatrixname != "NMF_M_spectra":
     np.savetxt(M_path, M_fmt, delimiter='\t', fmt="%s")
 else:
     M_f = M/(M.sum(axis=1)+1e-8)[:,None]
-    model = NMF(n_components=args.rank, init='random', random_state=0)
-    model.fit(M_f)
+    # model = NMF(n_components=args.rank, init='random', random_state=0)
+    if args.noscale:
+        if args.verbose:
+            eprint("Running NMF on raw count spectra")
+        model = nimfa.Nmf(M, rank=args.rank)
+    else:
+        if args.verbose:
+            eprint("Running NMF on normalized spectra")
+        model = nimfa.Nmf(M_f, rank=args.rank)
 
-    # Get loadings of subtypes per signature
-    # Get signature contributions per sample
-    H = model.components_
-    W = model.fit_transform(M_f)
+    model_fit = model()
+    W = model_fit.basis()
+    H = model_fit.coef()
 
-    if not args.noscale:
-        H = H/(H.sum(axis=1)+1e-8)[:,None]
-        W = W/(W.sum(axis=1)+1e-8)[:,None]
-
+    W_f = W
+    W = W/np.sum(W, axis=1)
+    # H = H/np.sum(H, axis=1)
     # W= W[~np.isnan(W).any(axis=1)]
-
-    colmeans = np.mean(W, axis=0)
-    colstd = np.std(W, axis=0)
-    upper = colmeans+args.threshold*colstd
-    lower = colmeans-args.threshold*colstd
 
     # output NMF results
     if(args.diagnostics or args.autodiagnostics):
+
         if args.verbose:
+            colmeans = np.mean(W, axis=0)
+            colstd = np.std(W, axis=0)
+            upper = colmeans+args.threshold*colstd
+            lower = colmeans-args.threshold*colstd
+
             eprint("Mean signature contributions: ", colmeans)
             eprint("StdDev:", colstd)
             eprint("Upper:", upper)
             eprint("Lower:", lower)
             eprint("Writing NMF results")
+
         diagWrite(projdir, M, M_f, W, H, subtypes_dict, samples, args)
 
 ###############################################################################

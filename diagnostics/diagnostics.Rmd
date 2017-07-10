@@ -60,7 +60,7 @@ sig_loads <- read.table(H_path, header=T, stringsAsFactors=F)
 
 Heatmap to visualize mutational spectra across all samples
 
-```{r M, echo=FALSE, fig.height = 12, fig.width = 24}
+```{r M, echo=FALSE, eval=FALSE, fig.height = 12, fig.width = 24}
 # overall distribution
 spectra_long <- spectra %>%
   gather(subtype, count, 2:ncol(spectra)) %>%
@@ -169,8 +169,11 @@ Describes how each mutation subtype is loaded into the r signatures
 ```{r sigloads, echo=FALSE, fig.height = 6, fig.width = 14}
 # signature loadings
 sig_loads_long <- sig_loads %>%
-   gather(subtype, loading, 2:ncol(sig_loads)) %>%
-   separate(subtype, c("category", "motif"), sep = "[.]")
+  mutate(sumVar = rowSums(.[2:ncol(sig_loads)])) %>% 
+  rowwise() %>% 
+  mutate_each(funs(./sumVar), -Sig) %>%
+  gather(subtype, loading, 2:ncol(sig_loads)) %>%
+  separate(subtype, c("category", "motif"), sep = "[.]")
 
 ggplot(sig_loads_long, aes(x=motif, y=loading, fill=Sig))+
   geom_bar(stat="identity")+
@@ -191,8 +194,17 @@ Proportion each signature contributes to the mutation spectrum in each individua
 ```{r sigs, echo=FALSE, fig.height = 12, fig.width = 24}
 # signature contributions across samples
 sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
-  # gather(signature, contribution, S1:S6)
-  gather(signature, contribution, -ID)
+  mutate(sumVar = rowSums(.[2:ncol(sig_contribs)])) %>% 
+  rowwise() %>% 
+  mutate_each(funs(./sumVar), -ID) %>%
+  dplyr::select(-sumVar) %>%
+  gather(signature, contribution, -ID) 
+  
+# gather(signature, contribution, S1:S6)
+# mutate(ID=factor(ID, levels=ID[order(S1)])) %>%
+#   arrange(contribution)
+# 
+# x$name <- factor(x$name, levels = x$name[order(x$val)])
 
 ggplot(sig_contribs2,
     aes(x=ID, y=contribution, group=signature, colour=signature))+
@@ -214,9 +226,11 @@ Proportion each signature contributes to the mutation spectrum in each individua
 # signature contributions across samples
 sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
   dplyr::filter(ID %in% keep_ids$V1) %>%
-  # gather(signature, contribution, S1:S2) %>%
-  gather(signature, contribution, -ID) %>%
-  arrange(contribution)
+  mutate(sumVar = rowSums(.[2:ncol(sig_contribs)])) %>% 
+  rowwise() %>% 
+  mutate_each(funs(./sumVar), -ID) %>%
+  dplyr::select(-sumVar) %>%
+  gather(signature, contribution, -ID)
 
 ggplot(sig_contribs2,
     aes(x=ID, y=contribution, group=signature, colour=signature))+
@@ -237,9 +251,11 @@ Proportion each signature contributes to the mutation spectrum in each individua
 # signature contributions across samples
 sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
   dplyr::filter(ID %in% drop_ids$V1) %>%
-  # gather(signature, contribution, S1:S2) %>%
-  gather(signature, contribution, -ID) %>%
-  arrange(contribution)
+  mutate(sumVar = rowSums(.[2:ncol(sig_contribs)])) %>% 
+  rowwise() %>% 
+  mutate_each(funs(./sumVar), -ID) %>%
+  dplyr::select(-sumVar) %>%
+  gather(signature, contribution, -ID)
 
 ggplot(sig_contribs2,
     aes(x=ID, y=contribution, group=signature, colour=signature))+

@@ -118,9 +118,11 @@ def processVCF(args, subtypes_dict):
         vcf_reader = VCF(args.input,
             mode='rb', gts012=True, lazy=True)
 
-    ############################################################
+    nbp = (args.length-1)//2
+
+    ####################
     # index samples
-    ############################################################
+    ####################
     eprint("Indexing samples in", args.input, "...") if args.verbose else None
 
     if args.groupfile:
@@ -143,9 +145,9 @@ def processVCF(args, subtypes_dict):
 
     eprint(len(samples), "samples indexed") if args.verbose else None
 
-    ############################################################
+    ############################################
     # Query records in VCF and build matrix
-    ############################################################
+    ############################################
     eprint("Parsing VCF records...") if args.verbose else None
     M = np.zeros((len(samples), len(subtypes_dict)))
     numsites_keep = 0
@@ -171,7 +173,8 @@ def processVCF(args, subtypes_dict):
             # eprint(record.POS, acval)
 
             if ((acval==1 and record.FILTER is None) or args.nofilter):
-                # eprint(record.CHROM, record.POS, record.REF, record.ALT[0], acval, record.FILTER)
+                # eprint(record.CHROM, record.POS, record.REF, record.ALT[0],
+                    # acval, record.FILTER)
                 # check and update chromosome sequence
                 if record.CHROM != chrseq:
                     if args.verbose:
@@ -181,7 +184,6 @@ def processVCF(args, subtypes_dict):
                     sequence = fasta_reader[record.CHROM]
                     chrseq = record.CHROM
 
-                nbp = (args.length-1)//2
                 mu_type = record.REF + str(record.ALT[0])
                 category = getCategory(mu_type)
                 if nbp > 0:
@@ -192,7 +194,8 @@ def processVCF(args, subtypes_dict):
                 motif_a = getMotif(record.POS, lseq)
                 subtype = str(category + "-" + motif_a)
                 st = subtypes_dict[subtype]
-                # eprint(record.CHROM, record.POS, record.REF, record.ALT[0], subtype)
+                # eprint(record.CHROM, record.POS,
+                    # record.REF, record.ALT[0], subtype)
 
                 # use quick singleton lookup for default QC option
                 # if not args.nofilter:
@@ -208,11 +211,8 @@ def processVCF(args, subtypes_dict):
                 # testing for speed improvements by batching updates to M
                 asbatch = False
                 if(asbatch and not args.groupfile):
-                    # M[sample, subtypes_dict[subtype]] += 1
                     batchit += 1
                     sample = record.gt_types.tolist().index(1)
-                    # sample_gts = record.gt_types.tolist()
-
                     sample_batch.append(sample)
                     subtype_batch.append(st)
 
@@ -222,8 +222,7 @@ def processVCF(args, subtypes_dict):
 
                 elif args.groupfile:
                     sample = all_samples[record.gt_types.tolist().index(1)]
-                    # eprint(sg_dict)
-                    # eprint(sample)
+
                     if sample in sg_dict:
                         sample_gp = sg_dict[sample]
                         ind = samples.index(sample_gp)
@@ -239,7 +238,6 @@ def processVCF(args, subtypes_dict):
                             "(Skipped", numsites_skip, "sites)")
             else:
                 numsites_skip += 1
-
 
     if numsites_keep == 0:
         eprint("No SNVs found. Please check your VCF file")

@@ -50,11 +50,11 @@ bash setup.sh
 ```
 
 `setup.sh` uses pip to check for and install the following python libraries and perform additional setup tasks:
-- [cyvcf2](https://github.com/brentp/cyvcf2)
-- [pyfaidx](https://github.com/mdshw5/pyfaidx)
-- [numpy](https://docs.scipy.org/doc/numpy/reference/)
-- [Biopython](https://github.com/biopython/biopython)
-- [scikit-learn](http://scikit-learn.org/stable/)
+- [cyvcf2](https://github.com/brentp/cyvcf2) for VCF parsing
+- [pyfaidx](https://github.com/mdshw5/pyfaidx) for reference genome parsing
+- [numpy](https://docs.scipy.org/doc/numpy/reference/) for numeric arrays
+- [Biopython](https://github.com/biopython/biopython) for various sequence parsing functions
+- [nimfa](http://nimfa.biolab.si) for NMF algorithms
 
 ## Usage
 
