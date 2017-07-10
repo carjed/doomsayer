@@ -64,7 +64,7 @@ Heatmap to visualize mutational spectra across all samples
 # overall distribution
 spectra_long <- spectra %>%
   gather(subtype, count, 2:ncol(spectra)) %>%
-  separate(subtype, c("category", "motif"), sep = "[-]")
+  separate(subtype, c("category", "motif"), sep = "[.]")
 
 # heatmap(as.matrix(spectra[,-1]))
 
