@@ -7,12 +7,11 @@ import argparse
 import itertools
 import timeit
 import collections
+import numpy as np
 import cyvcf2 as vcf
 from cyvcf2 import VCF
 from cyvcf2 import Writer
-import numpy as np
 from pyfaidx import Fasta
-# from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.Alphabet import IUPAC
 
@@ -80,11 +79,9 @@ def indexSubtypes(args):
             # eprint(kmerstr)
             for category in categories:
                 ref = category[0]
-                # subtype = category + "-" + kmer[0] + ref + kmer[1]
 
                 subtype = category + "-" \
                     + kmerstr[0:flank] + ref + kmerstr[flank:(motiflength-1)]
-
 
                 subtypes_list.append(subtype)
     else:
@@ -121,42 +118,36 @@ def processVCF(args, subtypes_dict):
         vcf_reader = VCF(args.input,
             mode='rb', gts012=True, lazy=True)
 
-    ###############################################################################
+    ############################################################
     # index samples
-    ###############################################################################
+    ############################################################
+    eprint("Indexing samples in", args.input, "...") if args.verbose else None
+
     if args.groupfile:
         sg_dict = {}
         with open(args.groupfile) as sg_file:
             for line in sg_file:
                (key, val) = line.split()
                sg_dict[key] = val
-        # s = set( val for dic in lis for val in sg_dict.values())
-        # s = set(chain.from_iterable(sg_dict.values() for d in dictionaries_list))
+
         all_samples = vcf_reader.samples
         samples = sorted(list(set(sg_dict.values())))
-        eprint(samples)
+        # eprint(samples)
     else:
-        eprint("Indexing samples in", args.input, "...") if args.verbose else None
+
         samples = vcf_reader.samples
 
     samples_dict = {}
     for i in range(len(samples)):
         samples_dict[samples[i]] = i
 
-    eprint(len(samples), "samples will be processed") if args.verbose else None
+    eprint(len(samples), "samples indexed") if args.verbose else None
 
-    ###############################################################################
-    # index subtypes
-    ###############################################################################
-    # eprint("indexing subtypes...") if args.verbose else None
-    # subtypes_dict = indexSubtypes(args)
-
-    M = np.zeros((len(samples), len(subtypes_dict)))
-
-    ###############################################################################
+    ############################################################
     # Query records in VCF and build matrix
-    ###############################################################################
+    ############################################################
     eprint("Parsing VCF records...") if args.verbose else None
+    M = np.zeros((len(samples), len(subtypes_dict)))
     numsites_keep = 0
     numsites_skip = 0
     chrseq = '0'
@@ -164,8 +155,7 @@ def processVCF(args, subtypes_dict):
     batchit = 0
     sample_batch = []
     subtype_batch = []
-    # from collections import Counter
-    # Counter(sings)
+
     for record in vcf_reader:
         # debug--testing performance for triallelic sites
         # if(record.POS==91628): # triallelic site
@@ -185,7 +175,8 @@ def processVCF(args, subtypes_dict):
                 # check and update chromosome sequence
                 if record.CHROM != chrseq:
                     if args.verbose:
-                        eprint("Loading chromosome", record.CHROM, "reference...")
+                        eprint("Loading chromosome", record.CHROM,
+                            "reference...")
 
                     sequence = fasta_reader[record.CHROM]
                     chrseq = record.CHROM
