@@ -316,15 +316,16 @@ def diagWrite(projdir, M, M_f, W, H, subtypes_dict, samples, args):
 
     # add signature ID as first column
     H_rownames = ["S" + str(i) for i in range(1,args.rank+1)]
-    H_fmt = np.concatenate((np.array([H_rownames]).T, H), axis=1)
+    H_fmt = np.concatenate((np.array([H_rownames]).T,
+        np.char.mod('%d', H)), axis=1)
 
     eprint(H_fmt)
     # add header
     H_colnames = ["Sig"] + list(sorted(subtypes_dict.keys()))
     H_fmt = np.concatenate((np.array([H_colnames]), H_fmt), axis=0)
-    eprint(H_fmt)
-    H_fmt = H
-    eprint(H_fmt)
+    # eprint(H_fmt)
+    # H_fmt = H
+    # eprint(H_fmt)
     # write out
     H_path = projdir + "/NMF_H_sig_loads.txt"
     np.savetxt(H_path, H_fmt, delimiter='\t', fmt="%s")
