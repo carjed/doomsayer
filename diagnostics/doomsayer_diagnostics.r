@@ -1,3 +1,5 @@
+Sys.setenv(RSTUDIO_PANDOC="/usr/lib/rstudio/bin/pandoc")
+
 # check and load packages
 packages <- c("rmarkdown", "knitr")
 
