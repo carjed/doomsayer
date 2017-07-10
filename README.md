@@ -8,7 +8,7 @@ _**DOOMSAYER** ( **D**etection **O**f **O**utliers using **M**utation **S**pectr
 
 _Using non-negative matrix factorization (NMF), Doomsayer summarize the distribution of rare single-nucleotide variants within each sample. In studies of standing genetic variation, this information can be a valuable indicator of cryptic error biases or batch effects. By identifying and filtering these outlier samples, Doomsayer helps ensure rigor and reproducibility in the analysis of NGS data._
 
-_In addition to its function as a quality control program, Doomsayer can be applied more generally to study between-sample differences in somatic and germline mutation signatures._
+_In addition to its purpose as a quality control program, Doomsayer can be applied more generally to study between-sample differences in somatic and germline mutation signatures._
 
 _Doomsayer is currently under active development, and should be considered as beta software._
 
@@ -109,9 +109,9 @@ optional arguments:
 ## Tutorial
 
 ### Basic example
-The basic function of Doomsayer is to provide sample-level filtering by using non-negative matrix factorization to identify individuals with abnormal distributions of singleton variants.
+The basic purpose of Doomsayer is to provide sample-level filtering by using non-negative matrix factorization to identify individuals with abnormal distributions of singleton variants.
 
-For this minimum functionality, Doomsayer requires two mandatory user-specified arguments: 1) a [Variant Call Format (VCF) input file](#vcf-input), and 2) a [fasta-format reference genome](#fasta-reference-file). Below is a basic, fully-functional Doomsayer command:
+A basic, fully-functional Doomsayer command requires two mandatory arguments: 1) a [Variant Call Format (VCF) input file](#vcf-input), and 2) a [fasta-format reference genome](#fasta-reference-file):
 
 ```{bash id:"chj4lkgfvz"}
 python /path/to/doomsayer.py \
@@ -144,17 +144,17 @@ bcftools concat /path/to/input/vcfs/chr*.vcf.gz | \
 #### Fasta reference file
 `-f FASTAFILE, --fastafile FASTAFILE` **(MANDATORY)**
 
-Doomsayer also requires a fasta sequence file be specified with the `--fastafile` argument. This **must** corresponding to the same reference genome build used to call the variants contained in the input VCF file, with [consistently-formatted records](#). The fasta file may be either uncompressed or bgzip-compressed.
+This parameter specifies the fasta-formatted reference genome used to look up the local sequence context for each SNV. This file **must** corresponding to the same reference genome build used to call the variants contained in the input VCF file, with [consistently-formatted records](#). The fasta file may be either uncompressed or bgzip-compressed.
 
 #### Sample subsets
 `-s [SAMPLEFILE], --samplefile [SAMPLEFILE]` **(optional)**
 
-If you only wish to run Doomsayer on a subset of samples in the input VCF, this option will read a list of sample IDs to keep (one per line) and skip all other samples in the VCF. This will be much faster than pre-filtering the VCF with another tool (e.g., bcftools) and piping the input to Doomsayer.
+If you only wish to run Doomsayer on a subset of samples in the input VCF, this parameter will read a list of sample IDs to keep (one per line) and skip all other samples in the VCF. This will be much faster than pre-filtering the VCF with another tool (e.g., bcftools) and piping the input to Doomsayer.
 
 #### Sample groupings
 `-g [GROUPFILE], --groupfile [GROUPFILE]` **(optional)**
 
-This option forces Doomsayer to evaluate mutation spectra across pooled groups of samples. The GROUPFILE should be a tab-delimited text file containing sample IDs in the first column and a grouping variable in the second column. This option is particularly useful if you wish to explicitly filter for batch effects in your data, e.g., by setting the grouping variable to be the sequencing date, study of origin, sequencing plate, etc.
+This parameter forces Doomsayer to evaluate mutation spectra across pooled groups of samples. The GROUPFILE should be a tab-delimited text file containing sample IDs in the first column and a grouping variable in the second column. This option is particularly useful if you wish to explicitly filter for batch effects in your data, e.g., by setting the grouping variable to be the sequencing date, study of origin, sequencing plate, etc.
 
 Note that this option will assume the GROUPFILE contains all samples in the input VCF. If your GROUPFILE contains only a subset of samples, other samples will not be evaluated.
 
@@ -163,7 +163,7 @@ Note that this option will assume the GROUPFILE contains all samples in the inpu
 #### Custom output directory
 `-p PROJECTDIR, --projectdir PROJECTDIR` **(optional)**
 
-This option will specify a custom name/location for the Doomsayer output directory. The following example will send output to a folder named `my_doomsayer_output` in your home directory:
+This parameter will specify a custom name/location for the Doomsayer output directory. The following example will send output to a folder named `my_doomsayer_output` in your home directory:
 
 ```{sh id:"chj4lkfg8u"}
 python /path/to/doomsayer.py \
@@ -172,12 +172,10 @@ python /path/to/doomsayer.py \
   --projectdir ~/my_doomsayer_output
 ```
 
-Be sure to exclude the trailing "/" from any directory specified.
-
 #### Auto-filtered VCF output
 `-o, --outputtovcf` **(optional)**
 
-This option will allow Doomsayer to automatically filter the input VCF and write a new VCF, removing all samples specified in the `doomsayer_drop.txt` file.
+This option will allow Doomsayer to automatically filter the input VCF and write a new VCF, removing any samples specified in the `doomsayer_drop.txt` file that has been generated.
 
 ```{sh id:"chj4lkcw3i"}
 python /path/to/doomsayer.py \
@@ -228,7 +226,7 @@ Running with the `--autodiagnostics` flag instead will force Doomsayer attempt t
 #### Write only M matrix with custom name
 `-m [MMATRIXNAME], --mmatrixname [MMATRIXNAME]` **(optional)**
 
-This option allows you to specify a custom name for the mutation spectra matrix file. This option was included for cases where large datasets are spread across several files and we wish to take advantage of the [aggregation](#) functionality of Doomsayer.  Note that using this option will force Doomsayer to skip the NMF decomposition and generation of keep/drop lists.
+This parameter allows you to specify a custom name for the mutation spectra matrix file. This option was included for cases where large datasets are spread across several files and we wish to take advantage of the [aggregation](#) functionality of Doomsayer.  Note that using this option will force Doomsayer to skip the NMF decomposition and generation of keep/drop lists.
 
 
 ### Other optional settings
@@ -238,22 +236,22 @@ This option allows you to specify a custom name for the mutation spectra matrix 
 #### Specify NMF rank
 `-r {2,3,4,5,6,7,8,9,10}, --rank {2,3,4,5,6,7,8,9,10}` **(optional)**
 
-This option specifies the rank of the NMF decomposition (up to 10). The default rank (3) should be sufficient for most QC applications, but if you are using Doomsayer for somatic mutation signature analysis, you will likely require a higher rank.
+This parameter specifies the rank of the NMF decomposition (up to 10). The default rank (3) should be sufficient for most QC applications, but if you are using Doomsayer for somatic mutation signature analysis, you will likely require a higher rank.
 
 #### Set motif length
 `-l {1,3,5,7}, --length {1,3,5,7}` **(optional)**
 
-This option specifies the motif length to be considered in determining the mutation subtypes. The default (3) produces 96 3-mer subtypes, which is likely sufficient for QC of whole-genome germline variants. If you are using Doomsayer for QC of whole-exome germline variants, you will likely need to specify `--length 1`, as most individuals will not have enough singleton variants to accurately infer higher-order mutation signatures. Values greater than 3 will likely lead to extremely noisy or unreliable QC results for germline variants, but may be useful for examining somatic sequencing data.
+This parameter specifies the motif length to be considered in determining the mutation subtypes. The default (3) produces 96 3-mer subtypes, which is likely sufficient for QC of whole-genome germline variants. If you are using Doomsayer for QC of whole-exome germline variants, you will likely need to specify `--length 1`, as most individuals will not have enough singleton variants to accurately infer higher-order mutation signatures. Values greater than 3 will likely lead to extremely noisy or unreliable QC results for germline variants, but may be useful for examining somatic sequencing data.
 
 #### Verbose logging
 `-v, --verbose` **(optional)**
 
-This enables detailed logging to the STDERR stream
+This option enables detailed logging to the STDERR stream
 
 ### Aggregation mode
 Doomsayer can be run independently and simultaneously on subsets of the same dataset and then act as an aggregator for these outputs. This is particularly necessary for very large datasets with millions of variants and thousands of samples where sequential processing of a single massive VCF file is not feasible.
 
-The `doomsayer_by_chr.sh` script provides an example of how to implement this function. This shell script will simultaneously start 22 Doomsayer runs in the background (one per chromosome). Each run is specified with the `--mmatrixname chrN`, option, so only the mutation spectra matrices for each chromsomes are written, each with a unique file name.
+The `doomsayer_by_chr.sh` script provides an example of how to implement this function. This shell script will simultaneously start 22 Doomsayer runs in the background (one per chromosome). Each run is specified with the `--mmatrixname chrN` argument, so only the mutation spectra matrices for each chromsomes are written, each with a unique file name.
 
 This script also writes a file named `m_regions.txt` containing the file names/paths of the per-chromosome mutation spectra matrices.
 
@@ -296,8 +294,11 @@ Doomsayer was written for *nix-based systems.
 
 The main Doomsayer program is cross-compatible with Python versions 2.7+ and 3.5+. Generation of diagnostic reports requires R version 3.1 or higher.
 
+### What are Doomsayer's hardware requirements?
+Doomsayer is extremely lightweight, and should run with \<1GB of RAM
+
 ### What type of sequencing data can Doomsayer analyze?
-Doomsayer's core functionality can be used to rapidly evaluate mutation signatures present in any collection of sequencing data with called variants, and offers an extremely efficient and almost entirely automated (albeit slightly less flexible) alternative to the functions provided by the [SomaticSignatures](http://bioconductor.org/packages/release/bioc/html/SomaticSignatures.html) R package:
+Doomsayer's core functionality, the NMF-based mutation signature analysis, can be used to rapidly evaluate mutation patterns present in any collection of sequencing data, and offers an extremely efficient and almost entirely automated (albeit slightly less flexible) alternative to the functions provided by the [SomaticSignatures](http://bioconductor.org/packages/release/bioc/html/SomaticSignatures.html) R package:
 
 >Gehring JS, Fischer B, Lawrence M, Huber W. SomaticSignatures: inferring mutational signatures from single-nucleotide variants. Bioinformatics. 2015;31(22):3673-3675. doi:10.1093/bioinformatics/btv408.
 

@@ -228,7 +228,7 @@ else:
     W = model.fit_transform(M_f)
 
     if not args.noscale:
-        # H = H/(H.sum(axis=1)+1e-8)[:,None]
+        H = H/(H.sum(axis=1)+1e-8)[:,None]
         W = W/(W.sum(axis=1)+1e-8)[:,None]
 
     # W= W[~np.isnan(W).any(axis=1)]
