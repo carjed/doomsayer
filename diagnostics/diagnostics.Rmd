@@ -20,7 +20,7 @@ packages <- c("dplyr","tidyr","ggplot2","yaml", "devtools")
 package.check <- lapply(packages, FUN = function(x) {
     if (!require(x, character.only = TRUE)) {
         install.packages(x, dependencies = TRUE)
-        library(x, character.only = TRUE)
+        library(x, character.only = TRUE, silent=TRUE)
     }
 })
 
@@ -172,7 +172,7 @@ Describes how each mutation subtype is loaded into the r signatures
 sig_loads_long <- sig_loads %>%
   mutate(sumVar = rowSums(.[2:ncol(sig_loads)])) %>% 
   rowwise() %>% 
-  mutate_each(funs(./sumVar), -Sig) %>%
+  mutate_at(funs(./sumVar), -Sig) %>%
   gather(subtype, loading, 2:ncol(sig_loads)) %>%
   separate(subtype, c("category", "motif"), sep = "[.]")
 
@@ -197,7 +197,7 @@ Proportion each signature contributes to the mutation spectrum in each individua
 sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
   mutate(sumVar = rowSums(.[2:ncol(sig_contribs)])) %>% 
   rowwise() %>% 
-  mutate_each(funs(./sumVar), -ID) %>%
+  mutate_at(funs(./sumVar), -ID) %>%
   dplyr::select(-sumVar) %>%
   gather(signature, contribution, -ID) 
   
@@ -229,7 +229,7 @@ sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
   dplyr::filter(ID %in% keep_ids$V1) %>%
   mutate(sumVar = rowSums(.[2:ncol(sig_contribs)])) %>% 
   rowwise() %>% 
-  mutate_each(funs(./sumVar), -ID) %>%
+  mutate_at(funs(./sumVar), -ID) %>%
   dplyr::select(-sumVar) %>%
   gather(signature, contribution, -ID)
 
@@ -251,11 +251,11 @@ Proportion each signature contributes to the mutation spectrum in each individua
 ```{r sigs_drop, echo=FALSE, fig.height = 12, fig.width = 24}
 # signature contributions across samples
 sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
-  # dplyr::filter(ID %in% drop_ids$V1) %>%
+  dplyr::filter(ID %in% drop_ids$V1) %>%
   mutate(sumVar = rowSums(.[2:ncol(sig_contribs)]),
          maxgp = apply(.[,2:ncol(sig_contribs)], 1, function(x) names(x)[which.max(x)])) %>%
   rowwise() %>% 
-  mutate_each(funs(./sumVar), -c(ID,maxgp)) %>%
+  mutate_at(funs(./sumVar), -c(ID,maxgp)) %>%
   dplyr::select(-sumVar) %>%
   gather(signature, contribution, -c(ID,maxgp)) # %>%
   # mutate(ID=factor(ID, levels=ID[order(contribution)]))
