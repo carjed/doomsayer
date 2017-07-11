@@ -234,8 +234,9 @@ sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
   gather(signature, contribution, -ID)
 
 ggplot(sig_contribs2,
-    aes(x=ID, y=contribution, group=signature, colour=signature))+
-  geom_line()+
+    aes(x=ID, y=contribution, group=signature, colour=signature, fill=signature))+
+  # geom_line()+
+  geom_bar(stat="identity", position="stack")+
   theme_bw()+
   theme(axis.text.x=element_blank(),
         axis.ticks.x=element_blank(),
@@ -261,8 +262,9 @@ sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
   # mutate(ID=factor(ID, levels=ID[order(contribution)]))
 
 ggplot(sig_contribs2,
-    aes(x=ID, y=contribution, group=signature, colour=signature))+
-  geom_line()+
+    aes(x=ID, y=contribution, group=signature, colour=signature, fill=signature))+
+  # geom_line()+
+  geom_bar(stat="identity", position="stack")+
   facet_wrap(~maxgp, ncol=1, scales="free_x")+
   theme_bw()+
   theme(axis.text.x=element_text(angle=90),
