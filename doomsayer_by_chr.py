@@ -117,7 +117,7 @@ for vcf in file_list:
         " --mmatrixname " + "NMF_" + str(i) + \
 		" --autodiagnostics --verbose"
     print("Running job:", cmd)
-    # call(cmd + " &", shell=True)
+    call(cmd + " &", shell=True)
     i += 1
 
 print("Waiting for subjobs to finish...")
@@ -151,4 +151,4 @@ aggcmd = "python doomsayer.py" + \
 	" --autodiagnostics --verbose"
 
 print("Running aggregation script:", aggcmd)
-# call(aggcmd, shell=True)
+call(aggcmd, shell=True)
