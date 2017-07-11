@@ -31,4 +31,4 @@ file.copy("./diagnostics/diagnostics.Rmd",
 # these will be located in the specified output folder
 rmarkdown::render(paste0(proj_dir, "/diagnostics.Rmd"),
   c("html_document", "pdf_document"),
-  params=list(yaml_cfg=yaml_cfg))
+  params=list(yaml_cfg=yaml_cfg), quiet=TRUE)
