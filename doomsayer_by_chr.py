@@ -112,14 +112,14 @@ with open(args.input) as f:
 
 i = 1
 for vcf in file_list:
-    cmd = "python doomsayer.py" +
-        " --input " + vcf +
-        " --fastafile " + args.fastafile +
-        " --projectdir " + args.projectdir +
-        " --length " + args.length +
-        " --rank " + args.length +
-        " --threshold " + args.threshold +
-        " --mmatrixname " + "NMF_" + i +
+    cmd = "python doomsayer.py" + \
+        " --input " + vcf + \
+        " --fastafile " + args.fastafile + \
+        " --projectdir " + args.projectdir + \
+        " --length " + args.length + \
+        " --rank " + args.length + \
+        " --threshold " + args.threshold + \
+        " --mmatrixname " + "NMF_" + i + \
 		" --autodiagnostics --verbose"
     print("Running job:", cmd)
     call(cmd + " &", shell=True)
@@ -140,9 +140,9 @@ while not mfiles_exist:
     else:
         time.sleep(5)
 
-aggcmd = "python doomsayer.py" +
-    " --input " + regionfile +
-    " --projectdir " + args.projectdir +
+aggcmd = "python doomsayer.py" + \
+    " --input " + regionfile + \
+    " --projectdir " + args.projectdir + \
 	" --autodiagnostics --verbose"
 
 print("Running aggregation script")
