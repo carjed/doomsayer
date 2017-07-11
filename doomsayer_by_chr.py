@@ -1,11 +1,12 @@
 #!/usr/bin/python
 
-from __future__ import print_function
+from __future__ import eprint_function
 import os
 import sys
 import argparse
 import time
 from subprocess import call
+from util import *
 
 parser = argparse.ArgumentParser()
 
@@ -115,17 +116,17 @@ for vcf in file_list:
         " --length " + str(args.length) + \
         " --rank " + str(args.rank) + \
         " --threshold " + str(args.threshold) + \
-        " --mmatrixname " + "NMF_" + str(i) + \
-		" --autodiagnostics --verbose"
-    print("Running job:", cmd)
+        " --mmatrixname " + "NMF_" + str(i)
+    eprint("Running job:", cmd)
     call(cmd + " &", shell=True)
     i += 1
 
-print("Waiting for subjobs to finish...")
 njobs = i
+eprint("Waiting for " + str(njobs-1) + "subjobs to finish...")
+
 
 regionfile = projdir + "/m_regions.txt"
-mfile_list = [projdir + "/NMF_" + str(s) + ".txt" for s in range(1,njobs+1)]
+mfile_list = [projdir + "/NMF_" + str(s) + ".txt" for s in range(1,njobs)]
 
 myfile = open(regionfile, 'w')
 for mfile in mfile_list:
@@ -133,7 +134,7 @@ for mfile in mfile_list:
 
 myfile.close()
 
-mfile_list = [projdir + "/NMF_" + str(s) + ".txt" for s in range(1,njobs+1)]
+mfile_list = [projdir + "/NMF_" + str(s) + ".txt" for s in range(1,njobs)]
 mfile_check = [False for i in range(njobs)]
 mfiles_exist = False
 while not mfiles_exist:
@@ -151,5 +152,5 @@ aggcmd = "python doomsayer.py" + \
     " --projectdir " + args.projectdir + \
 	" --autodiagnostics --verbose"
 
-print("Running aggregation script:", aggcmd)
+eprint("Running aggregation script:", aggcmd)
 call(aggcmd, shell=True)

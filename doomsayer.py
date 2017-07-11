@@ -317,7 +317,7 @@ if(args.outputtovcf and
 ###############################################################################
 # auto-generate diagnostic report in R
 ###############################################################################
-if args.autodiagnostics:
+if(args.autodiagnostics and args.mmatrixname == "NMF_M_spectra"):
     cmd = "diagnostics/doomsayer_diagnostics.r " + projdir + "/config.yaml"
     if args.verbose:
         eprint("Rscript will run the following command:")
