@@ -112,7 +112,7 @@ for vcf in file_list:
         " --length " + args.length + \
         " --rank " + args.length + \
         " --threshold " + args.threshold + \
-        " --mmatrixname " + "NMF_" + i + \
+        " --mmatrixname " + "NMF_" + str(i) + \
 		" --autodiagnostics --verbose"
     print("Running job:", cmd)
     call(cmd + " &", shell=True)
