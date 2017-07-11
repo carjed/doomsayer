@@ -98,14 +98,7 @@ parser.add_argument("-v", "--verbose",
 args = parser.parse_args()
 
 projdir = os.path.realpath(args.projectdir)
-regionfile = projdir + "/m_regions.txt"
-mfile_list = [projdir + "/NMF_" + str(s) + ".txt" for s in range(1,njobs+1)]
 
-myfile = open(regionfile, 'w')
-for mfile in mfile_list:
-    myfile.write("%s\n" % mfile)
-
-myfile.close()
 
 with open(args.input) as f:
     file_list = f.read().splitlines()
@@ -125,8 +118,18 @@ for vcf in file_list:
     call(cmd + " &", shell=True)
     i += 1
 
-print("Waiting for subjobs to finish")
+print("Waiting for subjobs to finish...")
 njobs = i
+
+regionfile = projdir + "/m_regions.txt"
+mfile_list = [projdir + "/NMF_" + str(s) + ".txt" for s in range(1,njobs+1)]
+
+myfile = open(regionfile, 'w')
+for mfile in mfile_list:
+    myfile.write("%s\n" % mfile)
+
+myfile.close()
+
 mfile_list = [projdir + "/NMF_" + str(s) + ".txt" for s in range(1,njobs+1)]
 mfile_check = [False for i in range(njobs)]
 mfiles_exist = False
