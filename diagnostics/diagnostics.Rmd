@@ -15,7 +15,7 @@ params:
 # knitr::opts_chunk$set(echo = TRUE)
 
 # check and load packages
-packages <- c("dplyr","tidyr","ggplot2","yaml", "devtools")
+packages <- c("dplyr","tidyr","ggplot2","yaml", "devtools", "knitr")
 
 package.check <- lapply(packages, FUN = function(x) {
     if (!require(x, character.only = TRUE)) {
@@ -100,36 +100,42 @@ spectra2 <- spectra %>%
   mutate(prop=count/sum(count)) %>%
   ungroup()
 
-match_b <- function(type){
-  benchmark_props <- c(0.07298031, 0.27229427, 0.06980828, 0.10192701, 0.08812614, 0.39486398)
-  names(benchmark_props) <- unique(spectra2$category)
-  return(benchmark_props[type])
+if(nrow(spectra2)==12){
+  match_b <- function(type){
+    benchmark_props <- c(0.07298031, 0.27229427, 0.06980828, 
+                         0.10192701, 0.08812614, 0.39486398)
+    names(benchmark_props) <- unique(spectra2$category)
+    return(benchmark_props[type])
+  }
+  
+  match_B <- Vectorize(match_b, vectorize.args = c('type'))
+  
+  benchmark <- spectra2 %>%
+    dplyr::filter(group=="keep") %>%
+    ungroup() %>%
+    mutate(group="benchmark", count=0, prop=match_b(category)) 
+  
+  spectra2 <- rbind(spectra2, benchmark)
 }
-
-match_B <- Vectorize(match_b, vectorize.args = c('type'))
-
-benchmark <- spectra2 %>%
-  dplyr::filter(group=="keep") %>%
-  ungroup() %>%
-  mutate(group="benchmark", count=0, prop=match_b(category)) 
-
-spectra2 <- rbind(spectra2, benchmark)
 
 ggplot(spectra2, aes(x=motif, y=prop, fill=group, group=group))+
   geom_bar(stat="identity", position="dodge")+
   facet_wrap(~category, ncol=6, scales="free_x")+
+  ylab("Contribution")+
   theme_bw()+
   theme(axis.text.x=element_text(angle=90, vjust=0, size=20),
         axis.text.y=element_text(size=20),
         axis.title.x=element_text(size=24),
         axis.title.y=element_text(size=24),
+        legend.title=element_blank(),
+        legend.text=element_text(size=20),
         strip.text=element_text(size=24))
         # legend.position="none")
 ```
 
 #### Kept samples
 
-```{r dist_keep, echo=FALSE, fig.height = 12, fig.width = 24}
+```{r dist_keep, echo=FALSE, eval=FALSE, fig.height = 12, fig.width = 24}
 # overall distribution
 spectra2_keep <- spectra %>%
   dplyr::filter(ID %in% keep_ids$V1) %>%
@@ -156,7 +162,7 @@ ggplot(spectra2_keep, aes(x=motif, y=count, fill=category))+
 
 #### Dropped samples
 
-```{r dist_drop, echo=FALSE, fig.height = 12, fig.width = 24}
+```{r dist_drop, echo=FALSE, eval=FALSE, fig.height = 12, fig.width = 24}
 # overall distribution
 spectra2_drop <- spectra %>%
   dplyr::filter(!(ID %in% keep_ids$V1)) %>%
@@ -295,4 +301,10 @@ ggplot(sig_contribs2,
       axis.title.x=element_text(size=24),
       axis.title.y=element_text(size=24),
       strip.text=element_text(size=24))
+
+# sig1 <- sig_contribs2 %>%
+  
+ddf<-data.frame(matrix(drop_ids$V1, round(sqrt(nrow(drop_ids)))+1, round(sqrt(nrow(drop_ids)))))
+
+knitr::kable(ddf, caption="Dropped samples list")
 ```
