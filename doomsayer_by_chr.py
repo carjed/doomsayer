@@ -109,9 +109,9 @@ for vcf in file_list:
         " --input " + vcf + \
         " --fastafile " + args.fastafile + \
         " --projectdir " + args.projectdir + \
-        " --length " + args.length + \
-        " --rank " + args.length + \
-        " --threshold " + args.threshold + \
+        " --length " + str(args.length) + \
+        " --rank " + str(args.rank) + \
+        " --threshold " + (args.threshold) + \
         " --mmatrixname " + "NMF_" + str(i) + \
 		" --autodiagnostics --verbose"
     print("Running job:", cmd)
