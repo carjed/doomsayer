@@ -251,7 +251,7 @@ This option enables detailed logging to the STDERR stream
 ### Aggregation mode
 Doomsayer can be run independently and simultaneously on subsets of the same dataset and then act as an aggregator for these outputs. This is particularly necessary for very large datasets with millions of variants and thousands of samples where sequential processing of a single massive VCF file is not feasible.
 
-The `doomsayer_by_chr.sh` script provides an example of how to implement this function. This shell script will simultaneously start 22 Doomsayer runs in the background (one per chromosome). Each run is specified with the `--mmatrixname chrN` argument, so only the mutation spectra matrices for each chromsomes are written, each with a unique file name.
+The `doomsayer_by_chr.py` script provides an example of how to implement this function. This shell script will simultaneously start 22 Doomsayer runs in the background (one per chromosome). Each run is specified with the `--mmatrixname chrN` argument, so only the mutation spectra matrices for each chromsomes are written, each with a unique file name.
 
 This script also writes a file named `m_regions.txt` containing the file names/paths of the per-chromosome mutation spectra matrices.
 
