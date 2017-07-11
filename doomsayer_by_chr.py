@@ -4,6 +4,7 @@ from __future__ import print_function
 import os
 import sys
 import argparse
+import time
 
 parser = argparse.ArgumentParser()
 
@@ -98,7 +99,8 @@ parser.add_argument("-v", "--verbose",
 args = parser.parse_args()
 
 projdir = os.path.realpath(args.projectdir)
-
+if not os.path.exists(args.projectdir):
+    os.makedirs(projdir)
 
 with open(args.input) as f:
     file_list = f.read().splitlines()
@@ -111,11 +113,11 @@ for vcf in file_list:
         " --projectdir " + args.projectdir + \
         " --length " + str(args.length) + \
         " --rank " + str(args.rank) + \
-        " --threshold " + (args.threshold) + \
+        " --threshold " + str(args.threshold) + \
         " --mmatrixname " + "NMF_" + str(i) + \
 		" --autodiagnostics --verbose"
     print("Running job:", cmd)
-    call(cmd + " &", shell=True)
+    # call(cmd + " &", shell=True)
     i += 1
 
 print("Waiting for subjobs to finish...")
@@ -148,5 +150,5 @@ aggcmd = "python doomsayer.py" + \
     " --projectdir " + args.projectdir + \
 	" --autodiagnostics --verbose"
 
-print("Running aggregation script")
-call(aggcmd, shell=True)
+print("Running aggregation script:", aggcmd)
+# call(aggcmd, shell=True)
