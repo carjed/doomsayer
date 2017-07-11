@@ -3,6 +3,7 @@ title: "doomsayer_diagnostics"
 output:
   html_document:
       keep_md: yes
+      theme: united
   pdf_document:
 date: '`r format(Sys.Date())`'
 params:

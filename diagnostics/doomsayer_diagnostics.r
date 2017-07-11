@@ -29,6 +29,7 @@ file.copy("./diagnostics/diagnostics.Rmd",
 
 # Render the RMarkdown document as both an HTML page and PDF,
 # these will be located in the specified output folder
+# c("html_document", "pdf_document"),
 rmarkdown::render(paste0(proj_dir, "/diagnostics.Rmd"),
-  c("html_document", "pdf_document"),
+  c("html_document"),
   params=list(yaml_cfg=yaml_cfg), quiet=TRUE)
