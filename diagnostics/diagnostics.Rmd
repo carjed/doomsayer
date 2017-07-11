@@ -267,7 +267,7 @@ ggplot(sig_contribs2,
   geom_bar(stat="identity", position="stack")+
   facet_wrap(~maxgp, ncol=1, scales="free_x")+
   theme_bw()+
-  theme(axis.text.x=element_text(angle=90),
+  theme(axis.text.x=element_text(angle=90, size=18),
         axis.ticks.x=element_blank(),
       axis.text.y=element_text(size=20),
       axis.title.x=element_text(size=24),
