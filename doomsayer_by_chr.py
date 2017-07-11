@@ -122,7 +122,7 @@ for vcf in file_list:
     i += 1
 
 njobs = i
-eprint("Waiting for " + str(njobs-1) + "subjobs to finish...")
+eprint("Waiting for " + str(njobs-1) + " subjobs to finish...")
 
 
 regionfile = projdir + "/m_regions.txt"
@@ -142,6 +142,10 @@ while not mfiles_exist:
     for mfile in mfile_list:
         mfile_check[i] = os.path.exists(mfile)
         i += 1
+        if mfile_check[i]:
+            print(mfile, "exists")
+        else:
+            print(mfile, "does not exist")
     if all(mfile_check):
         mfiles_exist = True
     else:

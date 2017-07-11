@@ -6,14 +6,12 @@ import sys
 import argparse
 import itertools
 import timeit
-# import collections
+import time
 import numpy as np
 from subprocess import call
 from pyfaidx import Fasta
-# from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.Alphabet import IUPAC
-# from sklearn.decomposition import NMF
 import nimfa
 from util import *
 
@@ -144,6 +142,28 @@ if(args.input.lower().endswith(('.vcf', '.vcf.gz')) or args.input == "-"):
     data = processVCF(args, subtypes_dict)
     M = data.M
     samples = data.samples
+# testing--integrate per-chromosome parsing
+# elif args.input.lower().endswith('inputs.txt'):
+#     with open(args.input) as f:
+#         file_list = f.read().splitlines()
+#
+#     i = 1
+#     for vcf in file_list:
+#         cmd = "python doomsayer.py" + \
+#             " --input " + vcf + \
+#             " --fastafile " + args.fastafile + \
+#             " --projectdir " + args.projectdir + \
+#             " --length " + str(args.length) + \
+#             " --rank " + str(args.rank) + \
+#             " --threshold " + str(args.threshold) + \
+#             " --mmatrixname " + "NMF_" + str(i)
+#         eprint("Running job:", cmd)
+#         call(cmd + " &", shell=True)
+#         i += 1
+#
+#     njobs = i
+#     if args.verbose:
+#         eprint("Waiting for " + str(njobs-1) + " subjobs to finish...")
 
 # M output by sample
 elif args.input.lower().endswith('m_samples.txt'):
