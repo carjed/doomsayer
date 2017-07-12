@@ -3,6 +3,7 @@
 from __future__ import print_function
 import os
 import sys
+import textwrap
 import argparse
 import itertools
 import timeit
@@ -279,7 +280,7 @@ else:
         if args.verbose:
             eprint("Total runtime:", tottime, "seconds")
             eprint(str(round(evar,2)*100) + \
-                "percent of variance explained with 1 signature")
+                " percent of variance explained with 1 signature")
         sys.exit()
     # else:
     # maxind = evar_list.index(max(evar_list))+1
@@ -362,6 +363,19 @@ if(args.outputtovcf and
             print(str(v).rstrip())
 
     vcf.close()
+elif(args.outputtovcf and args.input.lower().endswith(('.txt'))):
+    eprint textwrap.dedent("""\
+            BEGIN:VCALENDAR
+            PRODID:-//Atlassian Software Systems//Confluence Calendar Plugin//EN
+            VERSION:2.0
+            CALSCALE:GREGORIAN
+            X-WR-CALNAME;VALUE=TEXT:
+            X-WR-CALDESC;VALUE=TEXT:
+            """)
+    # eprint("WARNING: you are using the --outputtovcf option, but running",
+    #     "in aggregation mode with no input VCF. Filtered VCF will not be",
+    #     "generated. Please use the keep/drop lists in", projdir, "to manually",
+    #      "filter your VCF.")
 
 ###############################################################################
 # auto-generate diagnostic report in R
