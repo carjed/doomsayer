@@ -257,7 +257,7 @@ else:
         with open(args.subtypefile) as st_file:
             for line in st_file:
                (key, val) = line.split()
-               st_dict[key] = val
+               st_dict[key] = int(val)
                M[:,subtypes_dict[key]] /= st_dict[key]
 
     if args.noscale:
