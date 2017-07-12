@@ -268,7 +268,7 @@ else:
     if args.rank > 0:
         if args.verbose:
             eprint("Running NMF with specified rank=", args.rank)
-        model = nimfa.Nmf(M_run, rank=args.rank)
+        model = nimfa.Nmf(M_run, rank=args.rank, max_iter=20000)
         model_fit = model()
         evar = model_fit.fit.evar()
         maxind = args.rank
@@ -277,7 +277,7 @@ else:
             eprint("Finding optimal rank for NMF...")
         evarprev = 0
         for i in range(1,6):
-            model = nimfa.Nmf(M_run, rank=i)
+            model = nimfa.Nmf(M_run, rank=i, max_iter=20000)
             model_fit = model()
             evar = model_fit.fit.evar()
             if args.verbose:
