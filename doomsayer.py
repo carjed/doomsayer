@@ -87,6 +87,13 @@ parser.add_argument("-g", "--groupfile",
                     nargs='?',
                     type=str)
 
+parser.add_argument("-b", "--subtypefile",
+                    help="two-column tab-delimited file containing sample IDs \
+                        (column 1) and group membership (column 2) for pooled \
+                        analysis",
+                    nargs='?',
+                    type=str)
+
 parser.add_argument("-ns", "--noscale",
                     help="do not scale H and W matrices",
                     action="store_true")
@@ -242,8 +249,19 @@ if args.mmatrixname != "NMF_M_spectra":
     np.savetxt(M_path, M_fmt, delimiter='\t', fmt="%s")
 else:
     M_f = M/(M.sum(axis=1)+1e-8)[:,None]
+
+    if args.subtypefile:
+        if args.verbose:
+            eprint("Scaling M into relative rate matrix")
+        st_dict = {}
+        with open(args.subtypefile) as st_file:
+            for line in st_file:
+               (key, val) = line.split()
+               st_dict[key] = val
+               M[:,subtypes_dict[key]] /= st_dict[key]
+
     if args.noscale:
-        M_run = M
+        M_run = M_r
     else:
         M_run = M_f
 
