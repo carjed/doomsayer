@@ -143,10 +143,10 @@ while not mfiles_exist:
     i = 0
     for mfile in mfile_list:
         mfile_check[i] = os.path.exists(mfile)
-        if mfile_check[i]:
+        # if mfile_check[i]:
             # print(mfile, "exists")
             # print(mfile_check)
-        else:
+        # else:
             # print(mfile, "does not exist")
             # print(mfile_check)
         i += 1
