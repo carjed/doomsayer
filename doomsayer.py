@@ -274,14 +274,7 @@ else:
                 break
             evarprev = evar
 
-    if(maxind == 1 and evar > 0.8):
-        stop = timeit.default_timer()
-        tottime = round(stop - start, 2)
-        if args.verbose:
-            eprint("Total runtime:", tottime, "seconds")
-            eprint(str(round(evar,2)*100) + \
-                " percent of variance explained with 1 signature")
-        sys.exit()
+
     # else:
     # maxind = evar_list.index(max(evar_list))+1
     # model = nimfa.Nmf(M_run, rank=maxind)
@@ -376,6 +369,15 @@ elif(args.outputtovcf and args.input.lower().endswith(('.txt'))):
     #     "in aggregation mode with no input VCF. Filtered VCF will not be",
     #     "generated. Please use the keep/drop lists in", projdir, "to manually",
     #      "filter your VCF.")
+
+if(maxind == 1 and evar > 0.8):
+    stop = timeit.default_timer()
+    tottime = round(stop - start, 2)
+    if args.verbose:
+        eprint("Total runtime:", tottime, "seconds")
+        eprint(str(round(evar,2)*100) + \
+            " percent of variance explained with 1 signature")
+    sys.exit()
 
 ###############################################################################
 # auto-generate diagnostic report in R
