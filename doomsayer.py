@@ -209,7 +209,7 @@ elif args.input.lower().endswith('m_regions.txt'):
         delimiter='\t',
         usecols=(0,))
 
-    M_out = np.zeros((len(samples), len(M_colnames)))
+    M_out = np.zeros((len(samples), len(M_colnames)-1))
     eprint(M_out.shape)
     for mfile in file_list:
         samples = np.loadtxt(mfile,
