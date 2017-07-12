@@ -23,11 +23,11 @@ These plots shows the total number of observations in each subtype, combined acr
 
 #### Kept samples
 
-![](diagnostics_files/figure-html/dist_keep-1.png)<!-- -->
+
 
 #### Dropped samples
 
-![](diagnostics_files/figure-html/dist_drop-1.png)<!-- -->
+
 
 ### Signature loadings (H matrix)
 

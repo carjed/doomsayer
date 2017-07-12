@@ -197,12 +197,21 @@ Describes how each mutation subtype is loaded into the r signatures
 
 ```{r sigloads, echo=FALSE, fig.height = 6, fig.width = 14}
 # signature loadings
-sig_loads %>% 
-  gather(var, val, 2:ncol(sig_loads)) %>% 
-  spread(Sig, val) %>% 
-  dplyr::select(-var) %>% 
-  correlate
-
+# corrm <- sig_loads %>% 
+#   gather(var, val, 2:ncol(sig_loads)) %>% 
+#   spread(Sig, val) %>% 
+#   dplyr::select(-var) %>% 
+#   correlate
+# 
+# 
+# corrm
+# 
+# mincor <- corrm %>% 
+#   dplyr::select(-rowname) %>%
+#   min(na.rm=T)
+# 
+# cat("Minimum correlation = ", mincor, "\n")
+# if(mincor > 0.5)
 
 sig_loads_long <- sig_loads %>%
   mutate(sumVar = rowSums(.[2:ncol(sig_loads)])) %>% 
@@ -302,7 +311,8 @@ ggplot(sig_contribs2,
   geom_bar(stat="identity", position="stack")+
   facet_wrap(~maxgp, ncol=1, scales="free_x")+
   theme_bw()+
-  theme(axis.text.x=element_text(angle=90, size=18),
+  theme(axis.text.x=element_blank(),
+    # axis.text.x=element_text(angle=90, size=18),
         axis.ticks.x=element_blank(),
       axis.text.y=element_text(size=20),
       axis.title.x=element_text(size=24),
@@ -311,7 +321,7 @@ ggplot(sig_contribs2,
 
 # sig1 <- sig_contribs2 %>%
   
-ddf<-data.frame(matrix(drop_ids$V1, round(sqrt(nrow(drop_ids)))+1, round(sqrt(nrow(drop_ids)))))
-
-knitr::kable(ddf, caption="Dropped samples list")
+# ddf<-data.frame(matrix(drop_ids$V1, round(sqrt(nrow(drop_ids)))+1, round(sqrt(nrow(drop_ids)))))
+# 
+# knitr::kable(ddf, caption="Dropped samples list")
 ```

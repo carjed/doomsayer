@@ -100,8 +100,8 @@ parser.add_argument("-t", "--threshold",
 parser.add_argument("-r", "--rank",
                     help="rank for NMF decomposition",
                     type=int,
-                    choices=range(2,11),
-                    default=3)
+                    choices=range(1,11),
+                    default=0)
 
 parser.add_argument("-l", "--length",
                     help="motif length",
@@ -258,19 +258,36 @@ if args.mmatrixname != "NMF_M_spectra":
     np.savetxt(M_path, M_fmt, delimiter='\t', fmt="%s")
 else:
     M_f = M/(M.sum(axis=1)+1e-8)[:,None]
-    # model = NMF(n_components=args.rank, init='random', random_state=0)
     if args.noscale:
+        M_run = M
+    else:
+        M_run = M_f
+
+    if args.rank > 0:
         if args.verbose:
-            eprint("Running NMF on raw count spectra")
-        model = nimfa.Nmf(M, rank=args.rank)
+            eprint("Running NMF with specified rank=", args.rank)
+        model = nimfa.Nmf(M_run, rank=args.rank)
+        maxind = args.rank
     else:
         if args.verbose:
-            eprint("Running NMF on normalized spectra")
-        model = nimfa.Nmf(M_f, rank=args.rank)
+            eprint("Finding optimal rank for NMF...")
+        for i in range(1,6):
+            model = nimfa.Nmf(M_run, rank=i)
+            model_fit = model()
+            evar = model_fit.fit.evar()
+            if args.verbose:
+                eprint("Explained variance for rank " + str(i) + ":", evar)
+            if evar > 0.8:
+                break
+            maxind = i
 
+    # maxind = evar_list.index(max(evar_list))+1
+    model = nimfa.Nmf(M_run, rank=maxind)
     model_fit = model()
     W = model_fit.basis()
     H = model_fit.coef()
+    evar = model_fit.fit.evar()
+    # eprint(evar)
 
     # eprint(H)
     # eprint(W)

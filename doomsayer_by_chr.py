@@ -137,9 +137,9 @@ for mfile in mfile_list:
 myfile.close()
 
 mfile_list = [projdir + "/NMF_" + str(s) + ".txt" for s in range(1,njobs)]
-eprint(mfile_list)
 mfile_check = [False] * len(mfile_list)
-eprint(mfile_check)
+# eprint(mfile_list)
+# eprint(mfile_check)
 mfiles_exist = False
 while not mfiles_exist:
     i = 0

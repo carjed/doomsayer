@@ -266,8 +266,8 @@ def diagWrite(projdir, M, M_f, W, H, subtypes_dict, samples, args):
         eprint("Saving M matrix (observed spectra counts)")
 
     # add ID as first column
-    eprint(np.array([samples]).T.shape)
-    eprint(M.shape)
+    # eprint(np.array([samples]).T.shape)
+    # eprint(M.shape)
     M_fmt = np.concatenate((np.array([samples]).T, M), axis=1)
 
     # add header
@@ -301,9 +301,10 @@ def diagWrite(projdir, M, M_f, W, H, subtypes_dict, samples, args):
 
     # add ID as first column
     W_fmt = np.concatenate((np.array([samples]).T, W), axis=1)
-
+    num_samples, num_sigs = W.shape
+    # eprint(W.shape)
     # add header
-    W_colnames = colnames + ["S" + str(i) for i in range(1,args.rank+1)]
+    W_colnames = colnames + ["S" + str(i) for i in range(1,num_sigs+1)]
     W_fmt = np.concatenate((np.array([W_colnames]), W_fmt), axis=0)
 
     # write out
@@ -317,7 +318,7 @@ def diagWrite(projdir, M, M_f, W, H, subtypes_dict, samples, args):
         eprint("Saving H matrix (feature loadings per signature)")
 
     # add signature ID as first column
-    H_rownames = ["S" + str(i) for i in range(1,args.rank+1)]
+    H_rownames = ["S" + str(i) for i in range(1,num_sigs+1)]
     H_fmt = np.concatenate((np.array([H_rownames]).T, H.astype('|S10')), axis=1)
 
     H_colnames = ["Sig"] + list(sorted(subtypes_dict.keys()))
