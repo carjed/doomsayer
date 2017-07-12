@@ -274,7 +274,7 @@ else:
                             """))
                 maxind = i-1
                 break
-            elif evar > 0.8:
+            elif evar > 0.95:
                 if args.verbose:
                     eprint(textwrap.dedent("""\
                             Stopping condition met: rank explains >80 percent
@@ -283,7 +283,7 @@ else:
                 break
             evarprev = evar
 
-    if(maxind == 1 and evar > 0.8):
+    if(maxind == 1 and evar > 0.95):
         stop = timeit.default_timer()
         tottime = round(stop - start, 2)
         if args.verbose:
