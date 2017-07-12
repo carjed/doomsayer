@@ -135,19 +135,20 @@ for mfile in mfile_list:
 myfile.close()
 
 mfile_list = [projdir + "/NMF_" + str(s) + ".txt" for s in range(1,njobs)]
-print(mfile_list)
-mfile_check = [False for i in range(njobs)]
+eprint(mfile_list)
+mfile_check = [False] * len(mfile_list)
+eprint(mfile_check)
 mfiles_exist = False
 while not mfiles_exist:
     i = 0
     for mfile in mfile_list:
         mfile_check[i] = os.path.exists(mfile)
         if mfile_check[i]:
-            print(mfile, "exists")
-            print(mfile_check)
+            # print(mfile, "exists")
+            # print(mfile_check)
         else:
-            print(mfile, "does not exist")
-            print(mfile_check)
+            # print(mfile, "does not exist")
+            # print(mfile_check)
         i += 1
     if all(mfile_check):
         mfiles_exist = True
