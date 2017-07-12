@@ -15,7 +15,7 @@ params:
 # knitr::opts_chunk$set(echo = TRUE)
 
 # check and load packages
-packages <- c("dplyr","tidyr","ggplot2","yaml", "devtools", "knitr")
+packages <- c("dplyr","tidyr","ggplot2","yaml", "devtools", "knitr", "corrr")
 
 package.check <- lapply(packages, FUN = function(x) {
     if (!require(x, character.only = TRUE)) {
@@ -197,6 +197,13 @@ Describes how each mutation subtype is loaded into the r signatures
 
 ```{r sigloads, echo=FALSE, fig.height = 6, fig.width = 14}
 # signature loadings
+sig_loads %>% 
+  gather(var, val, 2:ncol(sig_loads)) %>% 
+  spread(Sig, val) %>% 
+  dplyr::select(-var) %>% 
+  correlate
+
+
 sig_loads_long <- sig_loads %>%
   mutate(sumVar = rowSums(.[2:ncol(sig_loads)])) %>% 
   rowwise() %>% 
