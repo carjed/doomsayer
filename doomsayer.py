@@ -208,17 +208,18 @@ elif args.input.lower().endswith('m_regions.txt'):
         skiprows=1,
         delimiter='\t',
         usecols=(0,))
-
+    eprint(len(samples))
     M_out = np.zeros((len(samples), len(M_colnames)-1))
     eprint(M_out.shape)
     for mfile in file_list:
-        samples = np.loadtxt(mfile,
-            dtype='S16',
-            skiprows=1,
-            delimiter='\t',
-            usecols=(0,))
+        # samples = np.loadtxt(mfile,
+        #     dtype='S16',
+        #     skiprows=1,
+        #     delimiter='\t',
+        #     usecols=(0,))
 
         M_it = np.loadtxt(mfile, skiprows=1, usecols=range(1,len(M_colnames)))
+        eprint(M_it)
         M_out = np.add(M_out, M_it)
 
     M_out = np.concatenate((np.array([samples]).T, M_out), axis=1)
