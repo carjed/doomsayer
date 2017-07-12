@@ -197,11 +197,19 @@ elif args.input.lower().endswith('m_regions.txt'):
         eprint("Aggregating regional subset spectra matrices")
     colnames = ["ID"]
     M_colnames = colnames + list(sorted(subtypes_dict.keys()))
-    M_out = np.array([M_colnames])
-
+    # M_out = np.array([M_colnames])
+    # M_out = np.zeros((, len(M_colnames)))
     # file_list = args.input
     with open(args.input) as f:
         file_list = f.read().splitlines()
+
+    samples = np.loadtxt(file_list[0],
+        dtype='S16',
+        skiprows=1,
+        delimiter='\t',
+        usecols=(0,))
+
+    M_out = np.zeros((len(samples), len(M_colnames)))
     for mfile in file_list:
         samples = np.loadtxt(mfile,
             dtype='S16',
@@ -211,7 +219,7 @@ elif args.input.lower().endswith('m_regions.txt'):
 
         M_it = np.loadtxt(mfile, skiprows=1, usecols=range(1,len(M_colnames)))
         M_it = np.concatenate((np.array([samples]).T, M_it), axis=1)
-        M_out = np.concatenate((M_out, M_it), axis=0)
+        M_out = np.add(M_out, M_it)
 
     M = np.delete(M_out, 0, 0)
     M = np.delete(M, 0, 1)
