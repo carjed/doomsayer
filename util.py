@@ -266,6 +266,8 @@ def diagWrite(projdir, M, M_f, W, H, subtypes_dict, samples, args):
         eprint("Saving M matrix (observed spectra counts)")
 
     # add ID as first column
+    eprint(np.array([samples]).T.shape)
+    eprint(M.shape)
     M_fmt = np.concatenate((np.array([samples]).T, M), axis=1)
 
     # add header

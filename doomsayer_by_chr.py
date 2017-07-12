@@ -117,8 +117,10 @@ for vcf in file_list:
         " --rank " + str(args.rank) + \
         " --threshold " + str(args.threshold) + \
         " --mmatrixname " + "NMF_" + str(i)
-    eprint("Running job:", cmd)
-    call(cmd + " &", shell=True)
+
+    if not os.path.exists(projdir + "/NMF_" + str(i) + ".txt"):
+        eprint("Running job:", cmd)
+        call(cmd + " &", shell=True)
     i += 1
 
 njobs = i
@@ -143,12 +145,6 @@ while not mfiles_exist:
     i = 0
     for mfile in mfile_list:
         mfile_check[i] = os.path.exists(mfile)
-        # if mfile_check[i]:
-            # print(mfile, "exists")
-            # print(mfile_check)
-        # else:
-            # print(mfile, "does not exist")
-            # print(mfile_check)
         i += 1
     if all(mfile_check):
         mfiles_exist = True
