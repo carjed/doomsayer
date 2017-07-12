@@ -166,57 +166,53 @@ if(args.input.lower().endswith(('.vcf', '.vcf.gz')) or args.input == "-"):
 #     if args.verbose:
 #         eprint("Waiting for " + str(njobs-1) + " subjobs to finish...")
 
-# M output by sample
-elif args.input.lower().endswith('m_samples.txt'):
-    if args.verbose:
-        eprint("Aggregating sample subset spectra matrices")
+
+elif(args.input.lower().endswith('m_samples.txt') or
+        args.input.lower().endswith('m_regions.txt')):
+
     colnames = ["ID"]
     M_colnames = colnames + list(sorted(subtypes_dict.keys()))
-    M_out = np.array([M_colnames])
-
-    # file_list = args.input
-    with open(args.input) as f:
-        file_list = f.read().splitlines()
-    for mfile in file_list:
-        samples = np.loadtxt(mfile,
-            dtype='S16',
-            skiprows=1,
-            delimiter='\t',
-            usecols=(0,))
-
-        M_it = np.loadtxt(mfile, skiprows=1, usecols=range(1,len(M_colnames)))
-        M_it = np.concatenate((np.array([samples]).T, M_it), axis=1)
-        M_out = np.concatenate((M_out, M_it), axis=0)
-
-    M = np.delete(M_out, 0, 0)
-    M = np.delete(M, 0, 1)
-    M = M.astype(np.float)
-
-# M output by region
-elif args.input.lower().endswith('m_regions.txt'):
-    if args.verbose:
-        eprint("Aggregating regional subset spectra matrices")
-    colnames = ["ID"]
-    M_colnames = colnames + list(sorted(subtypes_dict.keys()))
+    colrange = range(1,len(M_colnames))
 
     with open(args.input) as f:
         file_list = f.read().splitlines()
 
-    samples = np.loadtxt(file_list[0],
-        dtype='S16',
-        skiprows=1,
-        delimiter='\t',
-        usecols=(0,))
-    # eprint(len(samples))
-    M_out = np.zeros((len(samples), len(M_colnames)-1))
-    # eprint(M_out.shape)
-    for mfile in file_list:
-        M_it = np.loadtxt(mfile, skiprows=1, usecols=range(1,len(M_colnames)))
-        M_out = np.add(M_out, M_it)
+    # M output by sample
+    if args.input.lower().endswith('m_samples.txt'):
+        if args.verbose:
+            eprint("Aggregating sample subset spectra matrices")
 
-    M = M_out.astype(np.float)
+        M_out = np.array([M_colnames])
+
+        for mfile in file_list:
+            samples = getSamples(mfile)
+
+            M_it = np.loadtxt(mfile, skiprows=1, usecols=colrange)
+            M_it = np.concatenate((np.array([samples]).T, M_it), axis=1)
+            M_out = np.concatenate((M_out, M_it), axis=0)
+
+        M = np.delete(M_out, 0, 0)
+        M = np.delete(M, 0, 1)
+        M = M.astype(np.float)
+
+    # M output by region
+    elif args.input.lower().endswith('m_regions.txt'):
+        if args.verbose:
+            eprint("Aggregating regional subset spectra matrices")
+
+        samples = getSamples(file_list[0])
+
+        # eprint(len(samples))
+        M_out = np.zeros((len(samples), len(M_colnames)-1))
+        # eprint(M_out.shape)
+        for mfile in file_list:
+            M_it = np.loadtxt(mfile, skiprows=1, usecols=colrange)
+            M_out = np.add(M_out, M_it)
+
+        M = M_out.astype(np.float)
 else:
-    eprint("invalid input detected. See documentation")
+    eprint("ERROR: invalid input detected. See documentation")
+    sys.exit()
 
 ###############################################################################
 # Run NMF on final matrix
@@ -270,11 +266,31 @@ else:
                 eprint("Explained variance for rank " + str(i) + ":", evar)
             maxind = i
             # if evar > 0.8:
-            if(evar - evarprev < 0.001 or evar > 0.8):
+            if(i > 2 and evar - evarprev < 0.001):
+                if args.verbose:
+                    eprint(textwrap.dedent("""\
+                            Stopping condition met: <0.1 percent difference
+                            in explained variation between ranks
+                            """))
+                maxind = i-1
+                break
+            elif evar > 0.8:
+                if args.verbose:
+                    eprint(textwrap.dedent("""\
+                            Stopping condition met: rank explains >80 percent
+                            of variation.
+                            """))
                 break
             evarprev = evar
 
-
+    if(maxind == 1 and evar > 0.8):
+        stop = timeit.default_timer()
+        tottime = round(stop - start, 2)
+        if args.verbose:
+            eprint(str(round(evar,2)*100) + \
+                " percent of variance explained with 1 signature")
+            eprint("Total runtime:", tottime, "seconds")
+        sys.exit()
     # else:
     # maxind = evar_list.index(max(evar_list))+1
     # model = nimfa.Nmf(M_run, rank=maxind)
@@ -313,8 +329,10 @@ else:
 # Write keep and drop lists
 ###############################################################################
 if(args.nofilter or args.mmatrixname != "NMF_M_spectra"):
-    eprint("You are running with the --nofilter or --mmatrixname option. " +
-        "Keep and drop lists will not be generated")
+    eprint(textwrap.dedent("""\
+            You are running with the --nofilter or --mmatrixname option.
+            Keep and drop lists will not be generated.
+            """))
 else:
     keep_samples = []
     drop_samples = []
@@ -356,28 +374,13 @@ if(args.outputtovcf and
             print(str(v).rstrip())
 
     vcf.close()
+
 elif(args.outputtovcf and args.input.lower().endswith(('.txt'))):
     eprint(textwrap.dedent("""\
-            BEGIN:VCALENDAR
-            PRODID:-//Atlassian Software Systems//Confluence Calendar Plugin//EN
-            VERSION:2.0
-            CALSCALE:GREGORIAN
-            X-WR-CALNAME;VALUE=TEXT:
-            X-WR-CALDESC;VALUE=TEXT:
+            WARNING: Doomsayer cannot write to a new VCF if running in
+            aggregation mode. Please use the keep/drop lists to manually filter
+            your VCF with bcftools or a similar utility
             """))
-    # eprint("WARNING: you are using the --outputtovcf option, but running",
-    #     "in aggregation mode with no input VCF. Filtered VCF will not be",
-    #     "generated. Please use the keep/drop lists in", projdir, "to manually",
-    #      "filter your VCF.")
-
-if(maxind == 1 and evar > 0.8):
-    stop = timeit.default_timer()
-    tottime = round(stop - start, 2)
-    if args.verbose:
-        eprint("Total runtime:", tottime, "seconds")
-        eprint(str(round(evar,2)*100) + \
-            " percent of variance explained with 1 signature")
-    sys.exit()
 
 ###############################################################################
 # auto-generate diagnostic report in R
@@ -389,7 +392,6 @@ if(args.autodiagnostics and args.mmatrixname == "NMF_M_spectra"):
         eprint("Rscript " + cmd)
         eprint("Auto-generating diagnostic report...")
     call("/usr/bin/Rscript --vanilla " + cmd, shell=True)
-
 
 stop = timeit.default_timer()
 tottime = round(stop - start, 2)

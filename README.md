@@ -236,7 +236,7 @@ This parameter allows you to specify a custom name for the mutation spectra matr
 #### Specify NMF rank
 `-r {2,3,4,5,6,7,8,9,10}, --rank {2,3,4,5,6,7,8,9,10}` **(optional)**
 
-This parameter specifies the rank of the NMF decomposition (up to 10). The default rank (3) should be sufficient for most QC applications, but if you are using Doomsayer for somatic mutation signature analysis, you will likely require a higher rank.
+This parameter allows you to choose the rank of the NMF decomposition (up to 10). By default, Doomsayer will choose an optimal value by selecting either 1) the lowest rank that explains at least 80% of variation across samples or 2) the smaller of two successive ranks if the increase in explained variation is \<0.1%. If neither of these conditions is met, Doomsayer will default to a rank of 5.
 
 #### Set motif length
 `-l {1,3,5,7}, --length {1,3,5,7}` **(optional)**
@@ -251,7 +251,9 @@ This option enables detailed logging to the STDERR stream
 ### Aggregation mode
 Doomsayer can be run independently and simultaneously on subsets of the same dataset and then act as an aggregator for these outputs. This is particularly necessary for very large datasets with millions of variants and thousands of samples where sequential processing of a single massive VCF file is not feasible.
 
-The `doomsayer_by_chr.py` script provides an example of how to implement this function. This shell script will simultaneously start 22 Doomsayer runs in the background (one per chromosome). Each run is specified with the `--mmatrixname chrN` argument, so only the mutation spectra matrices for each chromsomes are written, each with a unique file name.
+The `doomsayer_by_chr.py` script provides an example of how to implement this function. This script accepts the same arguments as `doomsayer.py`, but instead of a VCF for input, it must be given a text file containing the file paths for the VCF
+
+will simultaneously start 22 Doomsayer runs in the background (one per chromosome). Each run is specified with the `--mmatrixname chrN` argument, so only the mutation spectra matrices for each chromsomes are written, each with a unique file name.
 
 This script also writes a file named `m_regions.txt` containing the file names/paths of the per-chromosome mutation spectra matrices.
 

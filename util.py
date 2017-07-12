@@ -98,6 +98,15 @@ def indexSubtypes(args):
     # eprint(subtypes_dict)
     return subtypes_dict
 
+def getSamples(fh):
+    samples = np.loadtxt(fh,
+        dtype='S16',
+        skiprows=1,
+        delimiter='\t',
+        usecols=(0,))
+
+    return samples
+
 ###############################################################################
 # Main function for parsing VCF
 ###############################################################################
@@ -262,12 +271,6 @@ def diagWrite(projdir, M, M_f, W, H, subtypes_dict, samples, args):
     ###############################
     # M matrix (counts)
     ###############################
-    if args.verbose:
-        eprint("Saving M matrix (observed spectra counts)")
-
-    # add ID as first column
-    # eprint(np.array([samples]).T.shape)
-    # eprint(M.shape)
     M_fmt = np.concatenate((np.array([samples]).T, M), axis=1)
 
     # add header
@@ -280,9 +283,6 @@ def diagWrite(projdir, M, M_f, W, H, subtypes_dict, samples, args):
     ###############################
     # M matrix (rates)
     ###############################
-    if args.verbose:
-        eprint("Saving M_f matrix (observed spectra rates)")
-
     # add ID as first column
     M_fmt = np.concatenate((np.array([samples]).T, M_f), axis=1)
 
@@ -296,9 +296,6 @@ def diagWrite(projdir, M, M_f, W, H, subtypes_dict, samples, args):
     ###############################
     # W matrix (contributions)
     ###############################
-    if args.verbose:
-        eprint("Saving W matrix (signature contributions per sample)")
-
     # add ID as first column
     W_fmt = np.concatenate((np.array([samples]).T, W), axis=1)
     num_samples, num_sigs = W.shape
@@ -314,9 +311,6 @@ def diagWrite(projdir, M, M_f, W, H, subtypes_dict, samples, args):
     ###############################
     # H matrix (loadings)
     ###############################
-    if args.verbose:
-        eprint("Saving H matrix (feature loadings per signature)")
-
     # add signature ID as first column
     H_rownames = ["S" + str(i) for i in range(1,num_sigs+1)]
     H_fmt = np.concatenate((np.array([H_rownames]).T, H.astype('|S10')), axis=1)
