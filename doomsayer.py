@@ -254,10 +254,13 @@ else:
         if args.verbose:
             eprint("Running NMF with specified rank=", args.rank)
         model = nimfa.Nmf(M_run, rank=args.rank)
+        model_fit = model()
+        evar = model_fit.fit.evar()
         maxind = args.rank
     else:
         if args.verbose:
             eprint("Finding optimal rank for NMF...")
+        evarprev = 0
         for i in range(1,6):
             model = nimfa.Nmf(M_run, rank=i)
             model_fit = model()
@@ -265,18 +268,26 @@ else:
             if args.verbose:
                 eprint("Explained variance for rank " + str(i) + ":", evar)
             maxind = i
-            if evar > 0.8:
+            # if evar > 0.8:
+            if(evar - evarprev < 0.001 or evar > 0.8):
                 break
+            evarprev = evar
 
-    if maxind == 1:
-        eprint(str(evar*100) + "%% of variance explained with 1 signature")
+    if(maxind == 1 and evar > 0.8):
+        stop = timeit.default_timer()
+        tottime = round(stop - start, 2)
+        if args.verbose:
+            eprint("Total runtime:", tottime, "seconds")
+            eprint(str(round(evar,2)*100) + \
+                "percent of variance explained with 1 signature")
+        sys.exit()
     # else:
     # maxind = evar_list.index(max(evar_list))+1
-    model = nimfa.Nmf(M_run, rank=maxind)
-    model_fit = model()
+    # model = nimfa.Nmf(M_run, rank=maxind)
+    # model_fit = model()
     W = model_fit.basis()
     H = model_fit.coef()
-    evar = model_fit.fit.evar()
+    # evar = model_fit.fit.evar()
     # eprint(evar)
 
     # eprint(H)
