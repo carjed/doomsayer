@@ -197,9 +197,7 @@ elif args.input.lower().endswith('m_regions.txt'):
         eprint("Aggregating regional subset spectra matrices")
     colnames = ["ID"]
     M_colnames = colnames + list(sorted(subtypes_dict.keys()))
-    # M_out = np.array([M_colnames])
-    # M_out = np.zeros((, len(M_colnames)))
-    # file_list = args.input
+
     with open(args.input) as f:
         file_list = f.read().splitlines()
 
@@ -208,24 +206,13 @@ elif args.input.lower().endswith('m_regions.txt'):
         skiprows=1,
         delimiter='\t',
         usecols=(0,))
-    eprint(len(samples))
+    # eprint(len(samples))
     M_out = np.zeros((len(samples), len(M_colnames)-1))
-    eprint(M_out.shape)
+    # eprint(M_out.shape)
     for mfile in file_list:
-        # samples = np.loadtxt(mfile,
-        #     dtype='S16',
-        #     skiprows=1,
-        #     delimiter='\t',
-        #     usecols=(0,))
-
         M_it = np.loadtxt(mfile, skiprows=1, usecols=range(1,len(M_colnames)))
-        eprint(M_it.shape)
         M_out = np.add(M_out, M_it)
 
-    # M_out = np.concatenate((np.array([samples]).T, M_out), axis=1)
-    # M_fmt = np.concatenate((np.array([M_colnames]), M_fmt), axis=0)
-    # M = np.delete(M_out, 0, 0)
-    # M = np.delete(M, 0, 1)
     M = M_out.astype(np.float)
 else:
     eprint("invalid input detected. See documentation")
@@ -277,10 +264,13 @@ else:
             evar = model_fit.fit.evar()
             if args.verbose:
                 eprint("Explained variance for rank " + str(i) + ":", evar)
+            maxind = i
             if evar > 0.8:
                 break
-            maxind = i
 
+    if maxind == 1:
+        eprint(str(evar*100) + "%% of variance explained with 1 signature")
+    # else:
     # maxind = evar_list.index(max(evar_list))+1
     model = nimfa.Nmf(M_run, rank=maxind)
     model_fit = model()
