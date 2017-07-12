@@ -364,14 +364,14 @@ if(args.outputtovcf and
 
     vcf.close()
 elif(args.outputtovcf and args.input.lower().endswith(('.txt'))):
-    eprint textwrap.dedent("""\
+    eprint(textwrap.dedent("""\
             BEGIN:VCALENDAR
             PRODID:-//Atlassian Software Systems//Confluence Calendar Plugin//EN
             VERSION:2.0
             CALSCALE:GREGORIAN
             X-WR-CALNAME;VALUE=TEXT:
             X-WR-CALDESC;VALUE=TEXT:
-            """)
+            """))
     # eprint("WARNING: you are using the --outputtovcf option, but running",
     #     "in aggregation mode with no input VCF. Filtered VCF will not be",
     #     "generated. Please use the keep/drop lists in", projdir, "to manually",
