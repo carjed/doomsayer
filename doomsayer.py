@@ -226,7 +226,7 @@ elif args.input.lower().endswith('m_regions.txt'):
     # M_fmt = np.concatenate((np.array([M_colnames]), M_fmt), axis=0)
     # M = np.delete(M_out, 0, 0)
     # M = np.delete(M, 0, 1)
-    M = M.astype(np.float)
+    M = M_out.astype(np.float)
 else:
     eprint("invalid input detected. See documentation")
 
