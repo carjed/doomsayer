@@ -219,12 +219,13 @@ elif args.input.lower().endswith('m_regions.txt'):
         #     usecols=(0,))
 
         M_it = np.loadtxt(mfile, skiprows=1, usecols=range(1,len(M_colnames)))
-        eprint(M_it)
+        eprint(M_it.shape)
         M_out = np.add(M_out, M_it)
 
-    M_out = np.concatenate((np.array([samples]).T, M_out), axis=1)
-    M = np.delete(M_out, 0, 0)
-    M = np.delete(M, 0, 1)
+    # M_out = np.concatenate((np.array([samples]).T, M_out), axis=1)
+    # M_fmt = np.concatenate((np.array([M_colnames]), M_fmt), axis=0)
+    # M = np.delete(M_out, 0, 0)
+    # M = np.delete(M, 0, 1)
     M = M.astype(np.float)
 else:
     eprint("invalid input detected. See documentation")
