@@ -261,7 +261,7 @@ else:
                M[:,subtypes_dict[key]] /= st_dict[key]
 
     if args.noscale:
-        M_run = M_r
+        M_run = M
     else:
         M_run = M_f
 
