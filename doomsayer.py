@@ -271,6 +271,7 @@ else:
         model = nimfa.Nmf(M_run,
             rank=args.rank,
             update="divergence",
+            objective='div',
             n_run=10,
             max_iter=20000)
         model_fit = model()
@@ -284,6 +285,7 @@ else:
             model = nimfa.Nmf(M_run,
                 rank=i,
                 update="divergence",
+                objective='div',
                 n_run=10,
                 max_iter=20000)
             model_fit = model()
