@@ -250,6 +250,9 @@ if args.mmatrixname != "NMF_M_spectra":
 else:
     M_f = M/(M.sum(axis=1)+1e-8)[:,None]
     M_r = M
+
+    # development option--pass file containing motif counts and
+    # run NMF on relative rates
     if args.subtypefile:
         if args.verbose:
             eprint("Scaling M into relative rate matrix")

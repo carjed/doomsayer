@@ -197,14 +197,14 @@ Describes how each mutation subtype is loaded into the r signatures
 
 ```{r sigloads, echo=FALSE, fig.height = 6, fig.width = 14}
 # signature loadings
-# corrm <- sig_loads %>%
-#   gather(var, val, 2:ncol(sig_loads)) %>%
-#   spread(Sig, val) %>%
-#   dplyr::select(-var) %>%
-#   correlate
-#
-#
-# corrm
+corrm <- sig_loads %>%
+  gather(var, val, 2:ncol(sig_loads)) %>%
+  spread(Sig, val) %>%
+  dplyr::select(-var) %>%
+  correlate
+
+
+corrm
 #
 # mincor <- corrm %>%
 #   dplyr::select(-rowname) %>%
