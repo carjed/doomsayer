@@ -102,19 +102,19 @@ spectra2 <- spectra %>%
 
 if(nrow(spectra2)==12){
   match_b <- function(type){
-    benchmark_props <- c(0.07298031, 0.27229427, 0.06980828, 
+    benchmark_props <- c(0.07298031, 0.27229427, 0.06980828,
                          0.10192701, 0.08812614, 0.39486398)
     names(benchmark_props) <- unique(spectra2$category)
     return(benchmark_props[type])
   }
-  
+
   match_B <- Vectorize(match_b, vectorize.args = c('type'))
-  
+
   benchmark <- spectra2 %>%
     dplyr::filter(group=="keep") %>%
     ungroup() %>%
-    mutate(group="benchmark", count=0, prop=match_b(category)) 
-  
+    mutate(group="benchmark", count=0, prop=match_b(category))
+
   spectra2 <- rbind(spectra2, benchmark)
 }
 
@@ -197,32 +197,32 @@ Describes how each mutation subtype is loaded into the r signatures
 
 ```{r sigloads, echo=FALSE, fig.height = 6, fig.width = 14}
 # signature loadings
-# corrm <- sig_loads %>% 
-#   gather(var, val, 2:ncol(sig_loads)) %>% 
-#   spread(Sig, val) %>% 
-#   dplyr::select(-var) %>% 
+# corrm <- sig_loads %>%
+#   gather(var, val, 2:ncol(sig_loads)) %>%
+#   spread(Sig, val) %>%
+#   dplyr::select(-var) %>%
 #   correlate
-# 
-# 
+#
+#
 # corrm
-# 
-# mincor <- corrm %>% 
+#
+# mincor <- corrm %>%
 #   dplyr::select(-rowname) %>%
 #   min(na.rm=T)
-# 
+#
 # cat("Minimum correlation = ", mincor, "\n")
 # if(mincor > 0.5)
 
 sig_loads_long <- sig_loads %>%
-  mutate(sumVar = rowSums(.[2:ncol(sig_loads)])) %>% 
-  rowwise() %>% 
+  mutate(sumVar = rowSums(.[2:ncol(sig_loads)])) %>%
+  rowwise() %>%
   mutate_each(funs(./sumVar), -Sig) %>%
   gather(subtype, loading, 2:ncol(sig_loads)) %>%
   separate(subtype, c("category", "motif"), sep = "[.]")
 
 ggplot(sig_loads_long, aes(x=motif, y=loading, fill=Sig))+
   geom_bar(stat="identity")+
-  facet_grid(Sig~category)+
+  facet_grid(Sig~category, scales="free")+
   theme_bw()+
   theme(axis.text.x=element_text(angle=90, vjust=0, size=10),
         axis.text.y=element_text(size=20),
@@ -239,16 +239,16 @@ Proportion each signature contributes to the mutation spectrum in each individua
 ```{r sigs, echo=FALSE, fig.height = 12, fig.width = 24}
 # signature contributions across samples
 sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
-  mutate(sumVar = rowSums(.[2:ncol(sig_contribs)])) %>% 
-  rowwise() %>% 
+  mutate(sumVar = rowSums(.[2:ncol(sig_contribs)])) %>%
+  rowwise() %>%
   mutate_each(funs(./sumVar), -ID) %>%
   dplyr::select(-sumVar) %>%
-  gather(signature, contribution, -ID) 
-  
+  gather(signature, contribution, -ID)
+
 # gather(signature, contribution, S1:S6)
 # mutate(ID=factor(ID, levels=ID[order(S1)])) %>%
 #   arrange(contribution)
-# 
+#
 # x$name <- factor(x$name, levels = x$name[order(x$val)])
 
 ggplot(sig_contribs2,
@@ -271,8 +271,8 @@ Proportion each signature contributes to the mutation spectrum in each individua
 # signature contributions across samples
 sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
   dplyr::filter(ID %in% keep_ids$V1) %>%
-  mutate(sumVar = rowSums(.[2:ncol(sig_contribs)])) %>% 
-  rowwise() %>% 
+  mutate(sumVar = rowSums(.[2:ncol(sig_contribs)])) %>%
+  rowwise() %>%
   mutate_each(funs(./sumVar), -ID) %>%
   dplyr::select(-sumVar) %>%
   gather(signature, contribution, -ID)
@@ -299,7 +299,7 @@ sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
   dplyr::filter(ID %in% drop_ids$V1) %>%
   mutate(sumVar = rowSums(.[2:ncol(sig_contribs)]),
          maxgp = apply(.[,2:ncol(sig_contribs)], 1, function(x) names(x)[which.max(x)])) %>%
-  rowwise() %>% 
+  rowwise() %>%
   mutate_each(funs(./sumVar), -c(ID,maxgp)) %>%
   dplyr::select(-sumVar) %>%
   gather(signature, contribution, -c(ID,maxgp)) # %>%
@@ -320,8 +320,8 @@ ggplot(sig_contribs2,
       strip.text=element_text(size=24))
 
 # sig1 <- sig_contribs2 %>%
-  
+
 # ddf<-data.frame(matrix(drop_ids$V1, round(sqrt(nrow(drop_ids)))+1, round(sqrt(nrow(drop_ids)))))
-# 
+#
 # knitr::kable(ddf, caption="Dropped samples list")
 ```
