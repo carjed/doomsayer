@@ -272,7 +272,7 @@ else:
             rank=args.rank,
             update="divergence",
             objective='div',
-            n_run=10,
+            n_run=1,
             max_iter=20000)
         model_fit = model()
         evar = model_fit.fit.evar()
@@ -286,7 +286,7 @@ else:
                 rank=i,
                 update="divergence",
                 objective='div',
-                n_run=10,
+                n_run=1,
                 max_iter=20000)
             model_fit = model()
             evar = model_fit.fit.evar()
