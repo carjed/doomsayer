@@ -249,7 +249,7 @@ if args.mmatrixname != "NMF_M_spectra":
     np.savetxt(M_path, M_fmt, delimiter='\t', fmt="%s")
 else:
     M_f = M/(M.sum(axis=1)+1e-8)[:,None]
-
+    M_r = M
     if args.subtypefile:
         if args.verbose:
             eprint("Scaling M into relative rate matrix")
@@ -258,10 +258,10 @@ else:
             for line in st_file:
                 (key, val) = line.split()
                 st_dict[key] = int(val)
-                M[:,subtypes_dict[key]] /= st_dict[key]
+                M_r[:,subtypes_dict[key]] /= st_dict[key]
     eprint(M)
     if args.noscale:
-        M_run = M
+        M_run = M_r
     else:
         M_run = M_f
 
@@ -351,7 +351,7 @@ else:
             eprint("Lower:", lower)
             eprint("Writing NMF results")
 
-        diagWrite(projdir, M, M_f, W, H, subtypes_dict, samples, args)
+        diagWrite(projdir, M, M_run, W, H, subtypes_dict, samples, args)
 
 ###############################################################################
 # Write keep and drop lists
