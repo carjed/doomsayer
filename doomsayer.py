@@ -259,7 +259,7 @@ else:
                 (key, val) = line.split()
                 st_dict[key] = int(val)
                 M_r[:,subtypes_dict[key]] /= st_dict[key]
-    eprint(M)
+    # eprint(M)
     if args.noscale:
         M_run = M_r
     else:
@@ -273,7 +273,7 @@ else:
             update="divergence",
             objective='div',
             n_run=1,
-            max_iter=20000)
+            max_iter=200)
         model_fit = model()
         evar = model_fit.fit.evar()
         maxind = args.rank
@@ -287,7 +287,7 @@ else:
                 update="divergence",
                 objective='div',
                 n_run=1,
-                max_iter=20000)
+                max_iter=200)
             model_fit = model()
             evar = model_fit.fit.evar()
             if args.verbose:
