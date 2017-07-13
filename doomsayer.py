@@ -271,8 +271,8 @@ else:
         model = nimfa.Nmf(M_run,
             rank=args.rank,
             update="divergence",
-            n_run=1, 
-            max_iter=20000)
+            n_run=1,
+            max_iter=200)
         model_fit = model()
         evar = model_fit.fit.evar()
         maxind = args.rank
@@ -285,7 +285,7 @@ else:
                 rank=i,
                 update="divergence",
                 n_run=1,
-                max_iter=20000)
+                max_iter=200)
             model_fit = model()
             evar = model_fit.fit.evar()
             if args.verbose:
