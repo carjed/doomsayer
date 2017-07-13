@@ -258,7 +258,7 @@ else:
             for line in st_file:
                 (key, val) = line.split()
                 st_dict[key] = int(val)
-                M[:,subtypes_dict[key]] = st_dict[key]
+                M[:,subtypes_dict[key]] /= st_dict[key]
     eprint(M)
     if args.noscale:
         M_run = M
