@@ -302,23 +302,23 @@ else:
                             """))
                 maxind = i-1
                 break
-            elif evar > 0.95:
-                if args.verbose:
-                    eprint(textwrap.dedent("""\
-                            Stopping condition met: rank explains >80 percent
-                            of variation.
-                            """))
-                break
+            # elif evar > 0.95:
+            #     if args.verbose:
+            #         eprint(textwrap.dedent("""\
+            #                 Stopping condition met: rank explains >80 percent
+            #                 of variation.
+            #                 """))
+            #     break
             evarprev = evar
 
-    if(maxind == 1 and evar > 0.95):
-        stop = timeit.default_timer()
-        tottime = round(stop - start, 2)
-        if args.verbose:
-            eprint(str(round(evar,2)*100) + \
-                " percent of variance explained with 1 signature")
-            eprint("Total runtime:", tottime, "seconds")
-        sys.exit()
+    # if(maxind == 1 and evar > 0.95):
+    #     stop = timeit.default_timer()
+    #     tottime = round(stop - start, 2)
+    #     if args.verbose:
+    #         eprint(str(round(evar,2)*100) + \
+    #             " percent of variance explained with 1 signature")
+    #         eprint("Total runtime:", tottime, "seconds")
+    #     sys.exit()
     # else:
     # maxind = evar_list.index(max(evar_list))+1
     # model = nimfa.Nmf(M_run, rank=maxind)
