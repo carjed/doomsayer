@@ -382,12 +382,12 @@ else:
     for sample in keep_samples:
         keeps.write("%s\n" % sample)
     # np.savetxt(keep_path, keep_samples, delimiter='\t', fmt="%s")
-    keep_path.close()
+    keeps.close()
     drop_path = projdir + "/doomsayer_drop.txt"
     drops = open(drop_path, "w")
     for sample in drop_samples:
         drops.write("%s\n" % sample)
-    drop_path.close()
+    drops.close()
     # np.savetxt(drop_path, drop_samples, delimiter='\t', fmt="%s")
 
 ###############################################################################
