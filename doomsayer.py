@@ -268,6 +268,21 @@ else:
     else:
         M_run = M_f
 
+    if args.verbose:
+        eprint("Generating baseline signature")
+    base_model = nimfa.Nmf(M_run,
+        rank=i,
+        update="divergence",
+        objective='div',
+        n_run=1,
+        max_iter=200)
+
+    base_model_fit = base_model()
+
+    base_W = base_model_fit.basis()
+    base_H = base_model_fit.coef()
+    eprint(base_H)
+
     if args.rank > 0:
         if args.verbose:
             eprint("Running NMF with specified rank=", args.rank)
@@ -280,7 +295,19 @@ else:
         model_fit = model()
         evar = model_fit.fit.evar()
         maxind = args.rank
-    else:
+    elif args.rank < 0:
+        model = nimfa.Nmf(M_run,
+            rank=1,
+            H = base_H,
+            update="divergence",
+            objective='div',
+            n_run=1,
+            max_iter=200)
+        model_fit = model()
+        evar = model_fit.fit.evar()
+        maxind = args.rank
+
+    elif args.rank == 0:
         if args.verbose:
             eprint("Finding optimal rank for NMF...")
         evarprev = 0
@@ -335,7 +362,7 @@ else:
     # eprint(W)
 
     W_f = W
-    W = W/np.sum(W, axis=1)
+    # W = W/np.sum(W, axis=1)
     # H = H/np.sum(H, axis=1)
     # W= W[~np.isnan(W).any(axis=1)]
 
