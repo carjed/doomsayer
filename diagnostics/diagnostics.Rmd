@@ -239,17 +239,17 @@ Proportion each signature contributes to the mutation spectrum in each individua
 ```{r sigs, echo=FALSE, fig.height = 12, fig.width = 24}
 # signature contributions across samples
 sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
-  mutate(V1 = ID, study=substr(V1, 1, 4)) %>%  #
-  mutate(ID=gsub("[[:punct:]]", "", V1)) %>%
-  mutate(ID=gsub("[[:alpha:]]", "", ID)) %>%
-  mutate(ID=as.numeric(ID)) %>%
+  # mutate(V1 = ID, study=substr(V1, 1, 4)) %>%  #
+  # mutate(ID=gsub("[[:punct:]]", "", V1)) %>%
+  # mutate(ID=gsub("[[:alpha:]]", "", ID)) %>%
+  # mutate(ID=as.numeric(ID)) %>%
   mutate(sumVar = rowSums(.[2:ncol(sig_contribs)])) %>%
   rowwise() %>%
-  mutate_each(funs(./sumVar), -c(ID, V1, study)) %>%
+  mutate_each(funs(./sumVar), -ID) %>%
   dplyr::select(-sumVar) %>%
-  gather(signature, contribution, -c(ID, V1, study)) %>%
-  group_by(study) %>%
-  arrange(study, ID)
+  gather(signature, contribution, -ID) #%>%
+  # group_by(study) %>%
+  # arrange(study, ID)
 
 ggplot(sig_contribs2,
   aes(x=ID, y=contribution, group=signature, colour=signature, fill=signature))+
@@ -297,21 +297,21 @@ Proportion each signature contributes to the mutation spectrum in each individua
 ```{r sigs_drop, echo=FALSE, fig.height = 12, fig.width = 24}
 # signature contributions across samples
 sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
-  mutate(V1 = ID, study=substr(V1, 1, 4)) %>%  #
-  mutate(ID=gsub("[[:punct:]]", "", V1)) %>%
-  mutate(ID=gsub("[[:alpha:]]", "", ID)) %>%
-  mutate(ID=as.numeric(ID)) %>%
-  # ungroup() %>% #
+  # mutate(V1 = ID, study=substr(V1, 1, 4)) %>%  #
+  # mutate(ID=gsub("[[:punct:]]", "", V1)) %>%
+  # mutate(ID=gsub("[[:alpha:]]", "", ID)) %>%
+  # mutate(ID=as.numeric(ID)) %>%
+  # # ungroup() %>% #
   # dplyr::filter(ID %in% drop_ids$V1) %>%
   mutate(sumVar = rowSums(.[2:ncol(sig_contribs)]),
          maxgp = apply(.[,2:ncol(sig_contribs)], 1, function(x) names(x)[which.max(x)])) %>%
   rowwise() %>%
-  mutate_each(funs(./sumVar), -c(ID,maxgp,V1,study)) %>%
+  mutate_each(funs(./sumVar), -c(ID,maxgp)) %>%
   dplyr::select(-sumVar) %>%
-  gather(signature, contribution, -c(ID,maxgp,V1,study)) %>%
-  mutate(contribution=ifelse((ID %in% drop_ids$V1), contribution, 0)) %>%
-  group_by(study) %>%
-  arrange(study, ID)
+  gather(signature, contribution, -c(ID,maxgp)) %>%
+  mutate(contribution=ifelse((ID %in% drop_ids$V1), contribution, 0)) #%>%
+  # group_by(study) %>%
+  # arrange(study, ID)
   #%>%
   # mutate(ID=factor(ID, levels=ID[order(contribution)]))
 
