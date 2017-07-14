@@ -252,8 +252,9 @@ sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
 # x$name <- factor(x$name, levels = x$name[order(x$val)])
 
 ggplot(sig_contribs2,
-    aes(x=ID, y=contribution, group=signature, colour=signature))+
-  geom_line()+
+  aes(x=ID, y=contribution, group=signature, colour=signature, fill=signature))+
+  # geom_line()+
+  geom_bar(stat="identity", position="stack")+
   theme_bw()+
   theme(axis.text.x=element_blank(),
         axis.ticks.x=element_blank(),
