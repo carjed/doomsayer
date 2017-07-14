@@ -239,6 +239,12 @@ Proportion each signature contributes to the mutation spectrum in each individua
 ```{r sigs, echo=FALSE, fig.height = 12, fig.width = 24}
 # signature contributions across samples
 sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
+  mutate(V1 = ID, study=substr(V1, 1, 4)) %>%  #
+  group_by(study) %>%
+  mutate(ID=gsub("[[:punct:]]", "", V1)) %>%
+  mutate(ID=gsub("[[:alpha:]]", "", ID)) %>%
+  mutate(ID=as.numeric(ID)) %>%
+  arrange(study, ID) %>% #
   mutate(sumVar = rowSums(.[2:ncol(sig_contribs)])) %>%
   rowwise() %>%
   mutate_each(funs(./sumVar), -ID) %>%
@@ -297,6 +303,12 @@ Proportion each signature contributes to the mutation spectrum in each individua
 ```{r sigs_drop, echo=FALSE, fig.height = 12, fig.width = 24}
 # signature contributions across samples
 sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
+  mutate(V1 = ID, study=substr(V1, 1, 4)) %>%  #
+  group_by(study) %>%
+  mutate(ID=gsub("[[:punct:]]", "", V1)) %>%
+  mutate(ID=gsub("[[:alpha:]]", "", ID)) %>%
+  mutate(ID=as.numeric(ID)) %>%
+  arrange(study, ID) %>% #
   # dplyr::filter(ID %in% drop_ids$V1) %>%
   mutate(sumVar = rowSums(.[2:ncol(sig_contribs)]),
          maxgp = apply(.[,2:ncol(sig_contribs)], 1, function(x) names(x)[which.max(x)])) %>%

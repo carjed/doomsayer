@@ -378,10 +378,16 @@ else:
 
     eprint("Printing keep and drop lists") if args.verbose else None
     keep_path = projdir + "/doomsayer_keep.txt"
-    np.savetxt(keep_path, keep_samples, delimiter='\t', fmt="%s")
+    keeps = open(keep_path, "w")
+    for sample in keep_samples:
+        keeps.write("%s\n" % sample)
+    # np.savetxt(keep_path, keep_samples, delimiter='\t', fmt="%s")
 
     drop_path = projdir + "/doomsayer_drop.txt"
-    np.savetxt(drop_path, drop_samples, delimiter='\t', fmt="%s")
+    drops = open(drop_path, "w")
+    for sample in drop_samples:
+        drops.write("%s\n" % sample)
+    # np.savetxt(drop_path, drop_samples, delimiter='\t', fmt="%s")
 
 ###############################################################################
 # write output vcf
