@@ -304,7 +304,7 @@ sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
   mutate_each(funs(./sumVar), -c(ID,maxgp)) %>%
   dplyr::select(-sumVar) %>%
   gather(signature, contribution, -c(ID,maxgp)) %>%
-  mutate(contribution=ifelse(ID %in% drop_ids$V1), contribution, 0)) #%>%
+  mutate(contribution=ifelse((ID %in% drop_ids$V1), contribution, 0)) #%>%
   # mutate(ID=factor(ID, levels=ID[order(contribution)]))
 
 ggplot(sig_contribs2,
