@@ -108,7 +108,7 @@ parser.add_argument("-t", "--threshold",
 parser.add_argument("-r", "--rank",
                     help="rank for NMF decomposition",
                     type=int,
-                    choices=range(1,11),
+                    choices=range(-1,11),
                     default=0)
 
 parser.add_argument("-l", "--length",
