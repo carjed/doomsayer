@@ -297,13 +297,14 @@ Proportion each signature contributes to the mutation spectrum in each individua
 ```{r sigs_drop, echo=FALSE, fig.height = 12, fig.width = 24}
 # signature contributions across samples
 sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
-  dplyr::filter(ID %in% drop_ids$V1) %>%
+  # dplyr::filter(ID %in% drop_ids$V1) %>%
   mutate(sumVar = rowSums(.[2:ncol(sig_contribs)]),
          maxgp = apply(.[,2:ncol(sig_contribs)], 1, function(x) names(x)[which.max(x)])) %>%
   rowwise() %>%
   mutate_each(funs(./sumVar), -c(ID,maxgp)) %>%
   dplyr::select(-sumVar) %>%
-  gather(signature, contribution, -c(ID,maxgp)) # %>%
+  gather(signature, contribution, -c(ID,maxgp)) %>%
+  mutate(contribution=ifelse(ID %in% drop_ids$V1), contribution, 0) #%>%
   # mutate(ID=factor(ID, levels=ID[order(contribution)]))
 
 ggplot(sig_contribs2,
