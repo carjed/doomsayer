@@ -240,22 +240,16 @@ Proportion each signature contributes to the mutation spectrum in each individua
 # signature contributions across samples
 sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
   mutate(V1 = ID, study=substr(V1, 1, 4)) %>%  #
-  group_by(study) %>%
   mutate(ID=gsub("[[:punct:]]", "", V1)) %>%
   mutate(ID=gsub("[[:alpha:]]", "", ID)) %>%
   mutate(ID=as.numeric(ID)) %>%
-  arrange(study, ID) %>% #
   mutate(sumVar = rowSums(.[2:ncol(sig_contribs)])) %>%
   rowwise() %>%
-  mutate_each(funs(./sumVar), -ID) %>%
+  mutate_each(funs(./sumVar), -c(ID, V1, study)) %>%
   dplyr::select(-sumVar) %>%
-  gather(signature, contribution, -ID)
-
-# gather(signature, contribution, S1:S6)
-# mutate(ID=factor(ID, levels=ID[order(S1)])) %>%
-#   arrange(contribution)
-#
-# x$name <- factor(x$name, levels = x$name[order(x$val)])
+  gather(signature, contribution, -c(ID, V1, study)) %>%
+  group_by(study) %>%
+  arrange(study, ID)
 
 ggplot(sig_contribs2,
   aes(x=ID, y=contribution, group=signature, colour=signature, fill=signature))+
@@ -312,9 +306,9 @@ sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
   mutate(sumVar = rowSums(.[2:ncol(sig_contribs)]),
          maxgp = apply(.[,2:ncol(sig_contribs)], 1, function(x) names(x)[which.max(x)])) %>%
   rowwise() %>%
-  mutate_each(funs(./sumVar), -c(ID,maxgp)) %>%
+  mutate_each(funs(./sumVar), -c(ID,maxgp,V1,study)) %>%
   dplyr::select(-sumVar) %>%
-  gather(signature, contribution, -c(ID,maxgp)) %>%
+  gather(signature, contribution, -c(ID,maxgp,V1,study)) %>%
   mutate(contribution=ifelse((ID %in% drop_ids$V1), contribution, 0)) %>%
   group_by(study) %>%
   arrange(study, ID)
