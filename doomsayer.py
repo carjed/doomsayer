@@ -271,7 +271,7 @@ else:
     if args.verbose:
         eprint("Generating baseline signature")
     base_model = nimfa.Nmf(M_run,
-        rank=i,
+        rank=1,
         update="divergence",
         objective='div',
         n_run=1,
@@ -279,9 +279,34 @@ else:
 
     base_model_fit = base_model()
 
-    base_W = base_model_fit.basis()
+    # base_W = base_model_fit.basis()
     base_H = base_model_fit.coef()
-    eprint(base_H)
+    base_H = np.divide(base_H, np.sum(base_H))
+    # base_H = abs(np.subtract(base_H, np.sum(base_H)))
+    eprint(M_run)
+    M_rmse = np.square(np.subtract(M_run, base_H))
+    M_rmse= np.sqrt(M_rmse.sum(axis=1)/96)
+    eprint(M_rmse)
+    # eprint(np.amax(M_rmse))
+
+
+    eprint("Printing RMSE list") if args.verbose else None
+    rmse_path = projdir + "/doomsayer_rmse.txt"
+    rmse = open(rmse_path, "w")
+    i = 0
+    # M_rmse_list = M_rmse[:,0].flatten().tolist()
+    for val in np.nditer(M_rmse):
+        if val > 0.005:
+            line = str(samples[i]) + "\t" + str(val) + "\n"
+            rmse.write("%s" % line)
+        i += 1
+    rmse.close()
+
+    M_run = np.divide(M_run, base_H)
+    eprint(M_run)
+    # W = base_model_fit.basis()
+    # H = base_model_fit.coef()
+    # eprint(base_H)
 
     if args.rank > 0:
         if args.verbose:
@@ -296,15 +321,16 @@ else:
         evar = model_fit.fit.evar()
         maxind = args.rank
     elif args.rank < 0:
-        model = nimfa.Nmf(M_run,
-            rank=1,
-            H = base_H,
-            update="divergence",
-            objective='div',
-            n_run=1,
-            max_iter=200)
-        model_fit = model()
-        evar = model_fit.fit.evar()
+        # model = nimfa.Nmf(M_run,
+        #     rank=1,
+        #     seed = None,
+        #     H = base_H,
+        #     update="divergence",
+        #     objective='div',
+        #     n_run=1,
+        #     max_iter=200)
+        # model_fit = model()
+        # evar = model_fit.fit.evar()
         maxind = args.rank
 
     elif args.rank == 0:
@@ -353,16 +379,20 @@ else:
     # maxind = evar_list.index(max(evar_list))+1
     # model = nimfa.Nmf(M_run, rank=maxind)
     # model_fit = model()
+
+    ##
     W = model_fit.basis()
     H = model_fit.coef()
+    W_f = W
+    W = W/np.sum(W, axis=1)
+
     # evar = model_fit.fit.evar()
     # eprint(evar)
 
     # eprint(H)
     # eprint(W)
 
-    W_f = W
-    # W = W/np.sum(W, axis=1)
+
     # H = H/np.sum(H, axis=1)
     # W= W[~np.isnan(W).any(axis=1)]
 
@@ -408,8 +438,9 @@ else:
     keeps = open(keep_path, "w")
     for sample in keep_samples:
         keeps.write("%s\n" % sample)
-    # np.savetxt(keep_path, keep_samples, delimiter='\t', fmt="%s")
     keeps.close()
+    # np.savetxt(keep_path, keep_samples, delimiter='\t', fmt="%s")
+
     drop_path = projdir + "/doomsayer_drop.txt"
     drops = open(drop_path, "w")
     for sample in drop_samples:
