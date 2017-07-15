@@ -15,7 +15,7 @@ params:
 # knitr::opts_chunk$set(echo = TRUE)
 
 # check and load packages
-packages <- c("dplyr","tidyr","ggplot2","yaml", "devtools", "knitr", "corrr", "viridis", "wesanderson")
+packages <- c("dplyr","tidyr","ggplot2","yaml", "devtools", "knitr", "corrr", "viridis")
 
 package.check <- lapply(packages, FUN = function(x) {
     if (!require(x, character.only = TRUE)) {
@@ -105,7 +105,7 @@ ggplot(spectra2, aes(x=motif, y=prop, fill=group, group=group))+
   geom_bar(stat="identity", position="dodge")+
   facet_wrap(~category, ncol=6, scales="free_x")+
   ylab("Contribution")+
-  scale_fill_manual(values=wes_palette("Royal1"))+
+  scale_fill_brewer(palette = "Set1")+
   theme_bw()+
   theme(axis.text.x=element_text(angle=90, vjust=0, size=20),
         axis.text.y=element_text(size=20),
@@ -231,7 +231,7 @@ sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
   gather(signature, contribution, -ID)
 
 ggplot(sig_contribs2,
-  aes(x=ID, y=contribution, group=signature, colour=signature, fill=signature))+
+  aes(x=ID, y=contribution, group=signature, fill=signature))+
   # geom_line()+
   geom_bar(stat="identity", position="stack")+
   scale_fill_viridis(discrete=TRUE)+
@@ -259,7 +259,7 @@ sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
   gather(signature, contribution, -ID)
 
 ggplot(sig_contribs2,
-    aes(x=ID, y=contribution, group=signature, colour=signature, fill=signature))+
+    aes(x=ID, y=contribution, group=signature, fill=signature))+
   # geom_line()+
   geom_bar(stat="identity", position="stack")+
   scale_fill_viridis(discrete=TRUE)+
@@ -289,7 +289,7 @@ sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
 
 ggplot(sig_contribs2,
     aes(x=ID, y=contribution,
-      group=signature, colour=signature, fill=signature))+
+      group=signature, fill=signature))+
   # geom_line()+
   geom_bar(stat="identity", position="stack")+
   scale_fill_viridis(discrete=TRUE)+
@@ -356,7 +356,7 @@ ggplot()+
   geom_hline(yintercept=0, linetype="dashed")+
   scale_y_continuous(limits=c(plotmin, abs(plotmin)+abs(plotmin)/10),
     breaks=breaks, labels=labels)+
-  scale_color_viridis(discrete=TRUE) +
+  scale_fill_viridis(discrete=TRUE) +
   coord_flip()+
   theme_bw()+
   theme(axis.text.x=element_text(size=18))
