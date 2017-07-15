@@ -389,8 +389,10 @@ spectra_r <- spectra_rates %>%
   gather(subtype, err, 2:ncol(spectra_rates)) %>%
   separate(subtype, c("category", "motif"), sep = "[.]")
 
+top_r <- rmse_plot %>% arrange(desc(RMSE)) %>% head(20)
+
 outlier_r <- spectra_r %>%
-  dplyr::filter(ID %in% rmse_plot$ID[1:10])
+  dplyr::filter(ID %in% top_r$ID[1:10])
 
 ggplot(outlier_r, aes(x=motif, y=err))+
   geom_bar(stat="identity")+
