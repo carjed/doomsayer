@@ -250,7 +250,7 @@ Proportion each signature contributes to the mutation spectrum in each individua
 
 ```{r sigs_keep, echo=FALSE, fig.height = 12, fig.width = 24}
 # signature contributions across samples
-sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
+sig_contribs_keep <- sig_contribs[complete.cases(sig_contribs),] %>%
   dplyr::filter(ID %in% keep_ids$V1) %>%
   mutate(sumVar = rowSums(.[2:ncol(sig_contribs)])) %>%
   rowwise() %>%
@@ -258,7 +258,7 @@ sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
   dplyr::select(-sumVar) %>%
   gather(signature, contribution, -ID)
 
-ggplot(sig_contribs2,
+ggplot(sig_contribs_keep,
     aes(x=ID, y=contribution, group=signature, fill=signature))+
   # geom_line()+
   geom_bar(stat="identity", position="stack")+
@@ -277,7 +277,7 @@ ggplot(sig_contribs2,
 Proportion each signature contributes to the mutation spectrum in each individual sample
 ```{r sigs_drop, echo=FALSE, fig.height = 12, fig.width = 24}
 # signature contributions across samples
-sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
+sig_contribs_drop <- sig_contribs[complete.cases(sig_contribs),] %>%
   dplyr::filter(ID %in% drop_ids$V1) %>%
   mutate(sumVar = rowSums(.[2:ncol(sig_contribs)]),
          maxgp = apply(.[,2:ncol(sig_contribs)], 1, function(x) names(x)[which.max(x)])) %>%
@@ -287,7 +287,7 @@ sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
   gather(signature, contribution, -c(ID,maxgp)) #%>%
   # mutate(contribution=ifelse((ID %in% drop_ids$V1), contribution, 0))
 
-ggplot(sig_contribs2,
+ggplot(sig_contribs_drop,
     aes(x=ID, y=contribution,
       group=signature, fill=signature))+
   # geom_line()+
@@ -310,7 +310,13 @@ ggplot(sig_contribs2,
 # knitr::kable(ddf, caption="Dropped samples list")
 ```
 
-```{r rmse, echo=FALSE, fig.height = 12, fig.width = 8}
+### Outlier analysis
+
+This plot shows detailed information about the top 50 IDs with the largest root mean squared error. The left panel shows the RMSE values, and each sample is colored by the mutation signature with the largest contribution.
+
+The contributions of each mutation signature for each of these samples are broken down in the right panel. If the sample was identified as an outlier (by having a signature contribution >2 standard deviations from the mean), it is marked with a star.
+
+```{r rmse, echo=FALSE, fig.height = 12, fig.width = 10}
 names(rmse) <- c("ID", "RMSE")
 
 rmse <- rmse %>%
@@ -321,44 +327,87 @@ rmse <- rmse %>%
 rmse <- merge(rmse, sig_contribs2, by="ID")
 d2a <- rmse %>%
   gather(k1,k2,RMSE,contribution) %>%
-  mutate(key=ifelse(k1=="RMSE", "rk", signature))
+  mutate(key=ifelse(k1=="RMSE", "RMSE", "signature \n contribution")) %>%
+  mutate(NMF_out=ifelse(ID %in% drop_ids$V1, "*", ""))
 
  #%>%
   # mutate(k2=k2/50)
-rsme_plot <- d2a %>%
-  dplyr::filter(k1 == "RMSE") %>%
-  mutate(k2=-k2) %>%
-  distinct(ID, .keep_all=TRUE)
+rmse_plot <- rmse %>%
+  # dplyr::filter(k1 == "RMSE") %>%
+  group_by(ID) %>%
+  slice(which.max(contribution)) %>%
+  mutate(key="RMSE")
+  # top_n(contribution, 1)
+  # # mutate(k2=-k2) %>%
+  # distinct(ID, .keep_all=TRUE)
 
-plotmin <- floor(min(rsme_plot$k2)/0.005)*0.005
+plotmin <- floor(min(rsme_plot$RMSE)/0.005)*0.005
 # ceiling(x/u)*u
 contribution_plot <- d2a %>%
-  dplyr::filter(k1 != "RMSE") %>%
-  mutate(k2=abs(plotmin)*k2)
+  dplyr::filter(k1 != "RMSE")
+  # %>%
+  # mutate(k2=abs(plotmin)*k2)
 
 breaks <- c(plotmin, plotmin/2, seq(0,abs(plotmin),abs(plotmin)/4))
 labels <- c(abs(plotmin), abs(plotmin)/2, seq(0,1,0.25))
 
 ggplot()+
   geom_bar(data=contribution_plot,
-    aes(x=ID, y=k2, fill=key), stat="identity")+
-  # geom_text(data=d2a, aes(x=ID, y=0.1, label=ID)) +
-  geom_bar(data=rsme_plot,
-    aes(x=ID, y=k2), stat="identity", width=0.08)+
-  geom_point(data=rsme_plot,
-    aes(x=ID, y=k2), size = 6, colour="red") +
-  annotate("rect", xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = 0,
-    fill = "blue", alpha = .1, color = NA)+
-  annotate("text", x = length(unique(d2a$ID))+4, y = min(rsme_plot$k2)/2,
-    label = "RMSE", size=8, vjust=1) +
-  annotate("text", x = length(unique(d2a$ID))+4, y = abs(plotmin/2),
-    label = "Signature contribution", size=8, vjust=1) +
+    aes(x=ID, y=k2, fill=signature), stat="identity")+
+  geom_text(data=contribution_plot,
+    aes(x=ID, y=1, label=NMF_out), hjust=0)+
+  # geom_text(data=d2a, aes(x=ID, y=1.1, label=ID)) +
+  geom_segment(data=rmse_plot,
+    aes(x=ID, xend=ID, y=0, yend=RMSE, colour=signature))+
+  geom_point(data=rmse_plot,
+    aes(x=ID, y=RMSE, colour=signature), size = 4) +
+  # annotate("rect", xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = 0,
+  #   fill = "blue", alpha = .1, color = NA)+
+  # annotate("text", x = length(unique(d2a$ID))+4, y = min(rsme_plot$k2)/2,
+  #   label = "RMSE", size=8, vjust=1) +
+  # annotate("text", x = length(unique(d2a$ID))+4, y = abs(plotmin/2),
+  #   label = "Signature contribution", size=8, vjust=1) +
   geom_hline(yintercept=0, linetype="dashed")+
-  scale_y_continuous(limits=c(plotmin, abs(plotmin)+abs(plotmin)/10),
-    breaks=breaks, labels=labels)+
+  # scale_x_continuous(position = c("top", "bottom"))+
+  # scale_y_continuous(limits=c(plotmin, abs(plotmin)+abs(plotmin)/10),
+  #   breaks=breaks, labels=labels)+
+  # scale_y_continuous(expand = c(0, 0.05, 0, 0)) +
+  # scale_x_discrete(expand = c(0,0)) +
   scale_fill_viridis(discrete=TRUE) +
+  scale_color_viridis(discrete=TRUE) +
+  facet_grid(.~key, scale="free")+
   coord_flip()+
+  ylab("Sample ID")+
   theme_bw()+
-  theme(axis.text.x=element_text(size=18))
+  theme( axis.text.y=element_text(size=14),
+    axis.text.x=element_text(size=14, angle=45, hjust=1, vjust=1),
+    axis.title.x=element_blank(),
+    legend.position="bottom")
 
+  normalize <- function(x){
+      return(x- mean(x))
+  }
+
+```
+
+### Error profiles for top 10 outliers
+
+```{r rmse, echo=FALSE, fig.height = 16, fig.width = 10}
+spectra_r <- spectra_rates %>%
+  mutate_at(vars(-1), funs(normalize)) %>%
+  gather(subtype, err, 2:ncol(spectra_rates)) %>%
+  separate(subtype, c("category", "motif"), sep = "[.]")
+  
+outlier_r <- spectra_r %>%
+  dplyr::filter(ID %in% rmse_plot$ID[1:10])
+
+ggplot(outlier_r, aes(x=motif, y=err))+
+  geom_bar(stat="identity")+
+  geom_hline(yintercept=0, linetype="dashed")+
+  facet_grid(ID~category, scales="free")+
+  theme_bw()+
+  theme(axis.text.x=element_text(angle=90, vjust=0))
+  # mutate_each(funs(.-mean(.)), -ID)
+  # mutate_each(funs(.-mean(.)), matches('^col'))
+  # group_by(category, motif) %>%
 ```
