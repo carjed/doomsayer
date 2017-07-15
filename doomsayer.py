@@ -296,7 +296,7 @@ else:
     i = 0
     # M_rmse_list = M_rmse[:,0].flatten().tolist()
     for val in np.nditer(M_rmse):
-        if val > 0.005:
+        if val > 0.002:
             line = str(samples[i]) + "\t" + str(val) + "\n"
             rmse.write("%s" % line)
         i += 1
