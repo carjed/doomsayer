@@ -43,8 +43,6 @@ def getCategory(mu_type):
 # query reference genome for local sequence motif
 ###############################################################################
 def getMotif(pos, sequence):
-    # get 3-mer motif
-    # motif = Seq(sequence[pos-2:pos+1].seq, IUPAC.unambiguous_dna)
     motif = Seq(sequence, IUPAC.unambiguous_dna)
     altmotif = motif.reverse_complement()
     central_base = (len(motif)-1)//2
@@ -206,17 +204,6 @@ def processVCF(args, subtypes_dict):
                 # eprint(record.CHROM, record.POS,
                     # record.REF, record.ALT[0], subtype)
 
-                # use quick singleton lookup for default QC option
-                # if not args.nofilter:
-                    # sample=samples[record.gt_types.tolist().index(1)]
-                    # if sample == "1497-RMM-1269RD":
-                    #     print(record.CHROM, record.POS,
-                    #         record.REF, record.ALT[0], sample, subtype)
-                    # eprint(record.gt_types.tolist())
-                    # sample = record.gt_types.tolist().index(1)
-                    # sample=np.where(record.gt_types == 1)[0]
-                    # eprint(sample)
-
                 # testing for speed improvements by batching updates to M
                 asbatch = False
                 if(asbatch and not args.groupfile):
@@ -263,7 +250,7 @@ def processVCF(args, subtypes_dict):
 ###############################################################################
 # prepar data for diagnostics
 ###############################################################################
-def diagWrite(projdir, M, M_f, W, H, subtypes_dict, samples, args):
+def diagWrite(projdir, M, M_f, M_rmse, W, H, subtypes_dict, samples, args):
 
     colnames = ["ID"]
     M_colnames = colnames + list(sorted(subtypes_dict.keys()))
@@ -322,6 +309,19 @@ def diagWrite(projdir, M, M_f, W, H, subtypes_dict, samples, args):
     H_path = projdir + "/NMF_H_sig_loads.txt"
     np.savetxt(H_path, H_fmt, delimiter='\t', fmt="%s")
 
+    ###############################
+    # RMSE list
+    ###############################
+    rmse_path = projdir + "/doomsayer_rmse.txt"
+    rmse = open(rmse_path, "w")
+    i = 0
+    for val in np.nditer(M_rmse):
+        # if val > 0.002:
+        line = str(samples[i]) + "\t" + str(val) + "\n"
+        rmse.write("%s" % line)
+        i += 1
+    rmse.close()
+
     yaml = open(projdir + "/config.yaml","w+")
     print("# Config file for doomsayer_diagnostics.r", file=yaml)
     print("keep_path: " + projdir + "/doomsayer_keep.txt", file=yaml)
@@ -330,4 +330,5 @@ def diagWrite(projdir, M, M_f, W, H, subtypes_dict, samples, args):
     print("M_path_rates: " + M_path_rates, file=yaml)
     print("W_path: " + W_path, file=yaml)
     print("H_path: " + H_path, file=yaml)
+    print("RMSE_path: " + rmse_path, file=yaml)
     yaml.close()

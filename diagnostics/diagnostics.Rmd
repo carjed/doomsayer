@@ -54,6 +54,7 @@ spectra <- read.table(M_path, header=T, stringsAsFactors=F)
 spectra_rates <- read.table(M_path_rates, header=T, stringsAsFactors=F)
 sig_contribs <- read.table(W_path, header=T, stringsAsFactors=F)
 sig_loads <- read.table(H_path, header=T, stringsAsFactors=F)
+rmse <- read.table(RMSE_path, header=F, stringsAsFactors=F)
 ```
 
 
@@ -100,24 +101,6 @@ spectra2 <- spectra %>%
   mutate(prop=count/sum(count)) %>%
   ungroup()
 
-if(nrow(spectra2)==12){
-  match_b <- function(type){
-    benchmark_props <- c(0.07298031, 0.27229427, 0.06980828,
-                         0.10192701, 0.08812614, 0.39486398)
-    names(benchmark_props) <- unique(spectra2$category)
-    return(benchmark_props[type])
-  }
-
-  match_B <- Vectorize(match_b, vectorize.args = c('type'))
-
-  benchmark <- spectra2 %>%
-    dplyr::filter(group=="keep") %>%
-    ungroup() %>%
-    mutate(group="benchmark", count=0, prop=match_b(category))
-
-  spectra2 <- rbind(spectra2, benchmark)
-}
-
 ggplot(spectra2, aes(x=motif, y=prop, fill=group, group=group))+
   geom_bar(stat="identity", position="dodge")+
   facet_wrap(~category, ncol=6, scales="free_x")+
@@ -133,7 +116,7 @@ ggplot(spectra2, aes(x=motif, y=prop, fill=group, group=group))+
         # legend.position="none")
 ```
 
-#### Kept samples
+<!-- #### Kept samples -->
 
 ```{r dist_keep, echo=FALSE, eval=FALSE, fig.height = 12, fig.width = 24}
 # overall distribution
@@ -160,7 +143,7 @@ ggplot(spectra2_keep, aes(x=motif, y=count, fill=category))+
         legend.position="none")
 ```
 
-#### Dropped samples
+<!-- #### Dropped samples -->
 
 ```{r dist_drop, echo=FALSE, eval=FALSE, fig.height = 12, fig.width = 24}
 # overall distribution
@@ -239,17 +222,11 @@ Proportion each signature contributes to the mutation spectrum in each individua
 ```{r sigs, echo=FALSE, fig.height = 12, fig.width = 24}
 # signature contributions across samples
 sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
-  # mutate(V1 = ID, study=substr(V1, 1, 4)) %>%  #
-  # mutate(ID=gsub("[[:punct:]]", "", V1)) %>%
-  # mutate(ID=gsub("[[:alpha:]]", "", ID)) %>%
-  # mutate(ID=as.numeric(ID)) %>%
   mutate(sumVar = rowSums(.[2:ncol(sig_contribs)])) %>%
   rowwise() %>%
   mutate_each(funs(./sumVar), -ID) %>%
   dplyr::select(-sumVar) %>%
-  gather(signature, contribution, -ID) #%>%
-  # group_by(study) %>%
-  # arrange(study, ID)
+  gather(signature, contribution, -ID)
 
 ggplot(sig_contribs2,
   aes(x=ID, y=contribution, group=signature, colour=signature, fill=signature))+
@@ -297,26 +274,18 @@ Proportion each signature contributes to the mutation spectrum in each individua
 ```{r sigs_drop, echo=FALSE, fig.height = 12, fig.width = 24}
 # signature contributions across samples
 sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
-  # mutate(V1 = ID, study=substr(V1, 1, 4)) %>%  #
-  # mutate(ID=gsub("[[:punct:]]", "", V1)) %>%
-  # mutate(ID=gsub("[[:alpha:]]", "", ID)) %>%
-  # mutate(ID=as.numeric(ID)) %>%
-  # # ungroup() %>% #
-  # dplyr::filter(ID %in% drop_ids$V1) %>%
+  dplyr::filter(ID %in% keep_ids$V1) %>%
   mutate(sumVar = rowSums(.[2:ncol(sig_contribs)]),
          maxgp = apply(.[,2:ncol(sig_contribs)], 1, function(x) names(x)[which.max(x)])) %>%
   rowwise() %>%
   mutate_each(funs(./sumVar), -c(ID,maxgp)) %>%
   dplyr::select(-sumVar) %>%
-  gather(signature, contribution, -c(ID,maxgp)) %>%
-  mutate(contribution=ifelse((ID %in% drop_ids$V1), contribution, 0)) #%>%
-  # group_by(study) %>%
-  # arrange(study, ID)
-  #%>%
-  # mutate(ID=factor(ID, levels=ID[order(contribution)]))
+  gather(signature, contribution, -c(ID,maxgp)) #%>%
+  # mutate(contribution=ifelse((ID %in% drop_ids$V1), contribution, 0))
 
 ggplot(sig_contribs2,
-    aes(x=ID, y=contribution, group=signature, colour=signature, fill=signature))+
+    aes(x=ID, y=contribution,
+      group=signature, colour=signature, fill=signature))+
   # geom_line()+
   geom_bar(stat="identity", position="stack")+
   facet_wrap(~maxgp, ncol=1, scales="free_x")+
@@ -334,4 +303,20 @@ ggplot(sig_contribs2,
 # ddf<-data.frame(matrix(drop_ids$V1, round(sqrt(nrow(drop_ids)))+1, round(sqrt(nrow(drop_ids)))))
 #
 # knitr::kable(ddf, caption="Dropped samples list")
+```
+
+```{r rmse, echo=FALSE, fig.height = 12, fig.width = 24}
+names(rmse) <- c("ID", "RMSE")
+
+rmse <- rmse %>%
+  mutate(ID=factor(ID, levels=ID[order(rmse)])) %>%
+  arrange(desc(RMSE)) %>%
+  head(20)
+
+rmse <- merge(rmse, sig_contribs2, by="ID")
+
+ggplot(rmse, aes(x=ID, y=contribution, fill=signature))+
+  geom_bar(stat="identity")+
+  coord_flip()
+
 ```

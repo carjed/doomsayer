@@ -87,12 +87,10 @@ parser.add_argument("-g", "--groupfile",
                     nargs='?',
                     type=str)
 
-parser.add_argument("-b", "--subtypefile",
-                    help="two-column tab-delimited file containing sample IDs \
-                        (column 1) and group membership (column 2) for pooled \
-                        analysis",
-                    nargs='?',
-                    type=str)
+parser.add_argument("-b", "--baseline",
+                    help="Transform individual mutation spectra relative to \
+                    baseline average (mean across samples)",
+                    action="store_true")
 
 parser.add_argument("-ns", "--noscale",
                     help="do not scale H and W matrices",
@@ -108,7 +106,7 @@ parser.add_argument("-t", "--threshold",
 parser.add_argument("-r", "--rank",
                     help="rank for NMF decomposition",
                     type=int,
-                    choices=range(-1,11),
+                    choices=range(2,11),
                     default=0)
 
 parser.add_argument("-l", "--length",
@@ -143,37 +141,15 @@ subtypes_dict = indexSubtypes(args)
 ###############################################################################
 # Check inputs
 ###############################################################################
-# vcf
+# build M matrix if vcf
 if(args.input.lower().endswith(('.vcf', '.vcf.gz')) or args.input == "-"):
     if args.verbose:
         eprint("Input detected as VCF file or VCF from STDIN")
     data = processVCF(args, subtypes_dict)
     M = data.M
     samples = data.samples
-# testing--integrate per-chromosome parsing
-# elif args.input.lower().endswith('inputs.txt'):
-#     with open(args.input) as f:
-#         file_list = f.read().splitlines()
-#
-#     i = 1
-#     for vcf in file_list:
-#         cmd = "python doomsayer.py" + \
-#             " --input " + vcf + \
-#             " --fastafile " + args.fastafile + \
-#             " --projectdir " + args.projectdir + \
-#             " --length " + str(args.length) + \
-#             " --rank " + str(args.rank) + \
-#             " --threshold " + str(args.threshold) + \
-#             " --mmatrixname " + "NMF_" + str(i)
-#         eprint("Running job:", cmd)
-#         call(cmd + " &", shell=True)
-#         i += 1
-#
-#     njobs = i
-#     if args.verbose:
-#         eprint("Waiting for " + str(njobs-1) + " subjobs to finish...")
 
-
+# aggregate if M matrix file list
 elif(args.input.lower().endswith('m_samples.txt') or
         args.input.lower().endswith('m_regions.txt')):
 
@@ -224,13 +200,6 @@ else:
 ###############################################################################
 # Run NMF on final matrix
 ###############################################################################
-# M /= np.max(np.abs(M),axis=1)
-# drop rows with all zeroes
-# M = M[~(M==0).all(1)]
-
-###############################
-# M matrix (counts)
-###############################
 if args.mmatrixname != "NMF_M_spectra":
     if args.verbose:
         eprint("Saving M matrix (observed spectra counts)")
@@ -239,78 +208,46 @@ if args.mmatrixname != "NMF_M_spectra":
     M_colnames = colnames + list(sorted(subtypes_dict.keys()))
 
     # add ID as first column
-    M_fmt = np.concatenate((np.array([samples]).T, M), axis=1)
+    M_out = np.concatenate((np.array([samples]).T, M), axis=1)
 
     # add header
-    M_fmt = np.concatenate((np.array([M_colnames]), M_fmt), axis=0)
+    M_out = np.concatenate((np.array([M_colnames]), M_out), axis=0)
 
     # write out
     M_path = projdir + "/" + args.mmatrixname + ".txt"
-    np.savetxt(M_path, M_fmt, delimiter='\t', fmt="%s")
+    np.savetxt(M_path, M_out, delimiter='\t', fmt="%s")
 else:
     M_f = M/(M.sum(axis=1)+1e-8)[:,None]
-    M_r = M
 
-    # development option--pass file containing motif counts and
-    # run NMF on relative rates
-    if args.subtypefile:
-        if args.verbose:
-            eprint("Scaling M into relative rate matrix")
-        st_dict = {}
-        with open(args.subtypefile) as st_file:
-            for line in st_file:
-                (key, val) = line.split()
-                st_dict[key] = int(val)
-                M_r[:,subtypes_dict[key]] /= st_dict[key]
     # eprint(M)
     if args.noscale:
-        M_run = M_r
+        M_run = M
     else:
         M_run = M_f
 
-    if args.verbose:
-        eprint("Generating baseline signature")
-    base_model = nimfa.Nmf(M_run,
-        rank=1,
-        update="divergence",
-        objective='div',
-        n_run=1,
-        max_iter=200)
+    if args.baseline:
+        if args.verbose:
+            eprint("Generating baseline signature")
+        base_model = nimfa.Nmf(M_run,
+            rank=1,
+            update="divergence",
+            objective='div',
+            n_run=1,
+            max_iter=200)
 
-    base_model_fit = base_model()
+        base_model_fit = base_model()
 
-    # base_W = base_model_fit.basis()
-    base_H = base_model_fit.coef()
-    base_H = np.divide(base_H, np.sum(base_H))
-    # base_H = abs(np.subtract(base_H, np.sum(base_H)))
-    eprint(M_run)
+        base_H = base_model_fit.coef()
+        base_H = np.divide(base_H, np.sum(base_H))
+        M_run = np.divide(M_run, base_H)
+        # base_H = abs(np.subtract(base_H, np.sum(base_H)))
+
     M_rmse = np.square(np.subtract(M_run, base_H))
-    M_rmse= np.sqrt(M_rmse.sum(axis=1)/96)
-    eprint(M_rmse)
-    # eprint(np.amax(M_rmse))
-
-
-    eprint("Printing RMSE list") if args.verbose else None
-    rmse_path = projdir + "/doomsayer_rmse.txt"
-    rmse = open(rmse_path, "w")
-    i = 0
-    # M_rmse_list = M_rmse[:,0].flatten().tolist()
-    for val in np.nditer(M_rmse):
-        if val > 0.002:
-            line = str(samples[i]) + "\t" + str(val) + "\n"
-            rmse.write("%s" % line)
-        i += 1
-    rmse.close()
-
-    M_run = np.divide(M_run, base_H)
-    eprint(M_run)
-    # W = base_model_fit.basis()
-    # H = base_model_fit.coef()
-    # eprint(base_H)
+    M_rmse = np.sqrt(M_rmse.sum(axis=1)/M.shape[1])
 
     if args.rank > 0:
         if args.verbose:
-            eprint("Running NMF with specified rank=", args.rank)
+            eprint("Running NMF with specified rank =", args.rank)
         model = nimfa.Nmf(M_run,
             rank=args.rank,
             update="divergence",
@@ -319,18 +256,6 @@ else:
             max_iter=200)
         model_fit = model()
         evar = model_fit.fit.evar()
-        maxind = args.rank
-    elif args.rank < 0:
-        # model = nimfa.Nmf(M_run,
-        #     rank=1,
-        #     seed = None,
-        #     H = base_H,
-        #     update="divergence",
-        #     objective='div',
-        #     n_run=1,
-        #     max_iter=200)
-        # model_fit = model()
-        # evar = model_fit.fit.evar()
         maxind = args.rank
 
     elif args.rank == 0:
@@ -358,42 +283,12 @@ else:
                             """))
                 maxind = i-1
                 break
-            # elif evar > 0.95:
-            #     if args.verbose:
-            #         eprint(textwrap.dedent("""\
-            #                 Stopping condition met: rank explains >80 percent
-            #                 of variation.
-            #                 """))
-            #     break
             evarprev = evar
 
-    # if(maxind == 1 and evar > 0.95):
-    #     stop = timeit.default_timer()
-    #     tottime = round(stop - start, 2)
-    #     if args.verbose:
-    #         eprint(str(round(evar,2)*100) + \
-    #             " percent of variance explained with 1 signature")
-    #         eprint("Total runtime:", tottime, "seconds")
-    #     sys.exit()
-    # else:
-    # maxind = evar_list.index(max(evar_list))+1
-    # model = nimfa.Nmf(M_run, rank=maxind)
-    # model_fit = model()
-
-    ##
     W = model_fit.basis()
     H = model_fit.coef()
     W_f = W
     W = W/np.sum(W, axis=1)
-
-    # evar = model_fit.fit.evar()
-    # eprint(evar)
-
-    # eprint(H)
-    # eprint(W)
-
-
-    # H = H/np.sum(H, axis=1)
     # W= W[~np.isnan(W).any(axis=1)]
 
     # output NMF results
@@ -411,7 +306,7 @@ else:
             eprint("Lower:", lower)
             eprint("Writing NMF results")
 
-        diagWrite(projdir, M, M_run, W, H, subtypes_dict, samples, args)
+        diagWrite(projdir, M, M_run, M_rmse, W, H, subtypes_dict, samples, args)
 
 ###############################################################################
 # Write keep and drop lists
