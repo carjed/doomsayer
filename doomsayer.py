@@ -225,25 +225,25 @@ else:
     else:
         M_run = M_f
 
-    if args.baseline:
-        if args.verbose:
-            eprint("Generating baseline signature")
-        base_model = nimfa.Nmf(M_run,
-            rank=1,
-            update="divergence",
-            objective='div',
-            n_run=1,
-            max_iter=200)
+    if args.verbose:
+        eprint("Generating baseline signature")
+    base_model = nimfa.Nmf(M_run,
+        rank=1,
+        update="divergence",
+        objective='div',
+        n_run=1,
+        max_iter=200)
 
-        base_model_fit = base_model()
-
-        base_H = base_model_fit.coef()
-        base_H = np.divide(base_H, np.sum(base_H))
-        M_run = np.divide(M_run, base_H)
-        # base_H = abs(np.subtract(base_H, np.sum(base_H)))
+    base_model_fit = base_model()
+    base_H = base_model_fit.coef()
+    base_H = np.divide(base_H, np.sum(base_H))
+    # base_H = abs(np.subtract(base_H, np.sum(base_H)))
 
     M_rmse = np.square(np.subtract(M_run, base_H))
     M_rmse = np.sqrt(M_rmse.sum(axis=1)/M.shape[1])
+
+    if args.baseline:
+        M_run = np.divide(M_run, base_H)
 
     if args.rank > 0:
         if args.verbose:
@@ -273,7 +273,6 @@ else:
             evar = model_fit.fit.evar()
             if args.verbose:
                 eprint("Explained variance for rank " + str(i) + ":", evar)
-            maxind = i
             # if evar > 0.8:
             if(i > 2 and evar - evarprev < 0.001):
                 if args.verbose:
@@ -281,7 +280,13 @@ else:
                             Stopping condition met: <0.1 percent difference
                             in explained variation between ranks
                             """))
-                maxind = i-1
+                    model = nimfa.Nmf(M_run,
+                        rank=i-1,
+                        update="divergence",
+                        objective='div',
+                        n_run=1,
+                        max_iter=200)
+                    model_fit = model()
                 break
             evarprev = evar
 

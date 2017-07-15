@@ -274,7 +274,7 @@ Proportion each signature contributes to the mutation spectrum in each individua
 ```{r sigs_drop, echo=FALSE, fig.height = 12, fig.width = 24}
 # signature contributions across samples
 sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
-  dplyr::filter(ID %in% keep_ids$V1) %>%
+  dplyr::filter(ID %in% drop_ids$V1) %>%
   mutate(sumVar = rowSums(.[2:ncol(sig_contribs)]),
          maxgp = apply(.[,2:ncol(sig_contribs)], 1, function(x) names(x)[which.max(x)])) %>%
   rowwise() %>%
@@ -317,6 +317,12 @@ rmse <- merge(rmse, sig_contribs2, by="ID")
 
 ggplot(rmse, aes(x=ID, y=contribution, fill=signature))+
   geom_bar(stat="identity")+
-  coord_flip()
+  coord_flip()+
+  theme(#axis.text.x=element_blank(),
+    axis.text.x=element_text(size=18),
+        axis.ticks.x=element_blank(),
+      axis.text.y=element_text(size=20),
+      axis.title.x=element_text(size=24),
+      axis.title.y=element_text(size=24))
 
 ```
