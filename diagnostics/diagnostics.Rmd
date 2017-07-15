@@ -310,7 +310,7 @@ ggplot(sig_contribs2,
 # knitr::kable(ddf, caption="Dropped samples list")
 ```
 
-```{r rmse, echo=FALSE, fig.height = 12, fig.width = 24}
+```{r rmse, echo=FALSE, fig.height = 12, fig.width = 8}
 names(rmse) <- c("ID", "RMSE")
 
 rmse <- rmse %>%
