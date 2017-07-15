@@ -373,17 +373,19 @@ ggplot()+
     axis.title.x=element_blank(),
     legend.position="bottom")
 
-  normalize <- function(x){
-      return(x- mean(x))
-  }
+
 
 ```
 
 ### Error profiles for top 10 outliers
 
 ```{r err_profiles, echo=FALSE, fig.height = 16, fig.width = 10}
+normalize <- function(x){
+    return(x- mean(x))
+}
+
 spectra_r <- spectra_rates %>%
-  mutate_at(vars(-1), funs(normalize)) %>%
+  mutate_at(vars(-1), funs(.-mean(.))) %>%
   gather(subtype, err, 2:ncol(spectra_rates)) %>%
   separate(subtype, c("category", "motif"), sep = "[.]")
 
