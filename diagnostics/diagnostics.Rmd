@@ -341,7 +341,7 @@ rmse_plot <- rmse %>%
   # # mutate(k2=-k2) %>%
   # distinct(ID, .keep_all=TRUE)
 
-plotmin <- floor(min(rsme_plot$RMSE)/0.005)*0.005
+plotmin <- floor(min(rmse_plot$RMSE)/0.005)*0.005
 # ceiling(x/u)*u
 contribution_plot <- d2a %>%
   dplyr::filter(k1 != "RMSE")
@@ -361,18 +361,7 @@ ggplot()+
     aes(x=ID, xend=ID, y=0, yend=RMSE, colour=signature))+
   geom_point(data=rmse_plot,
     aes(x=ID, y=RMSE, colour=signature), size = 4) +
-  # annotate("rect", xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = 0,
-  #   fill = "blue", alpha = .1, color = NA)+
-  # annotate("text", x = length(unique(d2a$ID))+4, y = min(rsme_plot$k2)/2,
-  #   label = "RMSE", size=8, vjust=1) +
-  # annotate("text", x = length(unique(d2a$ID))+4, y = abs(plotmin/2),
-  #   label = "Signature contribution", size=8, vjust=1) +
   geom_hline(yintercept=0, linetype="dashed")+
-  # scale_x_continuous(position = c("top", "bottom"))+
-  # scale_y_continuous(limits=c(plotmin, abs(plotmin)+abs(plotmin)/10),
-  #   breaks=breaks, labels=labels)+
-  # scale_y_continuous(expand = c(0, 0.05, 0, 0)) +
-  # scale_x_discrete(expand = c(0,0)) +
   scale_fill_viridis(discrete=TRUE) +
   scale_color_viridis(discrete=TRUE) +
   facet_grid(.~key, scale="free")+
@@ -407,7 +396,4 @@ ggplot(outlier_r, aes(x=motif, y=err))+
   facet_grid(ID~category, scales="free")+
   theme_bw()+
   theme(axis.text.x=element_text(angle=90, vjust=0))
-  # mutate_each(funs(.-mean(.)), -ID)
-  # mutate_each(funs(.-mean(.)), matches('^col'))
-  # group_by(category, motif) %>%
 ```
