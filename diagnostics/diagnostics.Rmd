@@ -311,18 +311,33 @@ names(rmse) <- c("ID", "RMSE")
 rmse <- rmse %>%
   mutate(ID=factor(ID, levels=ID[order(rmse)])) %>%
   arrange(desc(RMSE)) %>%
-  head(20)
+  head(50)
 
 rmse <- merge(rmse, sig_contribs2, by="ID")
+d2a <- rmse %>%
+  gather(k1,k2,rmse,contribution) %>%
+  mutate(key=ifelse(k1=="rmse", "rk", signature))
 
-ggplot(rmse, aes(x=ID, y=contribution, fill=signature))+
-  geom_bar(stat="identity")+
+breaks <- c(round(min(rmse2$k2), 2), seq(0,1,0.25))
+
+ggplot()+
+  geom_bar(data=d2a[d2a$k1!="rmse",],
+    aes(x=ID, y=k2, fill=key), stat="identity")+
+  geom_text(data=d2a, aes(x=ID, y=0.1, label=ID)) +
+  geom_bar(data=d2a[d2a$k1=="rmse",][1:3,],
+    aes(x=ID, y=k2), stat="identity", width=0.05)+
+  geom_point(data=d2a[d2a$k1=="rmse",][1:3,],
+    aes(x=ID, y=k2), size = 6, colour="red") +
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = 0,
+    fill = "blue", alpha = .1, color = NA)+
+  annotate("text", x = length(unique(d2a$ID))+0.8, y = min(d2a$k2)/2,
+    label = "RMSE", size=10, vjust=1) +
+  annotate("text", x = length(unique(d2a$ID))+0.8, y = 0.5,
+    label = "Signature contribution", size=10, vjust=1) +
+  geom_hline(yintercept=0, linetype="dashed")+
+  scale_y_continuous(breaks=breaks, labels=abs(breaks))+
   coord_flip()+
-  theme(#axis.text.x=element_blank(),
-    axis.text.x=element_text(size=18),
-        axis.ticks.x=element_blank(),
-      axis.text.y=element_text(size=20),
-      axis.title.x=element_text(size=24),
-      axis.title.y=element_text(size=24))
+  theme_bw()+
+  theme(axis.text.x=element_text(size=18))
 
 ```
