@@ -392,12 +392,12 @@ ggplot()+
 
 ### Error profiles for top 10 outliers
 
-```{r rmse, echo=FALSE, fig.height = 16, fig.width = 10}
+```{r err_profiles, echo=FALSE, fig.height = 16, fig.width = 10}
 spectra_r <- spectra_rates %>%
   mutate_at(vars(-1), funs(normalize)) %>%
   gather(subtype, err, 2:ncol(spectra_rates)) %>%
   separate(subtype, c("category", "motif"), sep = "[.]")
-  
+
 outlier_r <- spectra_r %>%
   dplyr::filter(ID %in% rmse_plot$ID[1:10])
 
