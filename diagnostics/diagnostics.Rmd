@@ -383,16 +383,20 @@ ggplot()+
 normalize <- function(x){
     return(x- mean(x))
 }
-
+cutoff <- ifelse(ncol(spectra_rates)-1==6, 0.05, 0.005)
 spectra_r <- spectra_rates %>%
   mutate_at(vars(-1), funs(.-mean(.))) %>%
   gather(subtype, err, 2:ncol(spectra_rates)) %>%
   separate(subtype, c("category", "motif"), sep = "[.]")
 
-top_r <- rmse_plot %>% arrange(desc(RMSE)) %>% head(20)
+top_r <- rmse_plot %>%
+  dplyr::filter(RMSE>cutoff) %>%
+  arrange(desc(RMSE))
 
 outlier_r <- spectra_r %>%
-  dplyr::filter(ID %in% top_r$ID[1:10])
+  dplyr::filter(ID %in% top_r$ID)
+outlier_r <- outlier_r %>%
+  mutate(ID=factor(ID, levels=ID[-order(top_r$RMSE)]))
 
 ggplot(outlier_r, aes(x=motif, y=err))+
   geom_bar(stat="identity")+
