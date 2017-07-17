@@ -271,7 +271,7 @@ def diagWrite(projdir, M, M_f, M_rmse, W, H, subtypes_dict, samples, args):
     # M matrix (rates)
     ###############################
     # add ID as first column
-    M_fmt = np.concatenate((np.array([samples]).T, M_f.astype('|S10')), axis=1)
+    M_fmt = np.concatenate((np.array([samples]).T, M_f.astype('|S20')), axis=1)
 
     # add header
     M_fmt = np.concatenate((np.array([M_colnames]), M_fmt), axis=0)
