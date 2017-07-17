@@ -319,20 +319,20 @@ The contributions of each mutation signature for each of these samples are broke
 ```{r rmse, echo=FALSE, fig.height = 12, fig.width = 10}
 names(rmse) <- c("ID", "RMSE")
 
-rmse <- rmse %>%
-  mutate(ID=factor(ID, levels=ID[order(rmse$RMSE)])) %>%
+rmse_ord <- rmse %>%
   arrange(desc(RMSE)) %>%
+  mutate(ID=factor(ID, levels=rev(ID))) %>%
   head(50)
 
-rmse <- merge(rmse, sig_contribs2, by="ID")
-d2a <- rmse %>%
+rmse_m <- merge(rmse_ord, sig_contribs2, by="ID")
+d2a <- rmse_m %>%
   gather(k1,k2,RMSE,contribution) %>%
   mutate(key=ifelse(k1=="RMSE", "RMSE", "signature \n contribution")) %>%
   mutate(NMF_out=ifelse(ID %in% drop_ids$V1, "*", ""))
 
  #%>%
   # mutate(k2=k2/50)
-rmse_plot <- rmse %>%
+rmse_plot <- rmse_m %>%
   # dplyr::filter(k1 == "RMSE") %>%
   group_by(ID) %>%
   slice(which.max(contribution)) %>%
@@ -391,12 +391,13 @@ spectra_r <- spectra_rates %>%
 
 top_r <- rmse_plot %>%
   dplyr::filter(RMSE>cutoff) %>%
-  arrange(desc(RMSE))
+  arrange(desc(RMSE)) %>%
+  ungroup() %>%
+  mutate(ID=factor(ID, levels=ID))
 
 outlier_r <- spectra_r %>%
-  dplyr::filter(ID %in% top_r$ID)
-outlier_r <- outlier_r %>%
-  mutate(ID=factor(ID, levels=ID[-order(top_r$RMSE)]))
+  dplyr::filter(ID %in% top_r$ID) %>%
+  mutate(ID=factor(ID, levels=levels(top_r$ID)))
 
 ggplot(outlier_r, aes(x=motif, y=err))+
   geom_bar(stat="identity")+
