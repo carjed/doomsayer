@@ -254,7 +254,7 @@ else:
     # M_rmse = np.sqrt(M_rmse.sum(axis=1)/M.shape[1])
 
     if args.baseline:
-        M_run = M_run/np.mean(M_run, axis=1)[:,None]
+        M_run = M_run/np.mean(M_run, axis=0)[:,None]
 
     if args.rank > 0:
         if args.verbose:
