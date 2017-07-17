@@ -233,6 +233,8 @@ else:
     else:
         M_run = M_f
 
+    eprint(M_run)
+
     if args.verbose:
         eprint("Generating baseline signature")
     base_model = nimfa.Nmf(M_run,
