@@ -240,6 +240,7 @@ else:
     # base_H = abs(np.subtract(base_H, np.sum(base_H)))
 
     M_rmse = np.square(np.subtract(M_run, base_H))
+    M_run = M_rmse
     M_rmse = np.sqrt(M_rmse.sum(axis=1)/M.shape[1])
 
     if args.baseline:
