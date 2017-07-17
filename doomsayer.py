@@ -226,12 +226,12 @@ else:
     # M_rmse = np.square(np.subtract(M_run, base_H))
     M_rmse = np.sqrt(np.sum(np.square(M_err), axis=1)/M_err.shape[1])
 
-    M_run = np.square(M_err)
-    # # eprint(M)
-    # if args.noscale:
-    #     M_run = M
-    # else:
-    #     M_run = M_f
+    # M_run = np.square(M_err)
+    # eprint(M)
+    if args.noscale:
+        M_run = M
+    else:
+        M_run = M_f
 
     if args.verbose:
         eprint("Generating baseline signature")
@@ -261,7 +261,7 @@ else:
             rank=args.rank,
             update="divergence",
             objective='div',
-            seed="nndsvd",
+            # seed="nndsvd",
             n_run=1,
             max_iter=500)
         model_fit = model()
