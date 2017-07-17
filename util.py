@@ -265,7 +265,7 @@ def diagWrite(projdir, M, M_f, M_rmse, W, H, subtypes_dict, samples, args):
 
     # write out
     M_path = projdir + "/" + args.mmatrixname + ".txt"
-    np.savetxt(M_path, M_fmt, delimiter='\t', fmt="%s24")
+    np.savetxt(M_path, M_fmt, delimiter='\t', fmt="%24s")
 
     ###############################
     # M matrix (rates)
@@ -278,7 +278,7 @@ def diagWrite(projdir, M, M_f, M_rmse, W, H, subtypes_dict, samples, args):
 
     # write out
     M_path_rates = projdir + "/NMF_M_spectra_rates.txt"
-    np.savetxt(M_path_rates, M_fmt, delimiter='\t', fmt="%s24")
+    np.savetxt(M_path_rates, M_fmt, delimiter='\t', fmt="%24s")
 
     ###############################
     # W matrix (contributions)
@@ -293,7 +293,7 @@ def diagWrite(projdir, M, M_f, M_rmse, W, H, subtypes_dict, samples, args):
 
     # write out
     W_path = projdir + "/NMF_W_sig_contribs.txt"
-    np.savetxt(W_path, W_fmt, delimiter='\t', fmt="%s24")
+    np.savetxt(W_path, W_fmt, delimiter='\t', fmt="%24s")
 
     ###############################
     # H matrix (loadings)
@@ -307,7 +307,7 @@ def diagWrite(projdir, M, M_f, M_rmse, W, H, subtypes_dict, samples, args):
 
     # write out
     H_path = projdir + "/NMF_H_sig_loads.txt"
-    np.savetxt(H_path, H_fmt, delimiter='\t', fmt="%s24")
+    np.savetxt(H_path, H_fmt, delimiter='\t', fmt="%24s")
 
     ###############################
     # RMSE list
