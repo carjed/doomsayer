@@ -304,8 +304,8 @@ else:
 
     W = model_fit.basis()
     H = model_fit.coef()
-    W_f = W
-    W = W/np.sum(W, axis=1)
+    # W_f = W
+    # W = W/np.sum(W, axis=1)
     # W= W[~np.isnan(W).any(axis=1)]
 
     # output NMF results
