@@ -263,7 +263,7 @@ else:
             rank=args.rank,
             update="divergence",
             objective='div',
-            # seed="nndsvd",
+            seed="nndsvd",
             n_run=1,
             max_iter=500)
         model_fit = model()
