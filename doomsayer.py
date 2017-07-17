@@ -263,9 +263,9 @@ else:
             rank=args.rank,
             update="divergence",
             objective='div',
-            seed="nndsvd",
+            # seed="nndsvd",
             n_run=1,
-            max_iter=500)
+            max_iter=200)
         model_fit = model()
         evar = model_fit.fit.evar()
         maxind = args.rank
