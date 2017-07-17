@@ -219,11 +219,17 @@ if args.mmatrixname != "NMF_M_spectra":
 else:
     M_f = M/(M.sum(axis=1)+1e-8)[:,None]
 
-    # eprint(M)
-    if args.noscale:
-        M_run = M
-    else:
-        M_run = M_f
+    # M_run is N x K matrix of residual error profiles
+    M_run = np.subtract(M_f, np.mean(M_f, axis=0))
+
+    # M_rmse = np.square(np.subtract(M_run, base_H))
+    M_rmse = np.sum(np.square(M_run)/M_run.shape[1], axis=1)
+
+    # # eprint(M)
+    # if args.noscale:
+    #     M_run = M
+    # else:
+    #     M_run = M_f
 
     if args.verbose:
         eprint("Generating baseline signature")
@@ -239,8 +245,8 @@ else:
     base_H = np.divide(base_H, np.sum(base_H))
     # base_H = abs(np.subtract(base_H, np.sum(base_H)))
 
-    M_rmse = np.square(np.subtract(M_run, base_H))
-    M_run = M_rmse
+    # M_rmse = np.square(np.subtract(M_run, base_H))
+    # M_run = M_rmse
     M_rmse = np.sqrt(M_rmse.sum(axis=1)/M.shape[1])
 
     if args.baseline:
