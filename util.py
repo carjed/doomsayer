@@ -258,7 +258,7 @@ def diagWrite(projdir, M, M_f, M_rmse, W, H, subtypes_dict, samples, args):
     ###############################
     # M matrix (counts)
     ###############################
-    M_fmt = np.concatenate((np.array([samples]).T, M.astype('|S10')), axis=1)
+    M_fmt = np.concatenate((np.array([samples]).T, M.astype('|S20')), axis=1)
 
     # add header
     M_fmt = np.concatenate((np.array([M_colnames]), M_fmt), axis=0)
@@ -284,7 +284,7 @@ def diagWrite(projdir, M, M_f, M_rmse, W, H, subtypes_dict, samples, args):
     # W matrix (contributions)
     ###############################
     # add ID as first column
-    W_fmt = np.concatenate((np.array([samples]).T, W.astype('|S10')), axis=1)
+    W_fmt = np.concatenate((np.array([samples]).T, W.astype('|S20')), axis=1)
     num_samples, num_sigs = W.shape
     # eprint(W.shape)
     # add header
@@ -300,7 +300,7 @@ def diagWrite(projdir, M, M_f, M_rmse, W, H, subtypes_dict, samples, args):
     ###############################
     # add signature ID as first column
     H_rownames = ["S" + str(i) for i in range(1,num_sigs+1)]
-    H_fmt = np.concatenate((np.array([H_rownames]).T, H.astype('|S10')), axis=1)
+    H_fmt = np.concatenate((np.array([H_rownames]).T, H.astype('|S20')), axis=1)
 
     H_colnames = ["Sig"] + list(sorted(subtypes_dict.keys()))
     H_fmt = np.concatenate((np.array([H_colnames]), H_fmt), axis=0)

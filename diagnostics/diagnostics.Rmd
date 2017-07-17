@@ -358,9 +358,9 @@ ggplot()+
     aes(x=ID, y=1, label=NMF_out), hjust=0)+
   # geom_text(data=d2a, aes(x=ID, y=1.1, label=ID)) +
   geom_segment(data=rmse_plot,
-    aes(x=ID, xend=ID, y=0, yend=RMSE, colour=signature))+
+    aes(x=ID, xend=ID, y=0, yend=RMSE, colour=maxgp))+
   geom_point(data=rmse_plot,
-    aes(x=ID, y=RMSE, colour=signature), size = 4) +
+    aes(x=ID, y=RMSE, colour=maxgp), size = 4) +
   geom_hline(yintercept=0, linetype="dashed")+
   scale_fill_viridis(discrete=TRUE) +
   scale_color_viridis(discrete=TRUE) +
