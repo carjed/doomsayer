@@ -258,33 +258,33 @@ def diagWrite(projdir, M, M_f, M_rmse, W, H, subtypes_dict, samples, args):
     ###############################
     # M matrix (counts)
     ###############################
-    M_fmt = np.concatenate((np.array([samples]).T, M), axis=1)
+    M_fmt = np.concatenate((np.array([samples]).T, M.astype('|S10')), axis=1)
 
     # add header
     M_fmt = np.concatenate((np.array([M_colnames]), M_fmt), axis=0)
 
     # write out
     M_path = projdir + "/" + args.mmatrixname + ".txt"
-    np.savetxt(M_path, M_fmt, delimiter='\t', fmt="%24s")
+    np.savetxt(M_path, M_fmt, delimiter='\t', fmt="%s")
 
     ###############################
     # M matrix (rates)
     ###############################
     # add ID as first column
-    M_fmt = np.concatenate((np.array([samples]).T, M_f), axis=1)
+    M_fmt = np.concatenate((np.array([samples]).T, M_f.astype('|S10')), axis=1)
 
     # add header
     M_fmt = np.concatenate((np.array([M_colnames]), M_fmt), axis=0)
 
     # write out
     M_path_rates = projdir + "/NMF_M_spectra_rates.txt"
-    np.savetxt(M_path_rates, M_fmt, delimiter='\t', fmt="%24s")
+    np.savetxt(M_path_rates, M_fmt, delimiter='\t', fmt="%s")
 
     ###############################
     # W matrix (contributions)
     ###############################
     # add ID as first column
-    W_fmt = np.concatenate((np.array([samples]).T, W), axis=1)
+    W_fmt = np.concatenate((np.array([samples]).T, W.astype('|S10')), axis=1)
     num_samples, num_sigs = W.shape
     # eprint(W.shape)
     # add header
@@ -293,7 +293,7 @@ def diagWrite(projdir, M, M_f, M_rmse, W, H, subtypes_dict, samples, args):
 
     # write out
     W_path = projdir + "/NMF_W_sig_contribs.txt"
-    np.savetxt(W_path, W_fmt, delimiter='\t', fmt="%24s")
+    np.savetxt(W_path, W_fmt, delimiter='\t', fmt="%s")
 
     ###############################
     # H matrix (loadings)
@@ -307,7 +307,7 @@ def diagWrite(projdir, M, M_f, M_rmse, W, H, subtypes_dict, samples, args):
 
     # write out
     H_path = projdir + "/NMF_H_sig_loads.txt"
-    np.savetxt(H_path, H_fmt, delimiter='\t', fmt="%24s")
+    np.savetxt(H_path, H_fmt, delimiter='\t', fmt="%s")
 
     ###############################
     # RMSE list
