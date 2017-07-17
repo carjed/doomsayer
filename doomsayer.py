@@ -226,7 +226,7 @@ else:
     # M_rmse = np.square(np.subtract(M_run, base_H))
     M_rmse = np.sqrt(np.sum(np.square(M_err), axis=1)/M_err.shape[1])
 
-    M_run = np.square(M_f)
+    M_run = np.square(M_err)
     # # eprint(M)
     # if args.noscale:
     #     M_run = M
