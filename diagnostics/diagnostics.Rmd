@@ -225,13 +225,12 @@ Proportion each signature contributes to the mutation spectrum in each individua
 # signature contributions across samples
 sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
   # mutate(sumVar = rowSums(.[2:ncol(sig_contribs)])) %>%
-  mutate(sumVar = rowSums(.[2:ncol(sig_contribs)]),
-         maxgp = apply(.[,2:ncol(sig_contribs)], 1, function(x) names(x)[which.max(x)])) %>%
-  # rowwise() %>%
-  # mutate_each(funs(./sumVar), -c(ID, maxgp)) %>%
+  mutate(sumVar = rowSums(.[2:ncol(sig_contribs)])) %>%
   mutate_at(vars(starts_with("S")), funs(./sumVar)) %>%
+  mutate(maxgp = apply(.[,2:ncol(sig_contribs)], 1, function(x)
+    names(x)[which.max(x)])) %>%
   dplyr::select(-sumVar) %>%
-  gather(signature, contribution, -c(ID, maxgp))
+  gather(signature, contribution, -c(ID,maxgp))
 
 ggplot(sig_contribs2,
   aes(x=ID, y=contribution, group=signature, fill=signature))+
@@ -256,10 +255,11 @@ Proportion each signature contributes to the mutation spectrum in each individua
 sig_contribs_keep <- sig_contribs[complete.cases(sig_contribs),] %>%
   dplyr::filter(ID %in% keep_ids$V1) %>%
   mutate(sumVar = rowSums(.[2:ncol(sig_contribs)])) %>%
-  rowwise() %>%
   mutate_at(vars(starts_with("S")), funs(./sumVar)) %>%
+  mutate(maxgp = apply(.[,2:ncol(sig_contribs)], 1, function(x)
+    names(x)[which.max(x)])) %>%
   dplyr::select(-sumVar) %>%
-  gather(signature, contribution, -ID)
+  gather(signature, contribution, -c(ID,maxgp))
 
 ggplot(sig_contribs_keep,
     aes(x=ID, y=contribution, group=signature, fill=signature))+
@@ -282,10 +282,10 @@ Proportion each signature contributes to the mutation spectrum in each individua
 # signature contributions across samples
 sig_contribs_drop <- sig_contribs[complete.cases(sig_contribs),] %>%
   dplyr::filter(ID %in% drop_ids$V1) %>%
-  mutate(sumVar = rowSums(.[2:ncol(sig_contribs)]),
-         maxgp = apply(.[,2:ncol(sig_contribs)], 1, function(x) names(x)[which.max(x)])) %>%
-  rowwise() %>%
+  mutate(sumVar = rowSums(.[2:ncol(sig_contribs)])) %>%
   mutate_at(vars(starts_with("S")), funs(./sumVar)) %>%
+  mutate(maxgp = apply(.[,2:ncol(sig_contribs)], 1, function(x)
+    names(x)[which.max(x)])) %>%
   dplyr::select(-sumVar) %>%
   gather(signature, contribution, -c(ID,maxgp)) #%>%
   # mutate(contribution=ifelse((ID %in% drop_ids$V1), contribution, 0))
