@@ -224,7 +224,9 @@ Proportion each signature contributes to the mutation spectrum in each individua
 ```{r sigs, echo=FALSE, fig.height = 12, fig.width = 24}
 # signature contributions across samples
 sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
-  mutate(sumVar = rowSums(.[2:ncol(sig_contribs)])) %>%
+  # mutate(sumVar = rowSums(.[2:ncol(sig_contribs)])) %>%
+  mutate(sumVar = rowSums(.[2:ncol(sig_contribs)]),
+         maxgp = apply(.[,2:ncol(sig_contribs)], 1, function(x) names(x)[which.max(x)])) %>%
   rowwise() %>%
   mutate_each(funs(./sumVar), -ID) %>%
   dplyr::select(-sumVar) %>%
