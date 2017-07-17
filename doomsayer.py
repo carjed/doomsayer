@@ -252,8 +252,8 @@ else:
             rank=args.rank,
             update="divergence",
             objective='div',
-            n_run=5,
-            max_iter=50)
+            n_run=1,
+            max_iter=500)
         model_fit = model()
         evar = model_fit.fit.evar()
         maxind = args.rank
@@ -268,7 +268,7 @@ else:
                 update="divergence",
                 objective='div',
                 n_run=5,
-                max_iter=50)
+                max_iter=500)
             model_fit = model()
             evar = model_fit.fit.evar()
             if args.verbose:
