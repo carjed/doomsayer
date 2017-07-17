@@ -224,7 +224,7 @@ else:
     M_err = np.subtract(M_f, np.mean(M_f, axis=0))
 
     # M_rmse = np.square(np.subtract(M_run, base_H))
-    M_rmse = np.sqrt(np.sum(np.square(M_err))/M_err.shape[1], axis=1)
+    M_rmse = np.sqrt(np.sum(np.square(M_err), axis=1)/M_err.shape[1])
 
     M_run = np.square(M_f)
     # # eprint(M)
