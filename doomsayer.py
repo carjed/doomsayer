@@ -248,7 +248,7 @@ else:
 
     # M_rmse = np.square(np.subtract(M_run, base_H))
     # M_run = M_rmse
-    M_rmse = np.sqrt(M_rmse.sum(axis=1)/M.shape[1])
+    # M_rmse = np.sqrt(M_rmse.sum(axis=1)/M.shape[1])
 
     if args.baseline:
         M_run = np.divide(M_run, base_H)
