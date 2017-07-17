@@ -379,7 +379,7 @@ ggplot()+
 
 ### Error profiles for top 10 outliers
 
-```{r err_profiles, echo=FALSE, fig.height = 16, fig.width = 10}
+```{r err_profiles, echo=FALSE, fig.height = 24, fig.width = 10}
 normalize <- function(x){
     return(x- mean(x))
 }
