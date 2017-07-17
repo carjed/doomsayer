@@ -254,7 +254,7 @@ else:
             objective='div',
             seed="nndsvd",
             n_run=3,
-            max_iter=100)
+            max_iter=1000)
         model_fit = model()
         evar = model_fit.fit.evar()
         maxind = args.rank
