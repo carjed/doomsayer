@@ -217,20 +217,21 @@ if args.mmatrixname != "NMF_M_spectra":
     M_path = projdir + "/" + args.mmatrixname + ".txt"
     np.savetxt(M_path, M_out, delimiter='\t', fmt="%s")
 else:
+    # M_f is the relative contribution of each subtype per sample
     M_f = M/(M.sum(axis=1)+1e-8)[:,None]
 
-    # M_run is N x K matrix of residual error profiles
-    M_run = np.subtract(M_f, np.mean(M_f, axis=0))
+    # M_err is N x K matrix of residual error profiles
+    M_err = np.subtract(M_f, np.mean(M_f, axis=0))
 
     # M_rmse = np.square(np.subtract(M_run, base_H))
-    M_rmse = np.sum(np.square(M_run)/M_run.shape[1], axis=1)
+    M_rmse = np.sum(np.square(M_err)/M_err.shape[1], axis=1)
 
-    M_run = np.square(M_run)
+    # M_run = np.square(M_run)
     # # eprint(M)
-    # if args.noscale:
-    #     M_run = M
-    # else:
-    #     M_run = M_f
+    if args.noscale:
+        M_run = M
+    else:
+        M_run = M_f
 
     if args.verbose:
         eprint("Generating baseline signature")
