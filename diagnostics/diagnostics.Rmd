@@ -339,7 +339,8 @@ rmse_plot <- rmse_m %>%
   # dplyr::filter(k1 == "RMSE") %>%
   group_by(ID) %>%
   slice(which.max(contribution)) %>%
-  mutate(key="RMSE")
+  mutate(key="RMSE") %>%
+  mutate(maxgp=factor(maxgp, levels=c("S1", "S2", "S3")))
   # top_n(contribution, 1)
   # # mutate(k2=-k2) %>%
   # distinct(ID, .keep_all=TRUE)
@@ -365,8 +366,10 @@ ggplot()+
   geom_point(data=rmse_plot,
     aes(x=ID, y=RMSE, colour=maxgp), size = 4) +
   geom_hline(yintercept=0, linetype="dashed")+
-  scale_fill_viridis(discrete=TRUE) +
-  scale_color_viridis(discrete=TRUE) +
+  scale_fill_viridis(discrete=TRUE, drop=FALSE) +
+  scale_color_viridis(discrete=TRUE, drop=FALSE) +
+  # scale_colour_manual(values=viridis_pal()(3)[c(2,3)])+
+  # scale_colour_manual(values=viridis_pal()(3), drop=FALSE)+
   facet_grid(.~key, scale="free")+
   coord_flip()+
   ylab("Sample ID")+
@@ -393,10 +396,11 @@ spectra_r <- spectra_rates %>%
   separate(subtype, c("category", "motif"), sep = "[.]")
 
 top_r <- rmse_plot %>%
-  dplyr::filter(RMSE>cutoff) %>%
+  # dplyr::filter(RMSE>cutoff) %>%
   arrange(desc(RMSE)) %>%
   ungroup() %>%
-  mutate(ID=factor(ID, levels=ID))
+  mutate(ID=factor(ID, levels=ID)) %>%
+  head(20)
 
 outlier_r <- spectra_r %>%
   dplyr::filter(ID %in% top_r$ID) %>%
