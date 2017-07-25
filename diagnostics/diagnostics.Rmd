@@ -406,7 +406,7 @@ top_r20 <- rmse_plot %>%
 
 outlier_r20 <- spectra_r %>%
   dplyr::filter(ID %in% top_r20$ID) %>%
-  mutate(ID=factor(ID, levels=levels(top_r$ID)))
+  mutate(ID=factor(ID, levels=levels(top_r20$ID)))
 
 ggplot(outlier_r20, aes(x=motif, y=err))+
   geom_bar(stat="identity")+
@@ -431,7 +431,7 @@ top_r50 <- rmse_plot %>%
 
 outlier_r50 <- spectra_r %>%
   dplyr::filter(ID %in% top_r50$ID) %>%
-  mutate(ID=factor(ID, levels=levels(top_r$ID)))
+  mutate(ID=factor(ID, levels=levels(top_r50$ID)))
 
 outlier_r_m <- outlier_r50 %>%
   mutate(subtype=paste0(category, "_", motif)) %>%
