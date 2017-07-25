@@ -96,9 +96,12 @@ def indexSubtypes(args):
     # eprint(subtypes_dict)
     return subtypes_dict
 
+###############################################################################
+# get samples from input M matrix when using aggregation mode
+###############################################################################
 def getSamples(fh):
     samples = np.loadtxt(fh,
-        dtype='S16',
+        dtype='S20',
         skiprows=1,
         delimiter='\t',
         usecols=(0,))
@@ -127,9 +130,7 @@ def processVCF(args, subtypes_dict):
 
     nbp = (args.length-1)//2
 
-    ####################
     # index samples
-    ####################
     eprint("Indexing samples in", args.input, "...") if args.verbose else None
 
     if args.groupfile:
@@ -152,9 +153,7 @@ def processVCF(args, subtypes_dict):
 
     eprint(len(samples), "samples indexed") if args.verbose else None
 
-    ############################################
     # Query records in VCF and build matrix
-    ############################################
     eprint("Parsing VCF records...") if args.verbose else None
     M = np.zeros((len(samples), len(subtypes_dict)))
     numsites_keep = 0
@@ -248,16 +247,59 @@ def processVCF(args, subtypes_dict):
     return out
 
 ###############################################################################
-# prepar data for diagnostics
+# aggregate M matrices from list of input files
+###############################################################################
+def aggregateM(args, subtypes_dict):
+    colnames = ["ID"]
+    M_colnames = colnames + list(sorted(subtypes_dict.keys()))
+    colrange = range(1,len(M_colnames))
+
+    with open(args.input) as f:
+        file_list = f.read().splitlines()
+
+    # M output by sample
+    if args.input.lower().endswith('m_samples.txt'):
+
+        M_out = np.array([M_colnames])
+
+        for mfile in file_list:
+            samples = getSamples(mfile)
+
+            M_it = np.loadtxt(mfile, skiprows=1, usecols=colrange)
+            M_it = np.concatenate((np.array([samples]).T, M_it), axis=1)
+            M_out = np.concatenate((M_out, M_it), axis=0)
+
+        M = np.delete(M_out, 0, 0)
+        M = np.delete(M, 0, 1)
+        M = M.astype(np.float)
+
+    # M output by region
+    elif args.input.lower().endswith('m_regions.txt'):
+
+        samples = getSamples(file_list[0])
+
+        # eprint(len(samples))
+        M_out = np.zeros((len(samples), len(M_colnames)-1))
+        # eprint(M_out.shape)
+        for mfile in file_list:
+            M_it = np.loadtxt(mfile, skiprows=1, usecols=colrange)
+            M_out = np.add(M_out, M_it)
+
+        M = M_out.astype(np.float)
+
+    out = collections.namedtuple('Out', ['M', 'samples'])(M, samples)
+    return out
+
+###############################################################################
+# prepare data for diagnostics
 ###############################################################################
 def diagWrite(projdir, M, M_f, M_rmse, W, H, subtypes_dict, samples, args):
 
     colnames = ["ID"]
     M_colnames = colnames + list(sorted(subtypes_dict.keys()))
 
-    ###############################
+
     # M matrix (counts)
-    ###############################
     M_fmt = np.concatenate((np.array([samples]).T, M.astype('|S20')), axis=1)
 
     # add header
@@ -267,9 +309,7 @@ def diagWrite(projdir, M, M_f, M_rmse, W, H, subtypes_dict, samples, args):
     M_path = projdir + "/" + args.mmatrixname + ".txt"
     np.savetxt(M_path, M_fmt, delimiter='\t', fmt="%s")
 
-    ###############################
     # M matrix (rates)
-    ###############################
     # add ID as first column
     M_fmt = np.concatenate((np.array([samples]).T, M_f.astype('|S20')), axis=1)
 
@@ -280,9 +320,7 @@ def diagWrite(projdir, M, M_f, M_rmse, W, H, subtypes_dict, samples, args):
     M_path_rates = projdir + "/NMF_M_spectra_rates.txt"
     np.savetxt(M_path_rates, M_fmt, delimiter='\t', fmt="%s")
 
-    ###############################
     # W matrix (contributions)
-    ###############################
     # add ID as first column
     W_fmt = np.concatenate((np.array([samples]).T, W.astype('|S20')), axis=1)
     num_samples, num_sigs = W.shape
@@ -295,9 +333,7 @@ def diagWrite(projdir, M, M_f, M_rmse, W, H, subtypes_dict, samples, args):
     W_path = projdir + "/NMF_W_sig_contribs.txt"
     np.savetxt(W_path, W_fmt, delimiter='\t', fmt="%s")
 
-    ###############################
     # H matrix (loadings)
-    ###############################
     # add signature ID as first column
     H_rownames = ["S" + str(i) for i in range(1,num_sigs+1)]
     H_fmt = np.concatenate((np.array([H_rownames]).T, H.astype('|S20')), axis=1)
@@ -309,9 +345,7 @@ def diagWrite(projdir, M, M_f, M_rmse, W, H, subtypes_dict, samples, args):
     H_path = projdir + "/NMF_H_sig_loads.txt"
     np.savetxt(H_path, H_fmt, delimiter='\t', fmt="%s")
 
-    ###############################
     # RMSE list
-    ###############################
     rmse_path = projdir + "/doomsayer_rmse.txt"
     rmse = open(rmse_path, "w")
     i = 0

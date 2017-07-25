@@ -89,17 +89,18 @@ parser.add_argument("-g", "--groupfile",
 
 parser.add_argument("-b", "--baseline",
                     help="Transform individual mutation spectra relative to \
-                    baseline average (mean across samples)",
+                        baseline average (mean across samples)",
                     action="store_true")
 
 parser.add_argument("-ns", "--noscale",
-                    help="do not scale H and W matrices",
+                    help="do not scale M matrix--NMF will be run on \
+                        raw count data",
                     action="store_true")
 
 parser.add_argument("-t", "--threshold",
                     help="threshold for dropping samples, in standard \
-                    deviations away from the mean signature contribution. \
-                    The default is 2--lower values are more stringent",
+                        deviations away from the mean signature contribution. \
+                        The default is 2--lower values are more stringent",
                     type=int,
                     default=2)
 
@@ -153,46 +154,14 @@ if(args.input.lower().endswith(('.vcf', '.vcf.gz')) or args.input == "-"):
 elif(args.input.lower().endswith('m_samples.txt') or
         args.input.lower().endswith('m_regions.txt')):
 
-    colnames = ["ID"]
-    M_colnames = colnames + list(sorted(subtypes_dict.keys()))
-    colrange = range(1,len(M_colnames))
+    if args.verbose:
+        eprint("Input detected as list of existing M matrices--\
+            running in aggregation mode")
 
-    with open(args.input) as f:
-        file_list = f.read().splitlines()
+    data = aggregateM(args, subtypes_dict)
+    M = data.M
+    samples = data.samples
 
-    # M output by sample
-    if args.input.lower().endswith('m_samples.txt'):
-        if args.verbose:
-            eprint("Aggregating sample subset spectra matrices")
-
-        M_out = np.array([M_colnames])
-
-        for mfile in file_list:
-            samples = getSamples(mfile)
-
-            M_it = np.loadtxt(mfile, skiprows=1, usecols=colrange)
-            M_it = np.concatenate((np.array([samples]).T, M_it), axis=1)
-            M_out = np.concatenate((M_out, M_it), axis=0)
-
-        M = np.delete(M_out, 0, 0)
-        M = np.delete(M, 0, 1)
-        M = M.astype(np.float)
-
-    # M output by region
-    elif args.input.lower().endswith('m_regions.txt'):
-        if args.verbose:
-            eprint("Aggregating regional subset spectra matrices")
-
-        samples = getSamples(file_list[0])
-
-        # eprint(len(samples))
-        M_out = np.zeros((len(samples), len(M_colnames)-1))
-        # eprint(M_out.shape)
-        for mfile in file_list:
-            M_it = np.loadtxt(mfile, skiprows=1, usecols=colrange)
-            M_out = np.add(M_out, M_it)
-
-        M = M_out.astype(np.float)
 else:
     eprint("ERROR: invalid input detected. See documentation")
     sys.exit()
@@ -202,7 +171,8 @@ else:
 ###############################################################################
 if args.mmatrixname != "NMF_M_spectra":
     if args.verbose:
-        eprint("Saving M matrix (observed spectra counts)")
+        eprint("Saving M matrix (observed spectra counts) to file:",
+            args.mmatrixname)
 
     colnames = ["ID"]
     M_colnames = colnames + list(sorted(subtypes_dict.keys()))
@@ -226,32 +196,10 @@ else:
     # M_rmse = np.square(np.subtract(M_run, base_H))
     M_rmse = np.sqrt(np.sum(np.square(M_err), axis=1)/M_err.shape[1])
 
-    # M_run = np.square(M_err)
-    # eprint(M)
     if args.noscale:
         M_run = M
     else:
         M_run = M_f
-
-    eprint(M_run)
-
-    if args.verbose:
-        eprint("Generating baseline signature")
-    base_model = nimfa.Nmf(M_run,
-        rank=1,
-        update="divergence",
-        objective='div',
-        n_run=1,
-        max_iter=200)
-
-    base_model_fit = base_model()
-    base_H = base_model_fit.coef()
-    base_H = np.divide(base_H, np.sum(base_H))
-    # base_H = abs(np.subtract(base_H, np.sum(base_H)))
-
-    # M_rmse = np.square(np.subtract(M_run, base_H))
-    # M_run = M_rmse
-    # M_rmse = np.sqrt(M_rmse.sum(axis=1)/M.shape[1])
 
     if args.baseline:
         M_run = M_run/np.mean(M_run, axis=0)
@@ -279,8 +227,8 @@ else:
                 rank=i,
                 update="divergence",
                 objective='div',
-                n_run=5,
-                max_iter=500)
+                n_run=3,
+                max_iter=200)
             model_fit = model()
             evar = model_fit.fit.evar()
             if args.verbose:

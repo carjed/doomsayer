@@ -15,7 +15,7 @@ params:
 # knitr::opts_chunk$set(echo = TRUE)
 
 # check and load packages
-packages <- c("dplyr","tidyr","ggplot2","yaml", "devtools", "knitr", "corrr", "viridis")
+packages <- c("dplyr","tidyr","ggplot2","yaml", "devtools", "knitr", "corrr", "viridis", "heatmaply")
 
 package.check <- lapply(packages, FUN = function(x) {
     if (!require(x, character.only = TRUE)) {
@@ -383,7 +383,7 @@ ggplot()+
 
 ```
 
-### Error profiles for top 10 outliers
+### Error profiles for top 20 outliers
 
 ```{r err_profiles, echo=FALSE, fig.height = 24, fig.width = 10}
 normalize <- function(x){
@@ -395,21 +395,80 @@ spectra_r <- spectra_rates %>%
   gather(subtype, err, 2:ncol(spectra_rates)) %>%
   separate(subtype, c("category", "motif"), sep = "[.]")
 
-top_r <- rmse_plot %>%
+top_r20 <- rmse_plot %>%
   # dplyr::filter(RMSE>cutoff) %>%
   arrange(desc(RMSE)) %>%
   ungroup() %>%
   mutate(ID=factor(ID, levels=ID)) %>%
   head(20)
 
-outlier_r <- spectra_r %>%
-  dplyr::filter(ID %in% top_r$ID) %>%
+outlier_r20 <- spectra_r %>%
+  dplyr::filter(ID %in% top_r20$ID) %>%
   mutate(ID=factor(ID, levels=levels(top_r$ID)))
 
-ggplot(outlier_r, aes(x=motif, y=err))+
+ggplot(outlier_r20, aes(x=motif, y=err))+
   geom_bar(stat="identity")+
   geom_hline(yintercept=0, linetype="dashed")+
   facet_grid(ID~category, scales="free")+
   theme_bw()+
-  theme(axis.text.x=element_text(angle=90, vjust=0))
+  theme(axis.text.x=element_text(angle=90, vjust=0.5))
+
+```
+
+### Interactive heatmap of error profiles
+
+IDs with similar error profiles are grouped together using hierarchical clustering.
+
+```{r heatmap, echo=FALSE}
+top_r50 <- rmse_plot %>%
+  # dplyr::filter(RMSE>cutoff) %>%
+  arrange(desc(RMSE)) %>%
+  ungroup() %>%
+  mutate(ID=factor(ID, levels=ID)) %>%
+  head(50)
+
+outlier_r50 <- spectra_r %>%
+  dplyr::filter(ID %in% top_r50$ID) %>%
+  mutate(ID=factor(ID, levels=levels(top_r$ID)))
+
+outlier_r_m <- outlier_r50 %>%
+  mutate(subtype=paste0(category, "_", motif)) %>%
+  dplyr::select(ID, subtype, err) %>%
+  # dplyr::filter(abs(err)>0.01) %>%
+  # mutate(err=ifelse(abs(err)<0.01, 0, err)) %>%
+  spread(subtype, err)
+
+rownames(outlier_r_m) <- outlier_r_m$ID
+
+outlier_r_m <- outlier_r_m %>%
+  dplyr::select(-ID)
+
+heatmaply(outlier_r_m,
+    k_row=4,
+    Colv=FALSE,
+    column_text_angle = 90,
+    subplot_widths=c(0.95,0.05),
+    plot_method="ggplot",
+    hclust_method="ward.D2",
+    colors=magma(20)) %>%
+  layout(autosize=F,
+    width = 1200,
+    height = 800,
+    margin = list(l = 130, b = 100))
+
+# wts <- rowMeans(outlier_r_m)
+# hc <- hclust(dist(as.matrix(outlier_r_m)), method="ward.D2")
+# row.order <- order.dendrogram(reorder(as.dendrogram(hc), wts))
+#
+# # row.order <- hclust(dist(as.matrix(outlier_r_m)), method="ward.D2")$order
+#
+# outlier_r2 <- outlier_r %>%
+#   mutate(ID=factor(ID, levels=levels(ID)[row.order]))
+#
+# ggplot(outlier_r2, aes(x=motif, y=ID, fill=err))+
+#   geom_tile()+
+#   facet_wrap(~category, nrow=1, scales="free_x")+
+#   scale_fill_viridis(option="magma")+
+#   theme_bw()+
+#   theme(axis.text.x=element_text(angle=90, vjust=0.5))
 ```
