@@ -21,6 +21,12 @@ from Bio.Alphabet import IUPAC
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
+def restricted_float(x):
+    x = float(x)
+    if x < 0.0 or x > 1.0:
+        raise argparse.ArgumentTypeError("%r not in range [0.0, 1.0]"%(x,))
+    return x
+
 ###############################################################################
 # collapse mutation types per strand symmetry
 ###############################################################################

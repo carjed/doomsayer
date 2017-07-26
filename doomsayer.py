@@ -98,11 +98,10 @@ parser.add_argument("-ns", "--noscale",
                     action="store_true")
 
 parser.add_argument("-t", "--threshold",
-                    help="threshold for dropping samples, in standard \
-                        deviations away from the mean signature contribution. \
-                        The default is 2--lower values are more stringent",
-                    type=int,
-                    default=2)
+                    help="RMSE threshold for dropping samples. The default is \
+                        0.005--lower values are more stringent",
+                    type=restricted_float,
+                    default=0.005)
 
 parser.add_argument("-r", "--rank",
                     help="rank for NMF decomposition",
@@ -171,8 +170,7 @@ else:
 ###############################################################################
 if args.mmatrixname != "NMF_M_spectra":
     if args.verbose:
-        eprint("Saving M matrix (observed spectra counts) to file:",
-            args.mmatrixname)
+        eprint("Saving M matrix (spectra counts) to:", args.mmatrixname)
 
     colnames = ["ID"]
     M_colnames = colnames + list(sorted(subtypes_dict.keys()))
@@ -227,7 +225,7 @@ else:
                 rank=i,
                 update="divergence",
                 objective='div',
-                n_run=3,
+                n_run=1,
                 max_iter=200)
             model_fit = model()
             evar = model_fit.fit.evar()
@@ -259,17 +257,17 @@ else:
     # output NMF results
     if(args.diagnostics or args.autodiagnostics):
 
-        if args.verbose:
-            colmeans = np.mean(W, axis=0)
-            colstd = np.std(W, axis=0)
-            upper = colmeans+args.threshold*colstd
-            lower = colmeans-args.threshold*colstd
+        eprint("Writing NMF results") if args.verbose else None
+            # colmeans = np.mean(W, axis=0)
+            # colstd = np.std(W, axis=0)
+            # upper = colmeans+args.threshold*colstd
+            # lower = colmeans-args.threshold*colstd
+            #
+            # eprint("Mean signature contributions: ", colmeans)
+            # eprint("StdDev:", colstd)
+            # eprint("Upper:", upper)
+            # eprint("Lower:", lower)
 
-            eprint("Mean signature contributions: ", colmeans)
-            eprint("StdDev:", colstd)
-            eprint("Upper:", upper)
-            eprint("Lower:", lower)
-            eprint("Writing NMF results")
 
         diagWrite(projdir, M, M_run, M_rmse, W, H, subtypes_dict, samples, args)
 
@@ -286,8 +284,9 @@ else:
     drop_samples = []
     # Check for outliers
     i=0
-    for n in W:
-        if(np.greater(n, upper).any() or np.less(n, lower).any()):
+    for n in M_rmse:
+        if n > args.threshold:
+        # if(np.greater(n, upper).any() or np.less(n, lower).any()):
             drop_samples.append(samples[i])
         else:
             keep_samples.append(samples[i])

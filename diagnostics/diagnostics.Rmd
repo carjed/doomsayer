@@ -15,7 +15,7 @@ params:
 # knitr::opts_chunk$set(echo = TRUE)
 
 # check and load packages
-packages <- c("dplyr","tidyr","ggplot2","yaml", "devtools", "knitr", "corrr", "viridis", "heatmaply")
+packages <- c("dplyr","tidyr","ggplot2","yaml", "devtools", "knitr", "corrr", "viridis", "heatmaply", "e1071")
 
 package.check <- lapply(packages, FUN = function(x) {
     if (!require(x, character.only = TRUE)) {
@@ -59,31 +59,6 @@ sig_loads <- read.table(H_path, header=T, stringsAsFactors=F)
 rmse <- read.table(RMSE_path, header=F, stringsAsFactors=F)
 ```
 
-
-#### Mutation spectrum per sample (M matrix)
-
-Heatmap to visualize mutational spectra across all samples
-
-```{r M, echo=FALSE, eval=FALSE, fig.height = 12, fig.width = 24}
-# overall distribution
-spectra_long <- spectra %>%
-  mutate(group=ifelse(ID %in% keep_ids$V1, "keep", "drop")) %>%
-  group_by(group) %>%
-  gather(subtype, count, 2:ncol(spectra)) %>%
-  separate(subtype, c("category", "motif"), sep = "[.]")
-
-# heatmap(as.matrix(spectra[,-1]))
-
-ggplot(spectra_long, aes(x=motif, y=ID, fill=count))+
-  geom_raster()+
-  facet_wrap(~category, ncol=6, scales="free_x")+
-  xlab("Subtypes")+
-  ylab("IDs")+
-  theme_bw()+
-  theme(axis.text.x=element_blank(),
-        axis.text.y=element_blank())
-```
-
 ### Combined mutation spectrum
 
 These plots shows the total number of observations in each subtype, combined across all samples
@@ -119,69 +94,11 @@ ggplot(spectra2, aes(x=motif, y=prop, fill=group, group=group))+
         # legend.position="none")
 ```
 
-<!-- #### Kept samples -->
-
-```{r dist_keep, echo=FALSE, eval=FALSE, fig.height = 12, fig.width = 24}
-# overall distribution
-spectra2_keep <- spectra %>%
-  dplyr::filter(ID %in% keep_ids$V1) %>%
-  gather(subtype, count, 2:ncol(spectra)) %>%
-  separate(subtype, c("category", "motif"), sep = "[.]") %>%
-  group_by(category, motif) %>%
-  summarise(count=sum(count))
-  # gather(subtype, count, 2:ncol(spectra)) %>%
-  # separate(subtype, c("category", "motif"), sep = "[.]") %>%
-  # group_by(category, motif) %>%
-  # summarise(count=sum(count))
-
-ggplot(spectra2_keep, aes(x=motif, y=count, fill=category))+
-  geom_bar(stat="identity")+
-  facet_wrap(~category, ncol=6, scales="free_x")+
-  theme_bw()+
-  theme(axis.text.x=element_text(angle=90, vjust=0, size=20),
-        axis.text.y=element_text(size=20),
-        axis.title.x=element_text(size=24),
-        axis.title.y=element_text(size=24),
-        strip.text=element_text(size=24),
-        legend.position="none")
-```
-
-<!-- #### Dropped samples -->
-
-```{r dist_drop, echo=FALSE, eval=FALSE, fig.height = 12, fig.width = 24}
-# overall distribution
-spectra2_drop <- spectra %>%
-  dplyr::filter(!(ID %in% keep_ids$V1)) %>%
-  gather(subtype, count, 2:ncol(spectra)) %>%
-  separate(subtype, c("category", "motif"), sep = "[.]") %>%
-  group_by(category, motif) %>%
-  summarise(count=sum(count))
-  # gather(subtype, count, 2:ncol(spectra)) %>%
-  # separate(subtype, c("category", "motif"), sep = "[.]") %>%
-  # group_by(category, motif) %>%
-  # summarise(count=sum(count))
-
-if(nrow(spectra2_drop)!=0){
-  ggplot(spectra2_drop, aes(x=motif, y=count, fill=category))+
-    geom_bar(stat="identity")+
-    facet_wrap(~category, ncol=6, scales="free_x")+
-    theme_bw()+
-    theme(axis.text.x=element_text(angle=90, vjust=0, size=20),
-          axis.text.y=element_text(size=20),
-          axis.title.x=element_text(size=24),
-          axis.title.y=element_text(size=24),
-          strip.text=element_text(size=24),
-          legend.position="none")
-} else {
-  cat("No samples in drop list\n")
-}
-```
-
 ### Signature loadings (H matrix)
 
 Describes how each mutation subtype is loaded into the r signatures
 
-```{r sigloads, echo=FALSE, fig.height = 6, fig.width = 14}
+```{r sigloads, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 6, fig.width = 14}
 # signature loadings
 corrm <- sig_loads %>%
   gather(var, val, 2:ncol(sig_loads)) %>%
@@ -223,7 +140,7 @@ ggplot(sig_loads_long, aes(x=motif, y=loading, fill=Sig))+
 
 Proportion each signature contributes to the mutation spectrum in each individual sample
 
-```{r sigs, echo=FALSE, fig.height = 12, fig.width = 24}
+```{r sigs, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 12, fig.width = 24}
 # signature contributions across samples
 sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
   # mutate(sumVar = rowSums(.[2:ncol(sig_contribs)])) %>%
@@ -248,86 +165,54 @@ ggplot(sig_contribs2,
       strip.text=element_text(size=24))
 ```
 
-### Signature contributions per kept samples (W matrix)
+### Interactive heatmap of error profiles
 
-Proportion each signature contributes to the mutation spectrum in each individual sample
+IDs with similar error profiles are grouped together using hierarchical clustering.
 
-```{r sigs_keep, echo=FALSE, fig.height = 12, fig.width = 24}
-# signature contributions across samples
-sig_contribs_keep <- sig_contribs[complete.cases(sig_contribs),] %>%
-  dplyr::filter(ID %in% keep_ids$V1) %>%
-  mutate(sumVar = rowSums(.[2:ncol(sig_contribs)])) %>%
-  mutate_at(vars(starts_with("S")), funs(./sumVar)) %>%
-  mutate(maxgp = apply(.[,2:ncol(sig_contribs)], 1, function(x)
-    names(x)[which.max(x)])) %>%
-  dplyr::select(-sumVar) %>%
-  gather(signature, contribution, -c(ID,maxgp))
-
-ggplot(sig_contribs_keep,
-    aes(x=ID, y=contribution, group=signature, fill=signature))+
-  # geom_line()+
-  geom_bar(stat="identity", position="stack")+
-  scale_fill_viridis(discrete=TRUE)+
-  theme_bw()+
-  theme(axis.text.x=element_blank(),
-        axis.ticks.x=element_blank(),
-      axis.text.y=element_text(size=20),
-      axis.title.x=element_text(size=24),
-      axis.title.y=element_text(size=24),
-      strip.text=element_text(size=24))
-```
-
-### Signature contributions per dropped samples (W matrix)
-
-Proportion each signature contributes to the mutation spectrum in each individual sample
-```{r sigs_drop, echo=FALSE, fig.height = 12, fig.width = 24}
-# signature contributions across samples
-sig_contribs_drop <- sig_contribs[complete.cases(sig_contribs),] %>%
-  dplyr::filter(ID %in% drop_ids$V1) %>%
-  mutate(sumVar = rowSums(.[2:ncol(sig_contribs)])) %>%
-  mutate_at(vars(starts_with("S")), funs(./sumVar)) %>%
-  mutate(maxgp = apply(.[,2:ncol(sig_contribs)], 1, function(x)
-    names(x)[which.max(x)])) %>%
-  dplyr::select(-sumVar) %>%
-  gather(signature, contribution, -c(ID,maxgp)) #%>%
-  # mutate(contribution=ifelse((ID %in% drop_ids$V1), contribution, 0))
-
-ggplot(sig_contribs_drop,
-    aes(x=ID, y=contribution,
-      group=signature, fill=signature))+
-  # geom_line()+
-  geom_bar(stat="identity", position="stack")+
-  scale_fill_viridis(discrete=TRUE)+
-  facet_wrap(~maxgp, ncol=1, scales="free_x")+
-  theme_bw()+
-  theme(axis.text.x=element_blank(),
-    # axis.text.x=element_text(angle=90, size=18),
-        axis.ticks.x=element_blank(),
-      axis.text.y=element_text(size=20),
-      axis.title.x=element_text(size=24),
-      axis.title.y=element_text(size=24),
-      strip.text=element_text(size=24))
-
-# sig1 <- sig_contribs2 %>%
-
-# ddf<-data.frame(matrix(drop_ids$V1, round(sqrt(nrow(drop_ids)))+1, round(sqrt(nrow(drop_ids)))))
-#
-# knitr::kable(ddf, caption="Dropped samples list")
-```
-
-### Outlier analysis
-
-This plot shows detailed information about the top 50 IDs with the largest root mean squared error. The left panel shows the RMSE values, and each sample is colored by the mutation signature with the largest contribution.
-
-The contributions of each mutation signature for each of these samples are broken down in the right panel. If the sample was identified as an outlier (by having a signature contribution >2 standard deviations from the mean), it is marked with a star.
-
-```{r rmse, echo=FALSE, fig.height = 12, fig.width = 10}
+```{r heatmap, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 16, fig.width = 14}
+cutoff <- ifelse(ncol(spectra_rates)-1==6, 0.05, 0.005)
+nind <- 100
 names(rmse) <- c("ID", "RMSE")
+
+rmse_m2 <- merge(rmse, sig_contribs2, by="ID") %>% 
+  spread(signature, contribution) %>% 
+  arrange(RMSE) %>% 
+  mutate(pctile = ntile(RMSE, 100))
+
+# train <- rmse_m2 %>% 
+#   filter(pctile<5 | pctile > 95) %>%
+#   mutate(QUAL=ifelse(pctile<10, 1, 0))
+
+svmmod <- svm(pctile~S1+S2+S3, rmse_m2)
+rmse_m2$QUAL <- predict(svmmod, rmse_m2)
+
+spectra_r <- spectra_rates %>%
+  mutate_at(vars(-1), funs(./mean(.))) %>%
+  gather(subtype, err, 2:ncol(spectra_rates)) %>%
+  separate(subtype, c("category", "motif"), sep = "[.]") %>%
+  mutate(err=ifelse(err>5, 5, err))
+
+# outlier_IDs <- rmse_m2 %>% 
+#   arrange(desc(RMSE)) %>%
+#   filter(RMSE>0.002) %>%
+#   # head(500) %>%
+#   # filter(RMSE.SVM>0.005) %>% 
+#   # filter(QUAL>95) %>%
+#   dplyr::select(ID) %>% 
+#   as.list %>% unlist
+
+# if any of the subtypes has a 2-fold or higher difference, 
+# sample is flagged as an outlier
+outlier_IDs <- spectra_r %>% 
+  filter(err>2) %>% 
+  dplyr::select(ID) %>% 
+  as.list %>% unlist %>% unique
 
 rmse_ord <- rmse %>%
   arrange(desc(RMSE)) %>%
   mutate(ID=factor(ID, levels=rev(ID))) %>%
-  head(50)
+  # head(nind)
+  filter(ID %in% outlier_IDs)
 
 rmse_m <- merge(rmse_ord, sig_contribs2, by="ID")
 d2a <- rmse_m %>%
@@ -335,67 +220,126 @@ d2a <- rmse_m %>%
   mutate(key=ifelse(k1=="RMSE", "RMSE", "signature \n contribution")) %>%
   mutate(NMF_out=ifelse(ID %in% drop_ids$V1, "*", ""))
 
- #%>%
-  # mutate(k2=k2/50)
+top_r50 <- rmse_m %>%
+  # dplyr::filter(k1 == "RMSE") %>%
+  group_by(ID) %>%
+  slice(which.max(contribution)) %>%
+  mutate(key="RMSE") %>%
+  mutate(maxgp=factor(maxgp, levels=names(sig_contribs)[-1])) %>%
+  # dplyr::filter(RMSE>cutoff) %>%
+  arrange(desc(RMSE)) %>%
+  ungroup() %>%
+  mutate(ID=factor(ID, levels=ID)) #%>%
+  # head(nind)
+
+ 
+outlier_r_m <- spectra_r %>%
+  dplyr::filter(ID %in% top_r50$ID) %>%
+  mutate(ID=factor(ID, levels=levels(top_r50$ID))) %>%
+  mutate(subtype=paste0(category, "_", motif)) %>%
+  dplyr::select(ID, subtype, err) %>%
+  spread(subtype, err)
+
+rownames(outlier_r_m) <- outlier_r_m$ID
+
+outlier_r_m <- outlier_r_m %>%
+  dplyr::select(-ID)
+
+hrm <- heatmapr(outlier_r_m,
+    k_row=6,
+    Colv=TRUE,
+    label_names = c("ID", "subtype", "error"),
+    hclust_method="ward.D2") 
+
+hm <- heatmaply(outlier_r_m,
+    k_row=6,
+    Colv=TRUE,
+    # main="Subtype-specific error",
+    return_ppxpy=TRUE,
+    hclust_method="ward.D2",
+    colors=magma(20),
+    label_names = c("ID", "subtype", "error"),
+    column_text_angle = 90,
+    subplot_widths=c(0.95,0.05),
+    plot_method="ggplot")
+
+
+rmse_ord <- rmse %>%
+  arrange(desc(RMSE)) %>%
+  mutate(ID=factor(ID, levels=rev(ID))) %>%
+  # head(nind) %>%
+  filter(ID %in% outlier_IDs) %>%
+  mutate(ID=as.character(ID)) %>%
+  mutate(ID=factor(ID, levels=rownames(hrm$matrix$data)))
+
+rmse_m <- merge(rmse_ord, sig_contribs2, by="ID")
+d2a <- rmse_m %>%
+  gather(k1,k2,RMSE,contribution) %>%
+  mutate(key=ifelse(k1=="RMSE", "RMSE", "signature \n contribution")) %>%
+  mutate(NMF_out=ifelse(ID %in% drop_ids$V1, "*", ""))
+
 rmse_plot <- rmse_m %>%
   # dplyr::filter(k1 == "RMSE") %>%
   group_by(ID) %>%
   slice(which.max(contribution)) %>%
   mutate(key="RMSE") %>%
-  mutate(maxgp=factor(maxgp, levels=c("S1", "S2", "S3")))
-  # top_n(contribution, 1)
-  # # mutate(k2=-k2) %>%
-  # distinct(ID, .keep_all=TRUE)
+  mutate(maxgp=factor(maxgp, levels=names(sig_contribs)[-1])) %>%
+  ungroup() %>%
+  mutate(ID=factor(ID, levels=rownames(hrm$matrix$data)))
 
 plotmin <- floor(min(rmse_plot$RMSE)/0.005)*0.005
-# ceiling(x/u)*u
+
 contribution_plot <- d2a %>%
   dplyr::filter(k1 != "RMSE")
-  # %>%
-  # mutate(k2=abs(plotmin)*k2)
 
 breaks <- c(plotmin, plotmin/2, seq(0,abs(plotmin),abs(plotmin)/4))
 labels <- c(abs(plotmin), abs(plotmin)/2, seq(0,1,0.25))
 
-ggplot()+
-  geom_bar(data=contribution_plot,
-    aes(x=ID, y=k2, fill=signature), stat="identity")+
-  geom_text(data=contribution_plot,
-    aes(x=ID, y=1, label=NMF_out), hjust=0)+
-  # geom_text(data=d2a, aes(x=ID, y=1.1, label=ID)) +
-  geom_segment(data=rmse_plot,
-    aes(x=ID, xend=ID, y=0, yend=RMSE, colour=maxgp))+
-  geom_point(data=rmse_plot,
-    aes(x=ID, y=RMSE, colour=maxgp), size = 4) +
-  geom_hline(yintercept=0, linetype="dashed")+
+p<-ggplot(rmse_plot)+
+  geom_segment(
+    aes(y=ID, yend=ID, 
+      x=0, xend=RMSE, colour=maxgp))+
+  geom_point(aes(y=ID, x=RMSE, colour=maxgp), 
+    size = 4) +
   scale_fill_viridis(discrete=TRUE, drop=FALSE) +
   scale_color_viridis(discrete=TRUE, drop=FALSE) +
-  # scale_colour_manual(values=viridis_pal()(3)[c(2,3)])+
-  # scale_colour_manual(values=viridis_pal()(3), drop=FALSE)+
-  facet_grid(.~key, scale="free")+
-  coord_flip()+
-  ylab("Sample ID")+
-  theme_bw()+
-  theme( axis.text.y=element_text(size=14),
-    axis.text.x=element_text(size=14, angle=45, hjust=1, vjust=1),
-    axis.title.x=element_blank(),
-    legend.position="bottom")
+  ylab("ID")+
+  xlab("RMSE")+
+  theme_classic()+
+  theme(axis.text.x=element_text(size=14, angle=45, hjust=1, vjust=1),
+    legend.position="none")
+# ggplotly(p)
 
+# contribution_plot <- sig_contribs2 %>% 
+#   filter(ID %in% rmse_plot$ID) %>% 
+#   spread(signature, contribution) %>%
+#     mutate(ID=factor(ID, levels=levels(rmse_plot$ID)))
 
+# pc <- ggplot(contribution_plot, aes(x=ID, y=k2, colour=signature, fill=signature))+
+#   geom_bar(stat="identity")+
+#   scale_fill_viridis(discrete=TRUE, drop=FALSE) +
+#   scale_color_viridis(discrete=TRUE, drop=FALSE) +
+#   coord_flip()
+# 
+# pc <- plot_ly(contribution_plot, x=~S1, y=~ID, type = 'bar', orientation = 'h', marker=list(color=viridis(3)[1])) %>%
+#   add_trace(x = ~S2, marker=list(color=viridis(3)[2])) %>%
+#     add_trace(x = ~S3, marker=list(color=viridis(3)[3])) %>%
+#   layout(barmode = 'stack', 
+#     showlegend = FALSE)
+
+subplot(p, hm$p, hm$px, 
+    margin=0, titleX=TRUE, shareY=TRUE, widths=c(0.2, 0.7, 0.1)) %>%
+  layout(autosize=F,
+     width = 1600,
+     height = 800,
+    margin = list(l = 130, b = 100))
 
 ```
 
+
 ### Error profiles for top 20 outliers
 
-```{r err_profiles, echo=FALSE, fig.height = 24, fig.width = 10}
-normalize <- function(x){
-    return(x- mean(x))
-}
-cutoff <- ifelse(ncol(spectra_rates)-1==6, 0.05, 0.005)
-spectra_r <- spectra_rates %>%
-  mutate_at(vars(-1), funs(.-mean(.))) %>%
-  gather(subtype, err, 2:ncol(spectra_rates)) %>%
-  separate(subtype, c("category", "motif"), sep = "[.]")
+```{r err_profiles, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 24, fig.width = 10}
 
 top_r20 <- rmse_plot %>%
   # dplyr::filter(RMSE>cutoff) %>%
@@ -408,69 +352,16 @@ outlier_r20 <- spectra_r %>%
   dplyr::filter(ID %in% top_r20$ID) %>%
   mutate(ID=factor(ID, levels=levels(top_r20$ID)))
 
-ggplot(outlier_r20, aes(x=motif, y=err))+
+perr <- ggplot(outlier_r20, aes(x=motif, y=err))+
   geom_bar(stat="identity")+
   geom_hline(yintercept=0, linetype="dashed")+
   facet_grid(ID~category, scales="free")+
   theme_bw()+
   theme(axis.text.x=element_text(angle=90, vjust=0.5))
 
-```
-
-### Interactive heatmap of error profiles
-
-IDs with similar error profiles are grouped together using hierarchical clustering.
-
-```{r heatmap, echo=FALSE}
-top_r50 <- rmse_plot %>%
-  # dplyr::filter(RMSE>cutoff) %>%
-  arrange(desc(RMSE)) %>%
-  ungroup() %>%
-  mutate(ID=factor(ID, levels=ID)) %>%
-  head(50)
-
-outlier_r50 <- spectra_r %>%
-  dplyr::filter(ID %in% top_r50$ID) %>%
-  mutate(ID=factor(ID, levels=levels(top_r50$ID)))
-
-outlier_r_m <- outlier_r50 %>%
-  mutate(subtype=paste0(category, "_", motif)) %>%
-  dplyr::select(ID, subtype, err) %>%
-  # dplyr::filter(abs(err)>0.01) %>%
-  # mutate(err=ifelse(abs(err)<0.01, 0, err)) %>%
-  spread(subtype, err)
-
-rownames(outlier_r_m) <- outlier_r_m$ID
-
-outlier_r_m <- outlier_r_m %>%
-  dplyr::select(-ID)
-
-heatmaply(outlier_r_m,
-    k_row=4,
-    Colv=FALSE,
-    column_text_angle = 90,
-    subplot_widths=c(0.95,0.05),
-    plot_method="ggplot",
-    hclust_method="ward.D2",
-    colors=magma(20)) %>%
-  layout(autosize=F,
-    width = 1200,
-    height = 800,
-    margin = list(l = 130, b = 100))
-
-# wts <- rowMeans(outlier_r_m)
-# hc <- hclust(dist(as.matrix(outlier_r_m)), method="ward.D2")
-# row.order <- order.dendrogram(reorder(as.dendrogram(hc), wts))
-#
-# # row.order <- hclust(dist(as.matrix(outlier_r_m)), method="ward.D2")$order
-#
-# outlier_r2 <- outlier_r %>%
-#   mutate(ID=factor(ID, levels=levels(ID)[row.order]))
-#
-# ggplot(outlier_r2, aes(x=motif, y=ID, fill=err))+
-#   geom_tile()+
-#   facet_wrap(~category, nrow=1, scales="free_x")+
-#   scale_fill_viridis(option="magma")+
-#   theme_bw()+
-#   theme(axis.text.x=element_text(angle=90, vjust=0.5))
+ggplotly(perr) #%>% 
+  # layout(autosize=F,
+  #   width = 1600,
+  #   height = 800,
+  #   margin = list(l = 130, b = 100))
 ```
