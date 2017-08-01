@@ -14,24 +14,26 @@ _In addition to its purpose as a quality control program, Doomsayer can be appli
 
 If you use DOOMSAYER in your research, please cite our [paper](#) (citation pending). -->
 
-## Contents
-- [Download and installation](#download-and-installation)
+- [Introduction](#introduction)
+- [Setup](#setup)
+  * [System requirements](#system-requirements)
+  * [Download and installation](#download-and-installation)
+  * [Dependencies](#dependencies)
+- [Usage](#usage)
 - [Tutorial](#tutorial)
-  - [Usage options](#usage-options)
-  - [Input](#input)
-    - [VCF input](#vcf-input)
-    - [Fasta reference file](#fasta-reference-file)
-  - [Output](#output)
-  - [Optional output settings](#optional-output-settings)
-    - [Custom output directory](#custom-output-directory)
-    - [Generate auto-filtered VCF](#auto-filtered-vcf)
-    - [Run NMF on all variants in the VCF](#run-nmf-on-all-variants-in-the-vcf)
-    - [NMF output](#nmf-output)
-    - [Diagnostic reports](#diagnostic-reports)
-  - [Other options](#other-options)
-- [Demonstration](#demonstration)
-- [Compatibility and troubleshooting](#compatibility-and-troubleshooting)
+  * [Input options](#input-options)
+  * [Output options](#output-options)
+  * [Control options](#control-options)
+  * [Generate a diagnostic report](#generate-a-diagnostic-report)
+- [FAQ](#faq)
+  * [What are Doomsayer's hardware requirements?](#what-are-doomsayer-s-hardware-requirements-)
+  * [What type of sequencing data can Doomsayer analyze?](#what-type-of-sequencing-data-can-doomsayer-analyze-)
+  * [Doomsayer is not reading my input VCF](#doomsayer-is-not-reading-my-input-vcf)
+  * [Reference file incompatibilities](#reference-file-incompatibilities)
+  * [RMarkdown reports are not rendering](#rmarkdown-reports-are-not-rendering)
 - [Contact](#contact)
+
+<small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
 
 ## Setup
 
@@ -229,6 +231,9 @@ If you plan on generating subtype count matrices via Doomsayer to aggregate at a
     --input /path/to/m_regions.txt
   ```
 #### Additional input options for VCF and plain text modes
+
+abc
+
 ##### Fasta reference file
 `-f FASTAFILE, --fastafile FASTAFILE`
 
