@@ -7,6 +7,9 @@ import argparse
 import itertools
 import timeit
 import collections
+import csv
+import nimfa
+from pandas import *
 import numpy as np
 import cyvcf2 as vcf
 from cyvcf2 import VCF
@@ -21,10 +24,13 @@ from Bio.Alphabet import IUPAC
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
+###############################################################################
+# Custom class for args
+###############################################################################
 def restricted_float(x):
     x = float(x)
-    if x < 0.0 or x > 1.0:
-        raise argparse.ArgumentTypeError("%r not in range [0.0, 1.0]"%(x,))
+    if x < 1.0:
+        raise argparse.ArgumentTypeError("%r must be greater than 1"%(x,))
     return x
 
 ###############################################################################
@@ -115,29 +121,19 @@ def getSamples(fh):
     return samples
 
 ###############################################################################
-# Main function for parsing VCF
+# get samples from VCF file
 ###############################################################################
-def processVCF(args, subtypes_dict):
-    eprint("Initializing reference genome...") if args.verbose else None
-    fasta_reader = Fasta(args.fastafile, read_ahead=1000000)
-
-    # 'demo/input/keep.txt'
+def getSamplesVCF(args, inputvcf):
     if args.samplefile:
         with open(args.samplefile) as f:
             keep_samples = f.read().splitlines()
-        eprint(len(keep_samples), "samples kept") if args.verbose else None
 
-        vcf_reader = VCF(args.input,
+        vcf_reader = VCF(inputvcf,
             mode='rb', gts012=True, lazy=True, samples=keep_samples)
         # vcf_reader.set_samples(keep_samples) # <- set_samples() subsets VCF
     else:
-        vcf_reader = VCF(args.input,
+        vcf_reader = VCF(inputvcf,
             mode='rb', gts012=True, lazy=True)
-
-    nbp = (args.length-1)//2
-
-    # index samples
-    eprint("Indexing samples in", args.input, "...") if args.verbose else None
 
     if args.groupfile:
         sg_dict = {}
@@ -150,7 +146,46 @@ def processVCF(args, subtypes_dict):
         samples = sorted(list(set(sg_dict.values())))
         # eprint(samples)
     else:
+        samples = vcf_reader.samples
+    vcf_reader.close()
+    return samples
 
+###############################################################################
+# Main function for parsing VCF
+###############################################################################
+def processVCF(args, inputvcf, subtypes_dict, par):
+    eprint("Initializing reference genome...") if args.verbose else None
+    fasta_reader = Fasta(args.fastafile, read_ahead=1000000)
+
+    # 'demo/input/keep.txt'
+    if args.samplefile:
+        with open(args.samplefile) as f:
+            keep_samples = f.read().splitlines()
+        eprint(len(keep_samples), "samples kept") if args.verbose else None
+
+        vcf_reader = VCF(inputvcf,
+            mode='rb', gts012=True, lazy=True, samples=keep_samples)
+        # vcf_reader.set_samples(keep_samples) # <- set_samples() subsets VCF
+    else:
+        vcf_reader = VCF(inputvcf,
+            mode='rb', gts012=True, lazy=True)
+
+    nbp = (args.length-1)//2
+
+    # index samples
+    eprint("Indexing samples in", inputvcf, "...") if args.verbose else None
+
+    if args.groupfile:
+        sg_dict = {}
+        with open(args.groupfile) as sg_file:
+            for line in sg_file:
+               (key, val) = line.split()
+               sg_dict[key] = val
+
+        all_samples = vcf_reader.samples
+        samples = sorted(list(set(sg_dict.values())))
+        # eprint(samples)
+    else:
         samples = vcf_reader.samples
 
     samples_dict = {}
@@ -184,7 +219,7 @@ def processVCF(args, subtypes_dict):
             acval = record.INFO['AC']
             # eprint(record.POS, acval)
 
-            if ((acval==1 and record.FILTER is None) or args.nofilter):
+            if ((acval==1 and record.FILTER is None) or args.novarfilter):
                 # eprint(record.CHROM, record.POS, record.REF, record.ALT[0],
                     # acval, record.FILTER)
                 # check and update chromosome sequence
@@ -250,7 +285,11 @@ def processVCF(args, subtypes_dict):
 
     vcf_reader.close()
     out = collections.namedtuple('Out', ['M', 'samples'])(M, samples)
-    return out
+
+    if par:
+        return M
+    else:
+        return out
 
 ###############################################################################
 # aggregate M matrices from list of input files
@@ -260,86 +299,208 @@ def aggregateM(args, subtypes_dict):
     M_colnames = colnames + list(sorted(subtypes_dict.keys()))
     colrange = range(1,len(M_colnames))
 
-    with open(args.input) as f:
-        file_list = f.read().splitlines()
+    if args.input.lower().endswith('nmf_m_spectra.txt'):
+        samples = getSamples(args.input)
+        M = np.loadtxt(args.input, skiprows=1, usecols=colrange)
+        # M_it = np.concatenate((np.array([samples]).T, M_it), axis=1)
+        # M_out = np.concatenate((M_out, M_it), axis=0)
 
-    # M output by sample
-    if args.input.lower().endswith('m_samples.txt'):
-
-        M_out = np.array([M_colnames])
-
-        for mfile in file_list:
-            samples = getSamples(mfile)
-
-            M_it = np.loadtxt(mfile, skiprows=1, usecols=colrange)
-            M_it = np.concatenate((np.array([samples]).T, M_it), axis=1)
-            M_out = np.concatenate((M_out, M_it), axis=0)
-
-        M = np.delete(M_out, 0, 0)
-        M = np.delete(M, 0, 1)
+        # M = np.delete(M_out, 0, 0)
+        # M = np.delete(M, 0, 1)
         M = M.astype(np.float)
+    else:
+        with open(args.input) as f:
+            file_list = f.read().splitlines()
 
-    # M output by region
-    elif args.input.lower().endswith('m_regions.txt'):
+        # M output by sample
+        if args.input.lower().endswith('m_samples.txt'):
 
-        samples = getSamples(file_list[0])
+            M_out = np.array([M_colnames])
 
-        # eprint(len(samples))
-        M_out = np.zeros((len(samples), len(M_colnames)-1))
-        # eprint(M_out.shape)
-        for mfile in file_list:
-            M_it = np.loadtxt(mfile, skiprows=1, usecols=colrange)
-            M_out = np.add(M_out, M_it)
+            for mfile in file_list:
+                samples = getSamples(mfile)
 
-        M = M_out.astype(np.float)
+                M_it = np.loadtxt(mfile, skiprows=1, usecols=colrange)
+                M_it = np.concatenate((np.array([samples]).T, M_it), axis=1)
+                M_out = np.concatenate((M_out, M_it), axis=0)
+
+            M = np.delete(M_out, 0, 0)
+            M = np.delete(M, 0, 1)
+            M = M.astype(np.float)
+
+        # M output by region
+        elif args.input.lower().endswith('m_regions.txt'):
+
+            samples = getSamples(file_list[0])
+
+            # eprint(len(samples))
+            M_out = np.zeros((len(samples), len(M_colnames)-1))
+            # eprint(M_out.shape)
+            for mfile in file_list:
+                M_it = np.loadtxt(mfile, skiprows=1, usecols=colrange)
+                M_out = np.add(M_out, M_it)
+
+            M = M_out.astype(np.float)
 
     out = collections.namedtuple('Out', ['M', 'samples'])(M, samples)
     return out
 
 ###############################################################################
-# prepare data for diagnostics
+# process tab-delimited text file, containing the following columns:
+# CHR    POS    REF    ALT    SAMPLE_ID
 ###############################################################################
-def diagWrite(projdir, M, M_f, M_rmse, W, H, subtypes_dict, samples, args):
+def aggregateTxt(args, subtypes_dict):
+    eprint("Initializing reference genome...") if args.verbose else None
+    fasta_reader = Fasta(args.fastafile, read_ahead=1000000)
 
+    nbp = (args.length-1)//2
+    samples_dict = {}
+
+    # M = np.zeros((len(samples), len(subtypes_dict)))
+    numsites_keep = 0
+    numsites_skip = 0
+    chrseq = '0'
+
+    with open(args.input, 'r') as f:
+        reader = csv.reader(f, delimiter='\t')
+
+        for row in reader:
+            chrom = row[0]
+            pos = int(row[1])
+            ref = row[2]
+            alt = row[3]
+            sample = row[4]
+
+            if chrom != chrseq:
+                if args.verbose:
+                    eprint("Loading chromosome", chrom, "reference...")
+
+                sequence = fasta_reader[chrom]
+                chrseq = chrom
+
+            if(len(alt) == 1 and len(ref)==1):
+                mu_type = ref + alt
+                category = getCategory(mu_type)
+                if nbp > 0:
+                    lseq = sequence[pos-(nbp+1):pos+nbp].seq
+                else:
+                    lseq = sequence[pos-1].seq
+                    # eprint("lseq:", lseq)
+                motif_a = getMotif(pos, lseq)
+                subtype = str(category + "-" + motif_a)
+                st = subtypes_dict[subtype]
+
+                if sample not in samples_dict:
+                    samples_dict[sample] = {}
+
+                if subtype not in samples_dict[sample]:
+                    samples_dict[sample][subtype] = 1
+                else:
+                    samples_dict[sample][subtype] += 1
+
+        M = DataFrame(samples_dict).T.fillna(0).values
+        samples = sorted(samples_dict)
+
+    out = collections.namedtuple('Out', ['M', 'samples'])(M, samples)
+    return out
+
+
+###############################################################################
+# run NMF on input matrix
+###############################################################################
+def NMFRun(M_run, args, projdir, samples, subtypes_dict):
+    if args.rank > 0:
+        if args.verbose:
+            eprint("Running NMF with rank =", args.rank)
+
+        model = nimfa.Nmf(M_run,
+            rank=args.rank,
+            update="divergence",
+            objective='div',
+            # seed="nndsvd",
+            n_run=1,
+            max_iter=200)
+        model_fit = model()
+        evar = model_fit.fit.evar()
+        maxind = args.rank
+
+    elif args.rank == 0:
+        if args.verbose:
+            eprint("Finding optimal rank for NMF...")
+        evarprev = 0
+        for i in range(1,6):
+            model = nimfa.Nmf(M_run,
+                rank=i,
+                update="divergence",
+                objective='div',
+                n_run=1,
+                max_iter=200)
+            model_fit = model()
+            evar = model_fit.fit.evar()
+            if args.verbose:
+                eprint("Explained variance for rank " + str(i) + ":", evar)
+            # if evar > 0.8:
+            if(i > 2 and evar - evarprev < 0.001):
+                if args.verbose:
+                    eprint(textwrap.dedent("""\
+                            Stopping condition met: <0.1 percent difference
+                            in explained variation between ranks
+                            """))
+                    model = nimfa.Nmf(M_run,
+                        rank=i-1,
+                        update="divergence",
+                        objective='div',
+                        n_run=1,
+                        max_iter=200)
+                    model_fit = model()
+                break
+            evarprev = evar
+
+    W = model_fit.basis()
+    H = model_fit.coef()
+
+    out = collections.namedtuple('Out', ['W', 'H'])(W, H)
+    return out
+
+###############################################################################
+# write M matrix
+###############################################################################
+def writeM(M, M_path, subtypes_dict, samples):
     colnames = ["ID"]
     M_colnames = colnames + list(sorted(subtypes_dict.keys()))
 
-
-    # M matrix (counts)
+    # add ID as first column
     M_fmt = np.concatenate((np.array([samples]).T, M.astype('|S20')), axis=1)
 
     # add header
     M_fmt = np.concatenate((np.array([M_colnames]), M_fmt), axis=0)
 
     # write out
-    M_path = projdir + "/" + args.mmatrixname + ".txt"
     np.savetxt(M_path, M_fmt, delimiter='\t', fmt="%s")
 
-    # M matrix (rates)
-    # add ID as first column
-    M_fmt = np.concatenate((np.array([samples]).T, M_f.astype('|S20')), axis=1)
+###############################################################################
+# write W matrix
+###############################################################################
+def writeW(W, W_path, samples):
+    colnames = ["ID"]
 
-    # add header
-    M_fmt = np.concatenate((np.array([M_colnames]), M_fmt), axis=0)
-
-    # write out
-    M_path_rates = projdir + "/NMF_M_spectra_rates.txt"
-    np.savetxt(M_path_rates, M_fmt, delimiter='\t', fmt="%s")
-
-    # W matrix (contributions)
     # add ID as first column
     W_fmt = np.concatenate((np.array([samples]).T, W.astype('|S20')), axis=1)
     num_samples, num_sigs = W.shape
-    # eprint(W.shape)
+
     # add header
     W_colnames = colnames + ["S" + str(i) for i in range(1,num_sigs+1)]
     W_fmt = np.concatenate((np.array([W_colnames]), W_fmt), axis=0)
 
     # write out
-    W_path = projdir + "/NMF_W_sig_contribs.txt"
     np.savetxt(W_path, W_fmt, delimiter='\t', fmt="%s")
 
-    # H matrix (loadings)
+###############################################################################
+# write H matrix
+###############################################################################
+def writeH(H, H_path, subtypes_dict):
+    num_sigs, num_subtypes = H.shape
+
     # add signature ID as first column
     H_rownames = ["S" + str(i) for i in range(1,num_sigs+1)]
     H_fmt = np.concatenate((np.array([H_rownames]).T, H.astype('|S20')), axis=1)
@@ -348,11 +509,12 @@ def diagWrite(projdir, M, M_f, M_rmse, W, H, subtypes_dict, samples, args):
     H_fmt = np.concatenate((np.array([H_colnames]), H_fmt), axis=0)
 
     # write out
-    H_path = projdir + "/NMF_H_sig_loads.txt"
     np.savetxt(H_path, H_fmt, delimiter='\t', fmt="%s")
 
-    # RMSE list
-    rmse_path = projdir + "/doomsayer_rmse.txt"
+###############################################################################
+# write RMSE per sample
+###############################################################################
+def writeRMSE(M_rmse, rmse_path, samples):
     rmse = open(rmse_path, "w")
     i = 0
     for val in np.nditer(M_rmse):
@@ -361,14 +523,3 @@ def diagWrite(projdir, M, M_f, M_rmse, W, H, subtypes_dict, samples, args):
         rmse.write("%s" % line)
         i += 1
     rmse.close()
-
-    yaml = open(projdir + "/config.yaml","w+")
-    print("# Config file for doomsayer_diagnostics.r", file=yaml)
-    print("keep_path: " + projdir + "/doomsayer_keep.txt", file=yaml)
-    print("drop_path: " + projdir + "/doomsayer_drop.txt", file=yaml)
-    print("M_path: " + M_path, file=yaml)
-    print("M_path_rates: " + M_path_rates, file=yaml)
-    print("W_path: " + W_path, file=yaml)
-    print("H_path: " + H_path, file=yaml)
-    print("RMSE_path: " + rmse_path, file=yaml)
-    yaml.close()
