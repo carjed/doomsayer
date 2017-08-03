@@ -34,7 +34,6 @@ package.check <- lapply(packages, FUN = function(x) {
     }
 })
 
-
 if(params$dev){
   setwd("../../../Github/doomsayer/sample_output")
   yaml_cfg <- "./config.yaml"
