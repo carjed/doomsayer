@@ -90,12 +90,12 @@ def indexSubtypes(args):
             for category in categories:
                 ref = category[0]
 
-                subtype = category + "-" \
+                subtype = category + "." \
                     + kmerstr[0:flank] + ref + kmerstr[flank:(motiflength-1)]
 
                 subtypes_list.append(subtype)
     else:
-        ext = ["-A", "-C"]
+        ext = [".A", ".C"]
         extr = list(np.repeat(ext,3))
         subtypes_list = [m+n for m,n in zip(categories,extr)]
         # eprint(subtypes_list)

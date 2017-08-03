@@ -33,8 +33,6 @@ If you use DOOMSAYER in your research, please cite our [paper](#) (citation pend
   * [RMarkdown reports are not rendering](#rmarkdown-reports-are-not-rendering)
 - [Contact](#contact)
 
-<small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
-
 ## Setup
 
 ### System requirements
@@ -402,3 +400,5 @@ Alternatively, you can transfer the contents of the `doomsayer_output` directory
 
 ## Contact
 If you need any further help, come across a bug, or have a feature request, feel free to [open an issue](https://github.com/carjed/doomsayer/issues/new) or [contact me directly](mailto:jed.e.carlson@gmail.com). If you are reporting a bug or unexpected output, please run Doomsayer with the `--verbose` option and include this output in your inquiry.
+
+<small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>

@@ -27,8 +27,8 @@ packages <- c("dplyr","tidyr","ggplot2","yaml", "devtools", "knitr", "corrr", "v
 
 package.check <- lapply(packages, FUN = function(x) {
     if (!require(x, character.only = TRUE)) {
-        install.packages(x, 
-          dependencies = TRUE, 
+        install.packages(x,
+          dependencies = TRUE,
           repos = "http://cran.us.r-project.org")
         library(x, character.only = TRUE, silent=TRUE)
     }
@@ -36,7 +36,8 @@ package.check <- lapply(packages, FUN = function(x) {
 
 
 if(params$dev){
-  yaml_cfg <- "./demo/output/config.yaml"
+  setwd("../../../Github/doomsayer/sample_output")
+  yaml_cfg <- "./config.yaml"
 } else {
   yaml_cfg <- params$yaml_cfg
 }
@@ -86,12 +87,12 @@ sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
   dplyr::select(-sumVar) %>%
   gather(signature, contribution, -c(ID,maxgp))
 
-# rmse_m2 <- merge(rmse, sig_contribs2, by="ID") %>% 
-#   spread(signature, contribution) %>% 
-#   arrange(RMSE) %>% 
+# rmse_m2 <- merge(rmse, sig_contribs2, by="ID") %>%
+#   spread(signature, contribution) %>%
+#   arrange(RMSE) %>%
 #   mutate(pctile = ntile(RMSE, 100))
 
-# train <- rmse_m2 %>% 
+# train <- rmse_m2 %>%
 #   filter(pctile<5 | pctile > 95) %>%
 #   mutate(QUAL=ifelse(pctile<10, 1, 0))
 
@@ -146,7 +147,7 @@ hrm <- heatmapr(outlier_r_m,
     k_row=3,
     Colv=TRUE,
     label_names = c("ID", "subtype", "error"),
-    hclust_method="ward.D2") 
+    hclust_method="ward.D2")
 
 get_leaves_branches_col(hrm$rows)
 
@@ -195,9 +196,9 @@ labels <- c(abs(plotmin), abs(plotmin)/2, seq(0,1,0.25))
 
 p<-ggplot(rmse_plot)+
   geom_segment(
-    aes(y=ID, yend=ID, 
+    aes(y=ID, yend=ID,
       x=0, xend=RMSE, colour=maxgp))+
-  geom_point(aes(y=ID, x=RMSE, colour=maxgp), 
+  geom_point(aes(y=ID, x=RMSE, colour=maxgp),
     size = 2) +
   scale_fill_viridis(discrete=TRUE, drop=FALSE) +
   scale_color_viridis(discrete=TRUE, drop=FALSE) +
@@ -207,7 +208,7 @@ p<-ggplot(rmse_plot)+
   theme(axis.text.x=element_text(size=14, angle=45, hjust=1, vjust=1),
     legend.position="none")
 
-subplot(p, hm$p, hm$px, 
+subplot(p, hm$p, hm$px,
     margin=0, titleX=TRUE, shareY=TRUE, widths=c(0.1, 0.85, 0.05)) %>%
   layout(autosize=F,
     width = 1600,
@@ -312,4 +313,3 @@ pc <- plot_ly(contribution_plot, x=~S1, y=~ID, type = 'bar', orientation = 'h', 
 
 pc
 ```
-
