@@ -164,11 +164,11 @@ def processVCF(args, inputvcf, subtypes_dict, par):
         eprint(len(keep_samples), "samples kept") if args.verbose else None
 
         vcf_reader = VCF(inputvcf,
-            mode='rb', gts012=True, lazy=True, samples=keep_samples)
+            mode='rb', gts012=True, lazy=True, samples=keep_samples, threads=4)
         # vcf_reader.set_samples(keep_samples) # <- set_samples() subsets VCF
     else:
         vcf_reader = VCF(inputvcf,
-            mode='rb', gts012=True, lazy=True)
+            mode='rb', gts012=True, lazy=True, threads=4)
 
     nbp = (args.length-1)//2
 

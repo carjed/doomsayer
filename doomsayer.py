@@ -211,7 +211,8 @@ if args.mode == "vcf":
         par = True
         with open(args.input) as f:
             vcf_list = f.read().splitlines()
-        results = Parallel(n_jobs=args.cpus)(delayed(processVCF)(args, vcf, subtypes_dict, par) for vcf in vcf_list)
+        results = Parallel(n_jobs=args.cpus) \
+            (delayed(processVCF)(args, vcf, subtypes_dict, par) for vcf in vcf_list)
         # eprint(results)
         # eprint(results[1].shape)
         nrow, ncol = results[1].shape
