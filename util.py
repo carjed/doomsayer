@@ -239,7 +239,7 @@ def processVCF(args, inputvcf, subtypes_dict, par):
                     lseq = sequence[record.POS-1].seq
                     # eprint("lseq:", lseq)
                 motif_a = getMotif(record.POS, lseq)
-                subtype = str(category + "-" + motif_a)
+                subtype = str(category + "." + motif_a)
                 st = subtypes_dict[subtype]
                 # eprint(record.CHROM, record.POS,
                     # record.REF, record.ALT[0], subtype)
