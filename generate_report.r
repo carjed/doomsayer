@@ -23,15 +23,15 @@ package.check <- lapply(packages, FUN = function(x) {
 # receive YAML config file name as argument
 cmd_args <- commandArgs(TRUE)
 yaml_cfg <- cmd_args[1]
-template <- cmd_args[2]
+# template <- cmd_args[2]
 proj_dir <- dirname(yaml_cfg)
 
-templateRmd <- paste0("./report_templates/", template, ".Rmd")
+# templateRmd <- paste0("./report_templates/", template, ".Rmd")
 outputRmd <- paste0(proj_dir, "/report.Rmd")
 
 # Copy the RMarkdown template to the specified output folder
-file.copy(templateRmd, outputRmd,
-  overwrite = TRUE, copy.mode = TRUE, copy.date = FALSE)
+# file.copy(templateRmd, outputRmd,
+#   overwrite = TRUE, copy.mode = TRUE, copy.date = FALSE)
 
 # Render the RMarkdown document as an HTML page, located in the specified
 # output folder

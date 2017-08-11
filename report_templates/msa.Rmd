@@ -116,11 +116,11 @@ These plots shows the total number of observations in each subtype, combined acr
 #### All samples
 
 ```{r dist, echo=FALSE, fig.height = 12, fig.width = 24}
-get_leaves_branches_col(hrm$rows)
+# get_leaves_branches_col(hrm$rows)
 
 # overall distribution
 spectra2 <- spectra %>%
-  mutate(group=ifelse(ID %in% keep_ids$V1, "keep", "drop")) %>%
+  mutate(group="all") %>%
   group_by(group) %>%
   gather(subtype, count, 2:ncol(spectra)) %>%
   separate(subtype, c("category", "motif"), sep = "[.]") %>%
@@ -169,7 +169,7 @@ sig_loads_long <- sig_loads %>%
 
 ggplot(sig_loads_long, aes(x=motif, y=loading, fill=Sig))+
   geom_bar(stat="identity")+
-  facet_grid(Sig~category, scales="free")+
+  facet_grid(Sig~category, scales="free_x")+
   scale_fill_viridis(discrete=TRUE)+
   theme_bw()+
   theme(axis.text.x=element_text(angle=90, vjust=0, size=10),

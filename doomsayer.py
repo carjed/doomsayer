@@ -3,6 +3,7 @@
 from __future__ import print_function
 import os
 import sys
+import shutil
 # from _version import __version__
 import textwrap
 import argparse
@@ -113,7 +114,7 @@ parser.add_argument("-R", "--report",
                         R.",
                     action="store_true")
 
-template_opts = ["diagnostics"]
+template_opts = ["diagnostics", "msa"]
 
 parser.add_argument("-T", "--template",
                     help="Template for diagnostic report. Must be one of \
@@ -380,12 +381,15 @@ if args.filterout:
 ###############################################################################
 if(args.report and args.matrixname == "NMF_M_spectra"):
     cmd_str = "Rscript --vanilla generate_report.r "
-    param_str = projdir + "/config.yaml " + args.template
+    param_str = projdir + "/config.yaml"
+
+    shutil.copy("report_templates/" + args.template + ".Rmd",
+        projdir + "/report.Rmd")
+
     cmd = cmd_str + param_str
     if args.verbose:
         eprint("Rscript will run the following command:")
         eprint(cmd)
-        eprint("Auto-generating diagnostic report...")
     call(cmd, shell=True)
 
 stop = timeit.default_timer()

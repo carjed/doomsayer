@@ -149,7 +149,7 @@ hrm <- heatmapr(outlier_r_m,
     label_names = c("ID", "subtype", "error"),
     hclust_method="ward.D2")
 
-get_leaves_branches_col(hrm$rows)
+# get_leaves_branches_col(hrm$rows)
 
 hm <- heatmaply(outlier_r_m,
     k_row=3,
@@ -211,8 +211,8 @@ p<-ggplot(rmse_plot)+
 subplot(p, hm$p, hm$px,
     margin=0, titleX=TRUE, shareY=TRUE, widths=c(0.1, 0.85, 0.05)) %>%
   layout(autosize=F,
-    width = 1600,
-    height = 1600,
+    width = 1400,
+    height = 1400,
     margin = list(l = 130, b = 100))
 
 top_r20 <- rmse_plot %>%
@@ -230,7 +230,7 @@ These plots shows the total number of observations in each subtype, combined acr
 #### All samples
 
 ```{r dist, echo=FALSE, fig.height = 12, fig.width = 24}
-get_leaves_branches_col(hrm$rows)
+# get_leaves_branches_col(hrm$rows)
 
 # overall distribution
 spectra2 <- spectra %>%
@@ -283,7 +283,7 @@ sig_loads_long <- sig_loads %>%
 
 ggplot(sig_loads_long, aes(x=motif, y=loading, fill=Sig))+
   geom_bar(stat="identity")+
-  facet_grid(Sig~category, scales="free")+
+  facet_grid(Sig~category, scales="free_x")+
   scale_fill_viridis(discrete=TRUE)+
   theme_bw()+
   theme(axis.text.x=element_text(angle=90, vjust=0, size=10),
