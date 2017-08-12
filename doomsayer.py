@@ -203,11 +203,11 @@ subtypes_dict = indexSubtypes(args)
 # Build M matrix from inputs
 ###############################################################################
 if args.mode == "vcf":
-    fasta_dict = SeqIO.to_dict(SeqIO.parse(args.fastafile, "fasta"))
+    # fasta_dict = SeqIO.to_dict(SeqIO.parse(args.fastafile, "fasta"))
     if(args.input.lower().endswith(('.vcf', '.vcf.gz', '.bcf')) or
             args.input == "-"):
         par = False
-        data = processVCF(args, args.input, fasta_dict, subtypes_dict, par)
+        data = processVCF(args, args.input, subtypes_dict, par)
         M = data.M
         samples = data.samples
 
@@ -216,7 +216,7 @@ if args.mode == "vcf":
         with open(args.input) as f:
             vcf_list = f.read().splitlines()
         results = Parallel(n_jobs=args.cpus) \
-            (delayed(processVCF)(args, vcf, fasta_dict, subtypes_dict, par) for vcf in vcf_list)
+            (delayed(processVCF)(args, vcf, subtypes_dict, par) for vcf in vcf_list)
         # eprint(results)
         # eprint(results[1].shape)
         nrow, ncol = results[1].shape

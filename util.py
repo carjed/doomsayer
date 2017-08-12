@@ -157,9 +157,9 @@ def getSamplesVCF(args, inputvcf):
 ###############################################################################
 # Main function for parsing VCF
 ###############################################################################
-def processVCF(args, inputvcf, fasta_dict, subtypes_dict, par):
+def processVCF(args, inputvcf, subtypes_dict, par):
     eprint("Initializing reference genome...") if args.verbose else None
-    # fasta_reader = Fasta(args.fastafile, read_ahead=1000000)
+    fasta_reader = Fasta(args.fastafile, read_ahead=1000000)
     # record_dict = SeqIO.to_dict(SeqIO.parse(args.fastafile, "fasta"))
 
     # 'demo/input/keep.txt'
@@ -240,8 +240,8 @@ def processVCF(args, inputvcf, fasta_dict, subtypes_dict, par):
                 mu_type = record.REF + str(record.ALT[0])
                 category = getCategory(mu_type)
                 if nbp > 0:
-                    # lseq = fasta_reader[record.CHROM][record.POS-(nbp+1):record.POS+nbp].seq
-                    lseq = str(fasta_dict[record.CHROM][record.POS-(nbp+1):record.POS+nbp].seq)
+                    lseq = fasta_reader[record.CHROM][record.POS-(nbp+1):record.POS+nbp].seq
+                    # lseq = str(fasta_dict[record.CHROM][record.POS-(nbp+1):record.POS+nbp].seq)
                 else:
                     lseq = fasta_reader[record.CHROM][record.POS-1].seq
                     # eprint("lseq:", lseq)
