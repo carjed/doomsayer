@@ -18,6 +18,7 @@ import numpy as np
 import cyvcf2 as vcf
 from cyvcf2 import VCF
 from cyvcf2 import Writer
+from pyfaidx import Fasta
 from joblib import Parallel, delayed
 from subprocess import call
 from util import *
