@@ -3,6 +3,9 @@
 from __future__ import print_function
 import os
 import sys
+
+sys.path.append(os.getcwd())
+
 import shutil
 # from _version import __version__
 import textwrap
