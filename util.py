@@ -18,7 +18,7 @@ import cyvcf2 as vcf
 from cyvcf2 import VCF
 from cyvcf2 import Writer
 from pyfaidx import Fasta
-from Bio import SeqIO
+# from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.Alphabet import IUPAC
 
@@ -228,22 +228,20 @@ def processVCF(args, inputvcf, subtypes_dict, par):
                 # eprint(record.CHROM, record.POS, record.REF, record.ALT[0],
                     # acval, record.FILTER)
                 # check and update chromosome sequence
-                # if record.CHROM != chrseq:
-                #     if args.verbose:
-                #         eprint("Loading chromosome", record.CHROM,
-                #             "reference...")
-                #
-                #     # sequence = fasta_reader[record.CHROM]
-                #     # sequence = record_dict[record.CHROM]
-                #     chrseq = record.CHROM
+                if record.CHROM != chrseq:
+                    sequence = fasta_reader[record.CHROM]
+                    # sequence = record_dict[record.CHROM]
+                    chrseq = record.CHROM
 
                 mu_type = record.REF + str(record.ALT[0])
                 category = getCategory(mu_type)
                 if nbp > 0:
-                    lseq = fasta_reader[record.CHROM][record.POS-(nbp+1):record.POS+nbp].seq
+                    # lseq = fasta_reader[record.CHROM][record.POS-(nbp+1):record.POS+nbp].seq
+                    lseq = sequence[record.POS-(nbp+1):record.POS+nbp].seq
                     # lseq = str(fasta_dict[record.CHROM][record.POS-(nbp+1):record.POS+nbp].seq)
                 else:
-                    lseq = fasta_reader[record.CHROM][record.POS-1].seq
+                    # lseq = fasta_reader[record.CHROM][record.POS-1].seq
+                    lseq = sequence[record.POS-1].seq
                     # eprint("lseq:", lseq)
                 motif_a = getMotif(record.POS, lseq)
                 subtype = str(category + "." + motif_a)
