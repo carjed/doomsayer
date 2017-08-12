@@ -156,10 +156,8 @@ def getSamplesVCF(args, inputvcf):
 ###############################################################################
 # Main function for parsing VCF
 ###############################################################################
-def processVCF(args, inputvcf, subtypes_dict, par):
-    eprint("Initializing reference genome...") if args.verbose else None
-    fasta_reader = Fasta(args.fastafile, read_ahead=1000000)
-
+def processVCF(args, inputvcf, fasta_reader, subtypes_dict, par):
+    
     # 'demo/input/keep.txt'
     if args.samplefile:
         with open(args.samplefile) as f:
