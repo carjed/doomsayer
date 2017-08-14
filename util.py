@@ -280,10 +280,6 @@ def processVCF(args, inputvcf, subtypes_dict, par):
             else:
                 numsites_skip += 1
 
-    if numsites_keep == 0:
-        eprint("No SNVs found. Please check your VCF file")
-        sys.exit()
-
     if args.verbose:
         eprint(numsites_keep, "sites kept")
         eprint(numsites_skip, "sites skipped")
