@@ -321,13 +321,13 @@ else:
         elif args.filtermode == "chisq":
             i=0
             mean_spectrum = np.mean(M, axis=0)
-
+            n_pass = sum(np.sum(M, axis=1) > args.minsnvs)
             for row in M:
                 if sum(M[i]) < args.minsnvs:
                     lowsnv_samples.append(samples[i])
                 else:
                     exp_spectrum = mean_spectrum*sum(row)/sum(mean_spectrum)
-                    if chisquare(row, f_exp=exp_spectrum)[1] < 0.05:
+                    if chisquare(row, f_exp=exp_spectrum)[1] < 0.05/n_pass:
                         drop_samples.append(samples[i])
                         drop_indices.append(i)
                     else:
