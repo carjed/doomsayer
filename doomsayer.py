@@ -311,8 +311,6 @@ else:
                 if sum(M[i]) < args.minsnvs:
                     lowsnv_samples.append(samples[i])
                 elif any(err > args.threshold for err in row):
-                # if n > args.threshold:
-                # if(np.greater(n, upper).any() or np.less(n, lower).any()):
                     drop_samples.append(samples[i])
                     drop_indices.append(i)
                 else:
@@ -327,9 +325,12 @@ else:
                     lowsnv_samples.append(samples[i])
                 else:
                     exp_spectrum = mean_spectrum*sum(row)/sum(mean_spectrum)
-                    if chisquare(row, f_exp=exp_spectrum)[1] < 0.05/n_pass:
+                    pval = chisquare(row, f_exp=exp_spectrum)[1]
+                    if pval < 0.05/n_pass:
                         drop_samples.append(samples[i])
                         drop_indices.append(i)
+                        if args.verbose:
+                            eprint(samples[i], pval)
                     else:
                         keep_samples.append(samples[i])
                 i += 1
