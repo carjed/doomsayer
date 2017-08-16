@@ -3,7 +3,10 @@
 from __future__ import print_function
 import os
 import sys
-import argparse
+
+sys.path.append(os.getcwd())
+
+import textwrap
 import itertools
 import timeit
 import collections
@@ -15,6 +18,7 @@ import cyvcf2 as vcf
 from cyvcf2 import VCF
 from cyvcf2 import Writer
 from pyfaidx import Fasta
+# from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.Alphabet import IUPAC
 
@@ -90,12 +94,12 @@ def indexSubtypes(args):
             for category in categories:
                 ref = category[0]
 
-                subtype = category + "-" \
+                subtype = category + "." \
                     + kmerstr[0:flank] + ref + kmerstr[flank:(motiflength-1)]
 
                 subtypes_list.append(subtype)
     else:
-        ext = ["-A", "-C"]
+        ext = [".A", ".C"]
         extr = list(np.repeat(ext,3))
         subtypes_list = [m+n for m,n in zip(categories,extr)]
         # eprint(subtypes_list)
@@ -156,6 +160,7 @@ def getSamplesVCF(args, inputvcf):
 def processVCF(args, inputvcf, subtypes_dict, par):
     eprint("Initializing reference genome...") if args.verbose else None
     fasta_reader = Fasta(args.fastafile, read_ahead=1000000)
+    # record_dict = SeqIO.to_dict(SeqIO.parse(args.fastafile, "fasta"))
 
     # 'demo/input/keep.txt'
     if args.samplefile:
@@ -224,22 +229,22 @@ def processVCF(args, inputvcf, subtypes_dict, par):
                     # acval, record.FILTER)
                 # check and update chromosome sequence
                 if record.CHROM != chrseq:
-                    if args.verbose:
-                        eprint("Loading chromosome", record.CHROM,
-                            "reference...")
-
                     sequence = fasta_reader[record.CHROM]
+                    # sequence = record_dict[record.CHROM]
                     chrseq = record.CHROM
 
                 mu_type = record.REF + str(record.ALT[0])
                 category = getCategory(mu_type)
                 if nbp > 0:
+                    # lseq = fasta_reader[record.CHROM][record.POS-(nbp+1):record.POS+nbp].seq
                     lseq = sequence[record.POS-(nbp+1):record.POS+nbp].seq
+                    # lseq = str(fasta_dict[record.CHROM][record.POS-(nbp+1):record.POS+nbp].seq)
                 else:
+                    # lseq = fasta_reader[record.CHROM][record.POS-1].seq
                     lseq = sequence[record.POS-1].seq
                     # eprint("lseq:", lseq)
                 motif_a = getMotif(record.POS, lseq)
-                subtype = str(category + "-" + motif_a)
+                subtype = str(category + "." + motif_a)
                 st = subtypes_dict[subtype]
                 # eprint(record.CHROM, record.POS,
                     # record.REF, record.ALT[0], subtype)
@@ -274,10 +279,6 @@ def processVCF(args, inputvcf, subtypes_dict, par):
                             "(Skipped", numsites_skip, "sites)")
             else:
                 numsites_skip += 1
-
-    if numsites_keep == 0:
-        eprint("No SNVs found. Please check your VCF file")
-        sys.exit()
 
     if args.verbose:
         eprint(numsites_keep, "sites kept")

@@ -7,7 +7,7 @@ os=${OSTYPE//[0-9.]/}
 # by default installs to user library location (default ~/.local/bin)
 # remove --user if installing system-wide
 echo "Installing python dependencies"
-/usr/bin/pip install --user cyvcf2 numpy pandas Biopython nimfa pyfaidx joblib
+/usr/bin/pip install --user cyvcf2 numpy pandas Biopython nimfa pyfaidx joblib scipy
 
 # Check for pandoc libraries
 if [ -d /usr/lib/rstudio ]; then
