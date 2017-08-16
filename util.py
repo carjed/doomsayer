@@ -245,33 +245,36 @@ def processVCF(args, inputvcf, subtypes_dict, par):
                     # eprint("lseq:", lseq)
                 motif_a = getMotif(record.POS, lseq)
                 subtype = str(category + "." + motif_a)
-                st = subtypes_dict[subtype]
-                # eprint(record.CHROM, record.POS,
+                if subtype in subtypes_dict:
+                    st = subtypes_dict[subtype]
+                    # eprint(record.CHROM, record.POS,
                     # record.REF, record.ALT[0], subtype)
 
-                # testing for speed improvements by batching updates to M
-                asbatch = False
-                if(asbatch and not args.groupfile):
-                    batchit += 1
-                    sample = record.gt_types.tolist().index(1)
-                    sample_batch.append(sample)
-                    subtype_batch.append(st)
+                    # testing for speed improvements by batching updates to M
+                    asbatch = False
+                    if(asbatch and not args.groupfile):
+                        batchit += 1
+                        sample = record.gt_types.tolist().index(1)
+                        sample_batch.append(sample)
+                        subtype_batch.append(st)
 
-                    if batchit == 10000:
-                        M[sample_batch, subtype_batch] += 1
-                        batchit = 0
+                        if batchit == 10000:
+                            M[sample_batch, subtype_batch] += 1
+                            batchit = 0
+                    elif args.groupfile:
+                        sample = all_samples[record.gt_types.tolist().index(1)]
 
-                elif args.groupfile:
-                    sample = all_samples[record.gt_types.tolist().index(1)]
+                        if sample in sg_dict:
+                            sample_gp = sg_dict[sample]
+                            ind = samples.index(sample_gp)
+                            M[ind,st] += 1
+                    else:
+                        M[:,st] = M[:,st]+record.gt_types
 
-                    if sample in sg_dict:
-                        sample_gp = sg_dict[sample]
-                        ind = samples.index(sample_gp)
-                        M[ind,st] += 1
+                    numsites_keep += 1
+
                 else:
-                    M[:,st] = M[:,st]+record.gt_types
-
-                numsites_keep += 1
+                    numsites_skip += 1
 
                 if args.verbose:
                     if (numsites_keep%10000==0):
