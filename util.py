@@ -42,18 +42,21 @@ def restricted_float(x):
 # collapse mutation types per strand symmetry
 ###############################################################################
 def getCategory(mu_type):
-    if (mu_type == "AC" or mu_type == "TG"):
-        category = "A_C"
-    if (mu_type == "AG" or mu_type == "TC"):
-        category = "A_G"
-    if (mu_type == "AT" or mu_type == "TA"):
-        category = "A_T"
-    if (mu_type == "CA" or mu_type == "GT"):
-        category = "C_A"
-    if (mu_type == "CG" or mu_type == "GC"):
-        category = "C_G"
-    if (mu_type == "CT" or mu_type == "GA"):
-        category = "C_T"
+    if re.match("^[ACGT]*$", mu_type):
+        if (mu_type == "AC" or mu_type == "TG"):
+            category = "A_C"
+        if (mu_type == "AG" or mu_type == "TC"):
+            category = "A_G"
+        if (mu_type == "AT" or mu_type == "TA"):
+            category = "A_T"
+        if (mu_type == "CA" or mu_type == "GT"):
+            category = "C_A"
+        if (mu_type == "CG" or mu_type == "GC"):
+            category = "C_G"
+        if (mu_type == "CT" or mu_type == "GA"):
+            category = "C_T"
+    else:
+        category = "unknown"
     return category
 
 ###############################################################################
@@ -245,11 +248,11 @@ def processVCF(args, inputvcf, subtypes_dict, par):
                     # eprint("lseq:", lseq)
 
                 mu_type = record.REF + str(record.ALT[0])
+                category = getCategory(mu_type)
                 motif_a = getMotif(record.POS, lseq)
                 subtype = str(category + "." + motif_a)
 
-                if(subtype in subtypes_dict and re.match("^[ACGT]*$", mu_type)):
-                    category = getCategory(mu_type)
+                if subtype in subtypes_dict:
                     st = subtypes_dict[subtype]
                     # eprint(record.CHROM, record.POS,
                     # record.REF, record.ALT[0], subtype)
