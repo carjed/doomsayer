@@ -12,6 +12,7 @@ import timeit
 import collections
 import csv
 import nimfa
+import re
 from pandas import *
 import numpy as np
 import cyvcf2 as vcf
@@ -233,8 +234,7 @@ def processVCF(args, inputvcf, subtypes_dict, par):
                     # sequence = record_dict[record.CHROM]
                     chrseq = record.CHROM
 
-                mu_type = record.REF + str(record.ALT[0])
-                category = getCategory(mu_type)
+
                 if nbp > 0:
                     # lseq = fasta_reader[record.CHROM][record.POS-(nbp+1):record.POS+nbp].seq
                     lseq = sequence[record.POS-(nbp+1):record.POS+nbp].seq
@@ -243,9 +243,13 @@ def processVCF(args, inputvcf, subtypes_dict, par):
                     # lseq = fasta_reader[record.CHROM][record.POS-1].seq
                     lseq = sequence[record.POS-1].seq
                     # eprint("lseq:", lseq)
+
+                mu_type = record.REF + str(record.ALT[0])
                 motif_a = getMotif(record.POS, lseq)
                 subtype = str(category + "." + motif_a)
-                if subtype in subtypes_dict:
+
+                if(subtype in subtypes_dict and re.match("^[ACGT]*$", mu_type)):
+                    category = getCategory(mu_type)
                     st = subtypes_dict[subtype]
                     # eprint(record.CHROM, record.POS,
                     # record.REF, record.ALT[0], subtype)
