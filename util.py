@@ -17,9 +17,8 @@ from pandas import *
 import numpy as np
 import cyvcf2 as vcf
 from cyvcf2 import VCF
-from cyvcf2 import Writer
+from scipy.stats import chisquare
 from pyfaidx import Fasta
-# from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.Alphabet import IUPAC
 
@@ -80,21 +79,19 @@ def getMotif(pos, sequence):
 ###############################################################################
 # define k-mer mutation subtypes
 ###############################################################################
-def indexSubtypes(args):
+def indexSubtypes(motiflength):
     categories = ["A_C", "A_G", "A_T", "C_G", "C_T", "C_A"]
     bases = ["A", "C", "G", "T"]
-
-    motiflength = args.length
     flank = (motiflength-1)//2
 
     if motiflength > 1:
         kmers = itertools.product(bases, repeat=motiflength-1)
 
         subtypes_list = []
-        # i = 0
+
         for kmer in kmers:
             kmerstr = ''.join(kmer)
-            # eprint(kmerstr)
+
             for category in categories:
                 ref = category[0]
 
@@ -106,26 +103,26 @@ def indexSubtypes(args):
         ext = [".A", ".C"]
         extr = list(np.repeat(ext,3))
         subtypes_list = [m+n for m,n in zip(categories,extr)]
-        # eprint(subtypes_list)
 
     i = 0
     subtypes_dict = {}
     for subtype in sorted(subtypes_list):
         subtypes_dict[subtype] = i
         i += 1
-    # eprint(subtypes_dict)
+
     return subtypes_dict
 
 ###############################################################################
-# get samples from input M matrix when using aggregation mode
+# Build dictionary with sample ID as key, group ID as value
 ###############################################################################
-def getSamples(fh):
-    samples = np.loadtxt(fh,
-        dtype='S20',
-        skiprows=1,
-        delimiter='\t',
-        usecols=(0,))
+def indexGroups(groupfile):
+    sg_dict = {}
+    with open(groupfile) as sg_file:
+        for line in sg_file:
+           (key, val) = line.split()
+           sg_dict[key] = val
 
+    samples = sorted(list(set(sg_dict.values())))
     return samples
 
 ###############################################################################
@@ -144,17 +141,11 @@ def getSamplesVCF(args, inputvcf):
             mode='rb', gts012=True, lazy=True)
 
     if args.groupfile:
-        sg_dict = {}
-        with open(args.groupfile) as sg_file:
-            for line in sg_file:
-               (key, val) = line.split()
-               sg_dict[key] = val
-
         all_samples = vcf_reader.samples
-        samples = sorted(list(set(sg_dict.values())))
-        # eprint(samples)
+        samples = indexGroups(args.groupfile)
     else:
         samples = vcf_reader.samples
+
     vcf_reader.close()
     return samples
 
@@ -185,15 +176,8 @@ def processVCF(args, inputvcf, subtypes_dict, par):
     eprint("Indexing samples in", inputvcf, "...") if args.verbose else None
 
     if args.groupfile:
-        sg_dict = {}
-        with open(args.groupfile) as sg_file:
-            for line in sg_file:
-               (key, val) = line.split()
-               sg_dict[key] = val
-
         all_samples = vcf_reader.samples
-        samples = sorted(list(set(sg_dict.values())))
-        # eprint(samples)
+        samples = indexGroups(args.groupfile)
     else:
         samples = vcf_reader.samples
 
@@ -228,24 +212,19 @@ def processVCF(args, inputvcf, subtypes_dict, par):
             acval = record.INFO['AC']
             # eprint(record.POS, acval)
 
-            if ((acval==1 and record.FILTER is None) or args.novarfilter):
+            if ((acval<=args.maxac or args.maxac==0) and record.FILTER is None):
                 # eprint(record.CHROM, record.POS, record.REF, record.ALT[0],
                     # acval, record.FILTER)
+
                 # check and update chromosome sequence
                 if record.CHROM != chrseq:
                     sequence = fasta_reader[record.CHROM]
-                    # sequence = record_dict[record.CHROM]
                     chrseq = record.CHROM
 
-
                 if nbp > 0:
-                    # lseq = fasta_reader[record.CHROM][record.POS-(nbp+1):record.POS+nbp].seq
                     lseq = sequence[record.POS-(nbp+1):record.POS+nbp].seq
-                    # lseq = str(fasta_dict[record.CHROM][record.POS-(nbp+1):record.POS+nbp].seq)
                 else:
-                    # lseq = fasta_reader[record.CHROM][record.POS-1].seq
                     lseq = sequence[record.POS-1].seq
-                    # eprint("lseq:", lseq)
 
                 mu_type = record.REF + str(record.ALT[0])
                 category = getCategory(mu_type)
@@ -254,21 +233,8 @@ def processVCF(args, inputvcf, subtypes_dict, par):
 
                 if subtype in subtypes_dict:
                     st = subtypes_dict[subtype]
-                    # eprint(record.CHROM, record.POS,
-                    # record.REF, record.ALT[0], subtype)
 
-                    # testing for speed improvements by batching updates to M
-                    asbatch = False
-                    if(asbatch and not args.groupfile):
-                        batchit += 1
-                        sample = record.gt_types.tolist().index(1)
-                        sample_batch.append(sample)
-                        subtype_batch.append(st)
-
-                        if batchit == 10000:
-                            M[sample_batch, subtype_batch] += 1
-                            batchit = 0
-                    elif args.groupfile:
+                    if args.groupfile:
                         sample = all_samples[record.gt_types.tolist().index(1)]
 
                         if sample in sg_dict:
@@ -303,64 +269,10 @@ def processVCF(args, inputvcf, subtypes_dict, par):
         return out
 
 ###############################################################################
-# aggregate M matrices from list of input files
-###############################################################################
-def aggregateM(args, subtypes_dict):
-    colnames = ["ID"]
-    M_colnames = colnames + list(sorted(subtypes_dict.keys()))
-    colrange = range(1,len(M_colnames))
-
-    if args.input.lower().endswith('nmf_m_spectra.txt'):
-        samples = getSamples(args.input)
-        M = np.loadtxt(args.input, skiprows=1, usecols=colrange)
-        # M_it = np.concatenate((np.array([samples]).T, M_it), axis=1)
-        # M_out = np.concatenate((M_out, M_it), axis=0)
-
-        # M = np.delete(M_out, 0, 0)
-        # M = np.delete(M, 0, 1)
-        M = M.astype(np.float)
-    else:
-        with open(args.input) as f:
-            file_list = f.read().splitlines()
-
-        # M output by sample
-        if args.input.lower().endswith('m_samples.txt'):
-
-            M_out = np.array([M_colnames])
-
-            for mfile in file_list:
-                samples = getSamples(mfile)
-
-                M_it = np.loadtxt(mfile, skiprows=1, usecols=colrange)
-                M_it = np.concatenate((np.array([samples]).T, M_it), axis=1)
-                M_out = np.concatenate((M_out, M_it), axis=0)
-
-            M = np.delete(M_out, 0, 0)
-            M = np.delete(M, 0, 1)
-            M = M.astype(np.float)
-
-        # M output by region
-        elif args.input.lower().endswith('m_regions.txt'):
-
-            samples = getSamples(file_list[0])
-
-            # eprint(len(samples))
-            M_out = np.zeros((len(samples), len(M_colnames)-1))
-            # eprint(M_out.shape)
-            for mfile in file_list:
-                M_it = np.loadtxt(mfile, skiprows=1, usecols=colrange)
-                M_out = np.add(M_out, M_it)
-
-            M = M_out.astype(np.float)
-
-    out = collections.namedtuple('Out', ['M', 'samples'])(M, samples)
-    return out
-
-###############################################################################
 # process tab-delimited text file, containing the following columns:
 # CHR    POS    REF    ALT    SAMPLE_ID
 ###############################################################################
-def aggregateTxt(args, subtypes_dict):
+def processTxt(args, subtypes_dict):
     eprint("Initializing reference genome...") if args.verbose else None
     fasta_reader = Fasta(args.fastafile, read_ahead=1000000)
 
@@ -415,6 +327,128 @@ def aggregateTxt(args, subtypes_dict):
     out = collections.namedtuple('Out', ['M', 'samples'])(M, samples)
     return out
 
+###############################################################################
+# get samples from input M matrix when using aggregation mode
+###############################################################################
+def getSamples(fh):
+    samples = np.loadtxt(fh,
+        dtype='S20',
+        skiprows=1,
+        delimiter='\t',
+        usecols=(0,))
+
+    return samples
+
+###############################################################################
+# aggregate M matrices from list of input files
+###############################################################################
+def aggregateM(inputM, subtypes_dict):
+    colnames = ["ID"]
+    M_colnames = colnames + list(sorted(subtypes_dict.keys()))
+    colrange = range(1,len(M_colnames))
+
+    if input.lower().endswith('nmf_m_spectra.txt'):
+        samples = getSamples(inputM)
+        M = np.loadtxt(inputM, skiprows=1, usecols=colrange)
+        M = M.astype(np.float)
+    else:
+        with open(inputM) as f:
+            file_list = f.read().splitlines()
+
+        # M output by sample
+        if inputM.lower().endswith('m_samples.txt'):
+
+            M_out = np.array([M_colnames])
+
+            for mfile in file_list:
+                samples = getSamples(mfile)
+
+                M_it = np.loadtxt(mfile, skiprows=1, usecols=colrange)
+                M_it = np.concatenate((np.array([samples]).T, M_it), axis=1)
+                M_out = np.concatenate((M_out, M_it), axis=0)
+
+            M = np.delete(M_out, 0, 0)
+            M = np.delete(M, 0, 1)
+            M = M.astype(np.float)
+
+        # M output by region
+        elif inputM.lower().endswith('m_regions.txt'):
+            samples = getSamples(file_list[0])
+
+            M_out = np.zeros((len(samples), len(M_colnames)-1))
+            for mfile in file_list:
+                M_it = np.loadtxt(mfile, skiprows=1, usecols=colrange)
+                M_out = np.add(M_out, M_it)
+
+            M = M_out.astype(np.float)
+
+    out = collections.namedtuple('Out', ['M', 'samples'])(M, samples)
+    return out
+
+###############################################################################
+# Generate keep/drop lists
+###############################################################################
+def detectOutliers(M, samples, filtermode, threshold, minsnvs):
+    M_f = M/(M.sum(axis=1)+1e-8)[:,None]
+
+    keep_samples = []
+    drop_samples = []
+    drop_indices = []
+    lowsnv_samples = []
+
+    if filtermode == "fold":
+        i=0
+        M_err_d = np.divide(M_f, np.mean(M_f, axis=0))
+        for row in M_err_d:
+            if sum(M[i]) < minsnvs:
+                lowsnv_samples.append(samples[i])
+            elif any(err > threshold for err in row):
+                drop_samples.append(samples[i])
+                drop_indices.append(i)
+            else:
+                keep_samples.append(samples[i])
+            i += 1
+    elif filtermode == "chisq":
+        i=0
+        mean_spectrum = np.mean(M, axis=0)
+        n_pass = sum(np.sum(M, axis=1) > minsnvs)
+        for row in M:
+            if sum(M[i]) < minsnvs:
+                lowsnv_samples.append(samples[i])
+            else:
+                exp_spectrum = mean_spectrum*sum(row)/sum(mean_spectrum)
+                pval = chisquare(row, f_exp=exp_spectrum)[1]
+                if pval < 0.05/n_pass:
+                    drop_samples.append(samples[i])
+                    drop_indices.append(i)
+                else:
+                    keep_samples.append(samples[i])
+            i += 1
+    elif filtermode == "sd":
+        i=0
+        mean_spectrum = np.mean(M_f, axis=0)
+        spec_std = np.std(M_f, axis=0, ddof=1)
+        std_threshold = mean_spectrum + threshold*spec_std
+
+        for row in M_f:
+            if sum(M[i]) < minsnvs:
+                lowsnv_samples.append(samples[i])
+            else:
+                if np.greater(row, std_threshold).any():
+                    drop_samples.append(samples[i])
+                    drop_indices.append(i)
+                else:
+                    keep_samples.append(samples[i])
+            i += 1
+
+    out_handles = ['keep_samples',
+        'drop_samples',
+        'lowsnv_samples',
+        'drop_indices']
+
+    out = collections.namedtuple('Out', out_handles) \
+        (keep_samples, drop_samples, lowsnv_samples, drop_indices)
+    return out
 
 ###############################################################################
 # run NMF on input matrix
@@ -428,7 +462,6 @@ def NMFRun(M_run, args, projdir, samples, subtypes_dict):
             rank=args.rank,
             update="divergence",
             objective='div',
-            # seed="nndsvd",
             n_run=1,
             max_iter=200)
         model_fit = model()
@@ -534,3 +567,38 @@ def writeRMSE(M_rmse, rmse_path, samples):
         rmse.write("%s" % line)
         i += 1
     rmse.close()
+
+###############################################################################
+# filter VCF input by kept samples
+###############################################################################
+def filterVCF(inputvcf, keep_samples):
+    vcf = VCF(inputvcf, samples=keep_samples, mode='rb')
+
+    print(vcf.raw_header.rstrip())
+    for v in vcf:
+        v.INFO['AC'] = str(v.num_het + v.num_hom_alt*2)
+
+        if int(v.INFO['AC']) > 0:
+            v.INFO['NS'] = str(v.num_called)
+            v.INFO['AN'] = str(2*v.num_called)
+            v.INFO['DP'] = str(np.sum(v.format('DP')))
+            print(str(v).rstrip())
+
+    vcf.close()
+
+###############################################################################
+# filter txt input by kept samples
+###############################################################################
+def filterTXT(inputtxt, keep_samples):
+    with open(inputtxt, 'r') as f:
+        reader = csv.reader(f, delimiter='\t')
+
+        for row in reader:
+            chrom = row[0]
+            pos = row[1]
+            ref = row[2]
+            alt = row[3]
+            sample = row[4]
+
+            if sample in keep_samples:
+                print("\t".join(row))

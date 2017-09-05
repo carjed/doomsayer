@@ -7,7 +7,6 @@ import sys
 sys.path.append(os.getcwd())
 
 import shutil
-# from _version import __version__
 import textwrap
 import argparse
 import itertools
@@ -15,10 +14,6 @@ import timeit
 import time
 import multiprocessing
 import numpy as np
-import cyvcf2 as vcf
-from cyvcf2 import VCF
-from cyvcf2 import Writer
-from scipy.stats import chisquare
 from joblib import Parallel, delayed
 from subprocess import call
 from util import *
@@ -106,13 +101,6 @@ parser.add_argument("-a", "--allsamples",
                         Forces NMF to run on the entire sample",
                     action="store_true")
 
-parser.add_argument("-n", "--novarfilter",
-                    help="turns off default variant filtering criteria \
-                        and evaluates all sites in the input VCF. \
-                        (Useful if analyzing somatic data or pre-filtering \
-                        with another tool)",
-                    action="store_true")
-
 parser.add_argument("-R", "--report",
                     help="automatically generates an HTML-formatted report in \
                         R.",
@@ -141,12 +129,20 @@ parser.add_argument("-F", "--filtermode",
                     default="fold")
 
 parser.add_argument("-C", "--minsnvs",
-                    help="minimum number of SNVs per individual to be included \
+                    help="minimum # of SNVs per individual to be included \
                         in analysis",
                     nargs='?',
                     type=int,
                     metavar='',
                     default=0)
+
+parser.add_argument("-X", "--maxac",
+                    help="maximum allele count for SNVs to keep in analysis. \
+                        Set to 0 to include all variants.",
+                    nargs='?',
+                    type=int,
+                    metavar='',
+                    default=1)
 
 parser.add_argument("-t", "--threshold",
                     help="threshold for fold-difference RMSE cutoff, used to \
@@ -161,7 +157,7 @@ parser.add_argument("-t", "--threshold",
 rank_opts = range(2,11)
 ro_str = str(min(rank_opts)) + " and " + str(max(rank_opts))
 parser.add_argument("-r", "--rank",
-                    help="Rank for NMF decomposition. Must be an integer value \
+                    help="Rank for NMF decomposition. Must be an integer \
                         between " + ro_str,
                     nargs='?',
                     type=int,
@@ -199,8 +195,6 @@ args = parser.parse_args()
 # Initialize project directory
 ###############################################################################
 projdir = os.path.realpath(args.projectdir)
-if args.verbose:
-    eprint("checking if directory", projdir, "exists...")
 
 if not os.path.exists(args.projectdir):
     if args.verbose:
@@ -217,7 +211,7 @@ if args.verbose:
 # index subtypes
 ###############################################################################
 eprint("indexing subtypes...") if args.verbose else None
-subtypes_dict = indexSubtypes(args)
+subtypes_dict = indexSubtypes(args.length)
 
 ###############################################################################
 # Build M matrix from inputs
@@ -237,7 +231,8 @@ if args.mode == "vcf":
             vcf_list = f.read().splitlines()
 
         results = Parallel(n_jobs=args.cpus) \
-            (delayed(processVCF)(args, vcf, subtypes_dict, par) for vcf in vcf_list)
+            (delayed(processVCF)(args, vcf, subtypes_dict, par) \
+            for vcf in vcf_list)
 
         nrow, ncol = results[1].shape
         M = np.zeros((nrow, ncol))
@@ -247,12 +242,12 @@ if args.mode == "vcf":
         samples = getSamplesVCF(args, vcf_list[1])
 
 elif args.mode == "agg":
-    data = aggregateM(args, subtypes_dict)
+    data = aggregateM(args.input, subtypes_dict)
     M = data.M
     samples = data.samples
 
 elif args.mode == "txt":
-    data = aggregateTxt(args, subtypes_dict)
+    data = processTxt(args, subtypes_dict)
     M = data.M
     samples = data.samples
 
@@ -270,9 +265,6 @@ if args.matrixname != "NMF_M_spectra":
     M_path = projdir + "/" + args.matrixname + ".txt"
     writeM(M, M_path, subtypes_dict, samples)
 
-###############################################################################
-# Process M matrix
-###############################################################################
 else:
     # M_f is the relative contribution of each subtype per sample
     M_f = M/(M.sum(axis=1)+1e-8)[:,None]
@@ -298,59 +290,14 @@ else:
         M_run = M_f
         samples = samples
     else:
-        eprint("Printing keep and drop lists") if args.verbose else None
-        M_err_d = np.divide(M_f, np.mean(M_f, axis=0))
-        keep_samples = []
-        drop_samples = []
-        drop_indices = []
-        lowsnv_samples = []
+        eprint("Generating keep and drop lists") if args.verbose else None
+        kd_lists = detectOutliers(M, samples,
+            args.filtermode, args.threshold, args.minsnvs)
 
-        if args.filtermode == "fold":
-            i=0
-            for row in M_err_d:
-                if sum(M[i]) < args.minsnvs:
-                    lowsnv_samples.append(samples[i])
-                elif any(err > args.threshold for err in row):
-                    drop_samples.append(samples[i])
-                    drop_indices.append(i)
-                else:
-                    keep_samples.append(samples[i])
-                i += 1
-        elif args.filtermode == "chisq":
-            i=0
-            mean_spectrum = np.mean(M, axis=0)
-            n_pass = sum(np.sum(M, axis=1) > args.minsnvs)
-            for row in M:
-                if sum(M[i]) < args.minsnvs:
-                    lowsnv_samples.append(samples[i])
-                else:
-                    exp_spectrum = mean_spectrum*sum(row)/sum(mean_spectrum)
-                    pval = chisquare(row, f_exp=exp_spectrum)[1]
-                    if pval < 0.05/n_pass:
-                        drop_samples.append(samples[i])
-                        drop_indices.append(i)
-                        if args.verbose:
-                            eprint(samples[i], pval)
-                    else:
-                        keep_samples.append(samples[i])
-                i += 1
-        elif args.filtermode == "sd":
-            i=0
-            mean_spectrum = np.mean(M_f, axis=0)
-            spec_std = np.std(M_f, axis=0, ddof=1)
-
-            std_threshold = mean_spectrum + args.threshold*spec_std
-
-            for row in M_f:
-                if sum(M[i]) < args.minsnvs:
-                    lowsnv_samples.append(samples[i])
-                else:
-                    if np.greater(row, std_threshold).any():
-                        drop_samples.append(samples[i])
-                        drop_indices.append(i)
-                    else:
-                        keep_samples.append(samples[i])
-                i += 1
+        keep_samples = kd_lists.keep_samples
+        drop_samples = kd_lists.drop_samples
+        lowsnv_samples = kd_lists.lowsnv_samples
+        drop_indices = kd_lists.drop_indices
 
         keep_path = projdir + "/doomsayer_keep.txt"
         keeps = open(keep_path, "w")
@@ -365,13 +312,14 @@ else:
         drops.close()
 
         if args.minsnvs > 0:
-            lowsnv_path = projdir + "/doomsayer_snvs_lt" + str(args.minsnvs) + ".txt"
+            lowsnv_path = projdir + \
+                "/doomsayer_snvs_lt" + str(args.minsnvs) + ".txt"
             lowsnvs = open(lowsnv_path, "w")
             for sample in lowsnv_samples:
                 lowsnvs.write("%s\n" % sample)
             lowsnvs.close()
 
-        if len(drop_indices) > 0:
+        if len(drop_samples) > 0:
             if args.verbose:
                 eprint(len(drop_samples), "potential outliers found.")
 
@@ -380,7 +328,6 @@ else:
         else:
             eprint("No outliers detected! NMF will be run on all samples")
             M_run = M_f
-            # sys.exit()
 
     eprint("Running NMF model") if args.verbose else None
     NMFdata = NMFRun(M_run, args, projdir, samples, subtypes_dict)
@@ -405,61 +352,30 @@ else:
     yaml.close()
 
 ###############################################################################
-# write output vcf
+# write output
 ###############################################################################
 if args.filterout:
-    if args.mode == "vcf":
+    if(args.mode == "vcf" and not(args.input.lower().endswith(('.txt')))):
         eprint("Filtering input by drop list...") if args.verbose else None
-        # keep_test = keep_samples[0:10]
-        # vcf = VCF(args.input, samples=keep_test, mode='rb')
-        vcf = VCF(args.input, samples=keep_samples, mode='rb')
-
-        print(vcf.raw_header.rstrip())
-        for v in vcf:
-            v.INFO['AC'] = str(v.num_het + v.num_hom_alt*2)
-
-            if int(v.INFO['AC']) > 0:
-                v.INFO['NS'] = str(v.num_called)
-                v.INFO['AN'] = str(2*v.num_called)
-                v.INFO['DP'] = str(np.sum(v.format('DP')))
-                print(str(v).rstrip())
-
-        vcf.close()
+        filterVCF(args.input, keep_samples)
 
     elif args.mode =="txt":
         eprint("Filtering input by drop list...") if args.verbose else None
-        with open(args.input, 'r') as f:
-            reader = csv.reader(f, delimiter='\t')
+        filterTXT(args.input, keep_samples)
 
-            for row in reader:
-                chrom = row[0]
-                pos = row[1]
-                ref = row[2]
-                alt = row[3]
-                sample = row[4]
-
-                if sample not in drop_samples:
-                    print("\t".join(row))
-
-    # elif(args.outputtovcf and args.input.lower().endswith(('.txt'))):
-    elif args.mode == "agg":
-        eprint(textwrap.dedent("""\
-                WARNING: Doomsayer cannot write to a new VCF if running in
-                aggregation mode. Please use the keep/drop lists to manually
-                filter your VCF with bcftools or a similar utility
-                """))
+    else:
+        eprint("Input not compatible with auto-filtering function")
 
 ###############################################################################
 # auto-generate diagnostic report in R
 ###############################################################################
 if(args.report and args.matrixname == "NMF_M_spectra"):
-    cmd_str = "Rscript --vanilla generate_report.r "
-    param_str = projdir + "/config.yaml"
 
-    shutil.copy("report_templates/" + args.template + ".Rmd",
-        projdir + "/report.Rmd")
+    template_src = sys.path[0] + "/report_templates/" + args.template + ".Rmd"
+    template_dest = projdir + "/report.Rmd"
+    shutil.copy(template_src, template_dest)
 
-    cmd = cmd_str + param_str
+    cmd = "Rscript --vanilla generate_report.r " + projdir + "/config.yaml"
     if args.verbose:
         eprint("Rscript will run the following command:")
         eprint(cmd)
