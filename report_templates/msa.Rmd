@@ -19,94 +19,7 @@ body {
     left: 0px;}
 </style>
 
-```{r setup, message=FALSE, warning=FALSE, echo=FALSE}
-# knitr::opts_chunk$set(echo = TRUE)
-
-# check and load packages
-packages <- c("dplyr","tidyr","ggplot2","yaml", "devtools", "knitr", "corrr", "viridis", "heatmaply","dendextend", "e1071")
-
-package.check <- lapply(packages, FUN = function(x) {
-    if (!require(x, character.only = TRUE)) {
-        install.packages(x,
-          dependencies = TRUE,
-          repos = "http://cran.us.r-project.org")
-        library(x, character.only = TRUE, silent=TRUE)
-    }
-})
-
-if(params$dev){
-  setwd("../../../Github/doomsayer/sample_output")
-  yaml_cfg <- "./config.yaml"
-} else {
-  yaml_cfg <- params$yaml_cfg
-}
-
-# debug--paths generated from doomsayer.py refer are formatted for bash on Windows
-# the sys.info check updates these paths with Windows format for proper loading in R
-if(Sys.info()['sysname']=="Windows"){
-  yaml_cfg <- gsub("/mnt/c", "C:", yaml_cfg)
-}
-
-yaml_args <- yaml.load_file(yaml_cfg)
-if(Sys.info()['sysname']=="Windows"){
-  yaml_args <- lapply(yaml_args, function(x) gsub("/mnt/c", "C:", x))
-}
-
-attach(yaml_args)
-```
-
-```{r load, echo=FALSE}
-# read tables
-# keep_ids <- read.table(keep_path, header=F, stringsAsFactors=F)
-# drop_ids <- read.table(drop_path, header=F, stringsAsFactors=F)
-spectra <- read.table(M_path, header=T, stringsAsFactors=F)
-spectra_rates <- read.table(M_path_rates, header=T, stringsAsFactors=F)
-sig_contribs <- read.table(W_path, header=T, stringsAsFactors=F)
-sig_loads <- read.table(H_path, header=T, stringsAsFactors=F)
-rmse <- read.table(RMSE_path, header=F, stringsAsFactors=F)
-```
-
-### Signature contributions per sample (W matrix)
-
-Proportion each signature contributes to the mutation spectrum in each individual sample
-
-<!-- # ```{r heatmap, message=FALSE, warning=FALSE, echo=FALSE} -->
-```{r sigs, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 18, fig.width = 14}
-cutoff <- ifelse(ncol(spectra_rates)-1==6, 0.05, 0.005)
-nind <- 100
-names(rmse) <- c("ID", "RMSE")
-
-sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
-  # mutate(sumVar = rowSums(.[2:ncol(sig_contribs)])) %>%
-  mutate(sumVar = rowSums(.[2:ncol(sig_contribs)])) %>%
-  mutate_at(vars(starts_with("S")), funs(./sumVar)) %>%
-  mutate(maxgp = apply(.[,2:ncol(sig_contribs)], 1, function(x)
-    names(x)[which.max(x)])) %>%
-  dplyr::select(-sumVar) %>%
-  gather(signature, contribution, -c(ID,maxgp))
-
-ggplot(sig_contribs2, aes(x=ID, y=contribution, fill=signature))+
-  geom_bar(stat="identity", position="stack")+
-  facet_wrap(~maxgp, scales="free")+
-  theme_bw()+
-  theme(axis.text.x=element_blank())
-
-```
-
-```{r sigs2, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 12, fig.width = 10}
-
-# contribution_plot <- sig_contribs2 %>%
-#   filter(ID %in% rmse_plot$ID) %>%
-#   spread(signature, contribution) %>%
-#     mutate(ID=factor(ID, levels=levels(rmse_plot$ID)))
-#
-# pc <- plot_ly(contribution_plot, x=~S1, y=~ID, type = 'bar', orientation = 'h', marker=list(color=viridis(3)[1])) %>%
-#   add_trace(x = ~S2, marker=list(color=viridis(3)[2])) %>%
-#     add_trace(x = ~S3, marker=list(color=viridis(3)[3])) %>%
-#   layout(barmode = 'stack',
-#     showlegend = FALSE)
-#
-# pc
+```{r child="R/setup.Rmd"}
 ```
 
 ### Combined mutation spectrum
@@ -115,67 +28,19 @@ These plots shows the total number of observations in each subtype, combined acr
 
 #### All samples
 
-```{r dist, echo=FALSE, fig.height = 12, fig.width = 24}
-# get_leaves_branches_col(hrm$rows)
-
-# overall distribution
-spectra2 <- spectra %>%
-  mutate(group="all") %>%
-  group_by(group) %>%
-  gather(subtype, count, 2:ncol(spectra)) %>%
-  separate(subtype, c("category", "motif"), sep = "[.]") %>%
-  group_by(category, motif, group) %>%
-  summarise(count=sum(count)) %>%
-  group_by(group) %>%
-  mutate(prop=count/sum(count)) %>%
-  ungroup()
-
-ggplot(spectra2, aes(x=motif, y=prop, fill=group, group=group))+
-  geom_bar(stat="identity", position="dodge")+
-  facet_wrap(~category, ncol=6, scales="free_x")+
-  ylab("Contribution")+
-  scale_fill_brewer(palette = "Set1")+
-  theme_bw()+
-  theme(axis.text.x=element_text(angle=90, vjust=0, size=20),
-        axis.text.y=element_text(size=20),
-        axis.title.x=element_text(size=24),
-        axis.title.y=element_text(size=24),
-        legend.title=element_blank(),
-        legend.text=element_text(size=20),
-        strip.text=element_text(size=24))
-        # legend.position="none")
+```{r child="R/spectra.Rmd"}
 ```
 
 ### Signature loadings (H matrix)
 
 Describes how each mutation subtype is loaded into the r signatures
 
-```{r sigloads, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 6, fig.width = 14}
-# signature loadings
-corrm <- sig_loads %>%
-  gather(var, val, 2:ncol(sig_loads)) %>%
-  spread(Sig, val) %>%
-  dplyr::select(-var) %>%
-  correlate
+```{r child="R/sigloads.Rmd"}
+```
 
-corrm
+### Signature contributions per sample (W matrix)
 
-sig_loads_long <- sig_loads %>%
-  mutate(sumVar = rowSums(.[2:ncol(sig_loads)])) %>%
-  rowwise() %>%
-  mutate_each(funs(./sumVar), -Sig) %>%
-  gather(subtype, loading, 2:ncol(sig_loads)) %>%
-  separate(subtype, c("category", "motif"), sep = "[.]")
+Proportion each signature contributes to the mutation spectrum in each individual sample
 
-ggplot(sig_loads_long, aes(x=motif, y=loading, fill=Sig))+
-  geom_bar(stat="identity")+
-  facet_grid(Sig~category, scales="free_x")+
-  scale_fill_viridis(discrete=TRUE)+
-  theme_bw()+
-  theme(axis.text.x=element_text(angle=90, vjust=0, size=10),
-        axis.text.y=element_text(size=20),
-        axis.title.x=element_text(size=24),
-        axis.title.y=element_text(size=24),
-        strip.text=element_text(size=24),
-        legend.position="none")
+```{r child="R/contribs.Rmd"}
 ```

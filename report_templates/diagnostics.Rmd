@@ -19,209 +19,14 @@ body {
     left: 0px;}
 </style>
 
-```{r setup, message=FALSE, warning=FALSE, echo=FALSE}
-# knitr::opts_chunk$set(echo = TRUE)
-
-# check and load packages
-packages <- c("dplyr","tidyr","ggplot2","yaml", "devtools", "knitr", "corrr", "viridis", "heatmaply","dendextend", "e1071")
-
-package.check <- lapply(packages, FUN = function(x) {
-    if (!require(x, character.only = TRUE)) {
-        install.packages(x,
-          dependencies = TRUE,
-          repos = "http://cran.us.r-project.org")
-        library(x, character.only = TRUE, silent=TRUE)
-    }
-})
-
-
-if(params$dev){
-  setwd("../../../Github/doomsayer/sample_output")
-  yaml_cfg <- "./config.yaml"
-} else {
-  yaml_cfg <- params$yaml_cfg
-}
-
-# debug--paths generated from doomsayer.py refer are formatted for bash on Windows
-# the sys.info check updates these paths with Windows format for proper loading in R
-if(Sys.info()['sysname']=="Windows"){
-  yaml_cfg <- gsub("/mnt/c", "C:", yaml_cfg)
-}
-
-yaml_args <- yaml.load_file(yaml_cfg)
-if(Sys.info()['sysname']=="Windows"){
-  yaml_args <- lapply(yaml_args, function(x) gsub("/mnt/c", "C:", x))
-}
-
-attach(yaml_args)
-```
-
-
-```{r load, echo=FALSE}
-# read tables
-keep_ids <- read.table(keep_path, header=F, stringsAsFactors=F)
-drop_ids <- read.table(drop_path, header=F, stringsAsFactors=F)
-spectra <- read.table(M_path, header=T, stringsAsFactors=F)
-spectra_rates <- read.table(M_path_rates, header=T, stringsAsFactors=F)
-sig_contribs <- read.table(W_path, header=T, stringsAsFactors=F)
-sig_loads <- read.table(H_path, header=T, stringsAsFactors=F)
-rmse <- read.table(RMSE_path, header=F, stringsAsFactors=F)
+```{r child="R/setup.Rmd"}
 ```
 
 ### Error profile heatmap
 
 Left panel shows root mean squared error (RMSE) of each outlier sample's mutation spectrum. Right panel shows the fold-difference in contribution per subtype for each outlier. Fold-differences are calculated relative to the mean contribution of that subtype across all samples.
 
-<!-- # ```{r heatmap, message=FALSE, warning=FALSE, echo=FALSE} -->
-```{r heatmap, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 18, fig.width = 14}
-cutoff <- ifelse(ncol(spectra_rates)-1==6, 0.05, 0.005)
-nind <- 100
-names(rmse) <- c("ID", "RMSE")
-
-sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
-  # mutate(sumVar = rowSums(.[2:ncol(sig_contribs)])) %>%
-  mutate(sumVar = rowSums(.[2:ncol(sig_contribs)])) %>%
-  # dplyr::filter(sumVar>=500) %>%
-  mutate_at(vars(starts_with("S")), funs(./sumVar)) %>%
-  mutate(maxgp = apply(.[,2:ncol(sig_contribs)], 1, function(x)
-    names(x)[which.max(x)])) %>%
-  dplyr::select(-sumVar) %>%
-  gather(signature, contribution, -c(ID,maxgp))
-
-# rmse_m2 <- merge(rmse, sig_contribs2, by="ID") %>%
-#   spread(signature, contribution) %>%
-#   arrange(RMSE) %>%
-#   mutate(pctile = ntile(RMSE, 100))
-
-# train <- rmse_m2 %>%
-#   filter(pctile<5 | pctile > 95) %>%
-#   mutate(QUAL=ifelse(pctile<10, 1, 0))
-
-# svmmod <- svm(pctile~S1+S2+S3, rmse_m2)
-# rmse_m2$QUAL <- predict(svmmod, rmse_m2)
-
-spectra_r <- spectra_rates %>%
-  mutate_at(vars(-1), funs(./mean(.))) %>%
-  gather(subtype, err, 2:ncol(spectra_rates)) %>%
-  separate(subtype, c("category", "motif"), sep = "[.]") %>%
-  mutate(err=ifelse(err>5, 5, err))
-
-outlier_IDs <- drop_ids$V1
-
-rmse_ord <- rmse %>%
-  arrange(desc(RMSE)) %>%
-  mutate(ID=factor(ID, levels=rev(ID))) %>%
-  # head(nind)
-  filter(ID %in% outlier_IDs)
-
-rmse_m <- merge(rmse_ord, sig_contribs2, by="ID")
-d2a <- rmse_m %>%
-  gather(k1,k2,RMSE,contribution) %>%
-  mutate(key=ifelse(k1=="RMSE", "RMSE", "signature \n contribution")) %>%
-  mutate(NMF_out=ifelse(ID %in% drop_ids$V1, "*", ""))
-
-top_r50 <- rmse_m %>%
-  # dplyr::filter(k1 == "RMSE") %>%
-  group_by(ID) %>%
-  slice(which.max(contribution)) %>%
-  mutate(key="RMSE") %>%
-  mutate(maxgp=factor(maxgp, levels=names(sig_contribs)[-1])) %>%
-  # dplyr::filter(RMSE>cutoff) %>%
-  arrange(desc(RMSE)) %>%
-  ungroup() %>%
-  mutate(ID=factor(ID, levels=ID)) #%>%
-  # head(nind)
-
-outlier_r_m <- spectra_r %>%
-  dplyr::filter(ID %in% top_r50$ID) %>%
-  mutate(ID=factor(ID, levels=levels(top_r50$ID))) %>%
-  mutate(subtype=paste0(category, "_", motif)) %>%
-  dplyr::select(ID, subtype, err) %>%
-  spread(subtype, err)
-
-rownames(outlier_r_m) <- outlier_r_m$ID
-
-outlier_r_m <- outlier_r_m %>%
-  dplyr::select(-ID)
-
-hrm <- heatmapr(outlier_r_m,
-    k_row=3,
-    Colv=TRUE,
-    label_names = c("ID", "subtype", "error"),
-    hclust_method="ward.D2")
-
-# get_leaves_branches_col(hrm$rows)
-
-hm <- heatmaply(outlier_r_m,
-    k_row=3,
-    Colv=TRUE,
-    return_ppxpy=TRUE,
-    hclust_method="ward.D2",
-    colors=magma(20),
-    label_names = c("ID", "subtype", "error"),
-    column_text_angle = 90,
-    subplot_widths=c(0.95,0.05),
-    plot_method="ggplot")
-
-
-rmse_ord <- rmse %>%
-  arrange(desc(RMSE)) %>%
-  mutate(ID=factor(ID, levels=rev(ID))) %>%
-  # head(nind) %>%
-  filter(ID %in% outlier_IDs) %>%
-  mutate(ID=as.character(ID)) %>%
-  mutate(ID=factor(ID, levels=rownames(hrm$matrix$data)))
-
-rmse_m <- merge(rmse_ord, sig_contribs2, by="ID")
-d2a <- rmse_m %>%
-  gather(k1,k2,RMSE,contribution) %>%
-  mutate(key=ifelse(k1=="RMSE", "RMSE", "signature \n contribution")) %>%
-  mutate(NMF_out=ifelse(ID %in% drop_ids$V1, "*", ""))
-
-rmse_plot <- rmse_m %>%
-  # dplyr::filter(k1 == "RMSE") %>%
-  group_by(ID) %>%
-  slice(which.max(contribution)) %>%
-  mutate(key="RMSE") %>%
-  mutate(maxgp=factor(maxgp, levels=names(sig_contribs)[-1])) %>%
-  ungroup() %>%
-  mutate(ID=factor(ID, levels=rownames(hrm$matrix$data)))
-
-plotmin <- floor(min(rmse_plot$RMSE)/0.005)*0.005
-
-contribution_plot <- d2a %>%
-  dplyr::filter(k1 != "RMSE")
-
-breaks <- c(plotmin, plotmin/2, seq(0,abs(plotmin),abs(plotmin)/4))
-labels <- c(abs(plotmin), abs(plotmin)/2, seq(0,1,0.25))
-
-p<-ggplot(rmse_plot)+
-  geom_segment(
-    aes(y=ID, yend=ID,
-      x=0, xend=RMSE, colour=maxgp))+
-  geom_point(aes(y=ID, x=RMSE, colour=maxgp),
-    size = 2) +
-  scale_fill_viridis(discrete=TRUE, drop=FALSE) +
-  scale_color_viridis(discrete=TRUE, drop=FALSE) +
-  ylab("ID")+
-  xlab("RMSE")+
-  theme_bw()+
-  theme(axis.text.x=element_text(size=14, angle=45, hjust=1, vjust=1),
-    legend.position="none")
-
-subplot(p, hm$p, hm$px,
-    margin=0, titleX=TRUE, shareY=TRUE, widths=c(0.1, 0.85, 0.05)) %>%
-  layout(autosize=F,
-    width = 1400,
-    height = 1400,
-    margin = list(l = 130, b = 100))
-
-top_r20 <- rmse_plot %>%
-  # dplyr::filter(RMSE>cutoff) %>%
-  arrange(desc(RMSE)) %>%
-  ungroup() %>%
-  mutate(ID=factor(ID, levels=ID)) %>%
-  head(20)
+```{r child="R/heatmap.Rmd"}
 ```
 
 ### Combined mutation spectrum
@@ -230,88 +35,25 @@ These plots shows the total number of observations in each subtype, combined acr
 
 #### All samples
 
-```{r dist, echo=FALSE, fig.height = 12, fig.width = 24}
-# get_leaves_branches_col(hrm$rows)
-
-# overall distribution
-spectra2 <- spectra %>%
-  mutate(group=ifelse(ID %in% keep_ids$V1, "keep", "drop")) %>%
-  group_by(group) %>%
-  gather(subtype, count, 2:ncol(spectra)) %>%
-  separate(subtype, c("category", "motif"), sep = "[.]") %>%
-  group_by(category, motif, group) %>%
-  summarise(count=sum(count)) %>%
-  group_by(group) %>%
-  mutate(prop=count/sum(count)) %>%
-  ungroup()
-
-ggplot(spectra2, aes(x=motif, y=prop, fill=group, group=group))+
-  geom_bar(stat="identity", position="dodge")+
-  facet_wrap(~category, ncol=6, scales="free_x")+
-  ylab("Contribution")+
-  scale_fill_brewer(palette = "Set1")+
-  theme_bw()+
-  theme(axis.text.x=element_text(angle=90, vjust=0, size=20),
-        axis.text.y=element_text(size=20),
-        axis.title.x=element_text(size=24),
-        axis.title.y=element_text(size=24),
-        legend.title=element_blank(),
-        legend.text=element_text(size=20),
-        strip.text=element_text(size=24))
-        # legend.position="none")
+```{r child="R/spectra.Rmd"}
 ```
 
 ### Signature loadings (H matrix)
 
 Describes how each mutation subtype is loaded into the r signatures
 
-```{r sigloads, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 6, fig.width = 14}
-# signature loadings
-corrm <- sig_loads %>%
-  gather(var, val, 2:ncol(sig_loads)) %>%
-  spread(Sig, val) %>%
-  dplyr::select(-var) %>%
-  correlate
+```{r child="R/sigloads.Rmd"}
+```
 
-corrm
+```{r child="R/sigloads_radial.Rmd"}
+```
 
-sig_loads_long <- sig_loads %>%
-  mutate(sumVar = rowSums(.[2:ncol(sig_loads)])) %>%
-  # dplyr::filter(sumVar>=500) %>%
-  rowwise() %>%
-  mutate_each(funs(./sumVar), -Sig) %>%
-  gather(subtype, loading, 2:ncol(sig_loads)) %>%
-  separate(subtype, c("category", "motif"), sep = "[.]")
-
-ggplot(sig_loads_long, aes(x=motif, y=loading, fill=Sig))+
-  geom_bar(stat="identity")+
-  facet_grid(Sig~category, scales="free_x")+
-  scale_fill_viridis(discrete=TRUE)+
-  theme_bw()+
-  theme(axis.text.x=element_text(angle=90, vjust=0, size=10),
-        axis.text.y=element_text(size=20),
-        axis.title.x=element_text(size=24),
-        axis.title.y=element_text(size=24),
-        strip.text=element_text(size=24),
-        legend.position="none")
+```{r child="R/sigloads_bar.Rmd"}
 ```
 
 ### Signature contributions per sample (W matrix)
 
 Proportion each signature contributes to the mutation spectrum in each individual sample
 
-```{r sigs, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 12, fig.width = 10}
-
-contribution_plot <- sig_contribs2 %>%
-  filter(ID %in% rmse_plot$ID) %>%
-  spread(signature, contribution) %>%
-    mutate(ID=factor(ID, levels=levels(rmse_plot$ID)))
-
-pc <- plot_ly(contribution_plot, x=~S1, y=~ID, type = 'bar', orientation = 'h', marker=list(color=viridis(3)[1])) %>%
-  add_trace(x = ~S2, marker=list(color=viridis(3)[2])) %>%
-    add_trace(x = ~S3, marker=list(color=viridis(3)[3])) %>%
-  layout(barmode = 'stack',
-    showlegend = FALSE)
-
-pc
+```{r child="R/contribs.Rmd"}
 ```

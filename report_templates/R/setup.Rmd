@@ -1,0 +1,44 @@
+```{r setup, message=FALSE, warning=FALSE, echo=FALSE}
+# knitr::opts_chunk$set(echo = TRUE)
+
+# check and load packages
+packages <- c("dplyr", "tidyr", "ggplot2", "yaml", "devtools", "knitr", "corrr", "viridis", "RColorBrewer", "heatmaply", "dendextend", "e1071")
+
+package.check <- lapply(packages, FUN = function(x) {
+    if (!require(x, character.only = TRUE)) {
+        install.packages(x,
+          dependencies = TRUE,
+          repos = "http://cran.us.r-project.org")
+        library(x, character.only = TRUE, silent=TRUE)
+    }
+})
+
+if(params$dev){
+  setwd("../../../Github/doomsayer/sample_output")
+  yaml_cfg <- "./config.yaml"
+} else {
+  yaml_cfg <- params$yaml_cfg
+}
+
+# debug--paths generated from doomsayer.py refer are formatted for bash on Windows
+# the sys.info check updates these paths with Windows format for proper loading in R
+if(Sys.info()['sysname']=="Windows"){
+  yaml_cfg <- gsub("/mnt/c", "C:", yaml_cfg)
+}
+
+yaml_args <- yaml.load_file(yaml_cfg)
+if(Sys.info()['sysname']=="Windows"){
+  yaml_args <- lapply(yaml_args, function(x) gsub("/mnt/c", "C:", x))
+  yaml_args <- lapply(yaml_args, function(x) gsub(".*_chsq", ".", x))
+}
+
+attach(yaml_args)
+
+keep_ids <- read.table(keep_path, header=F, stringsAsFactors=F)
+drop_ids <- read.table(drop_path, header=F, stringsAsFactors=F)
+spectra <- read.table(M_path, header=T, stringsAsFactors=F)
+spectra_rates <- read.table(M_path_rates, header=T, stringsAsFactors=F)
+sig_contribs <- read.table(W_path, header=T, stringsAsFactors=F)
+sig_loads <- read.table(H_path, header=T, stringsAsFactors=F)
+rmse <- read.table(RMSE_path, header=F, stringsAsFactors=F)
+```

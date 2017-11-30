@@ -1,0 +1,150 @@
+```{r heatmap, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 18, fig.width = 14}
+cutoff <- ifelse(ncol(spectra_rates)-1==6, 0.05, 0.005)
+nind <- 100
+names(rmse) <- c("ID", "RMSE")
+
+sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
+  # mutate(sumVar = rowSums(.[2:ncol(sig_contribs)])) %>%
+  mutate(sumVar = rowSums(.[2:ncol(sig_contribs)])) %>%
+  # dplyr::filter(sumVar>=500) %>%
+  mutate_at(vars(starts_with("S")), funs(./sumVar)) %>%
+  mutate(maxgp = apply(.[,2:ncol(sig_contribs)], 1, function(x)
+    names(x)[which.max(x)])) %>%
+  dplyr::select(-sumVar) %>%
+  gather(signature, contribution, -c(ID,maxgp))
+
+# rmse_m2 <- merge(rmse, sig_contribs2, by="ID") %>%
+#   spread(signature, contribution) %>%
+#   arrange(RMSE) %>%
+#   mutate(pctile = ntile(RMSE, 100))
+
+# train <- rmse_m2 %>%
+#   filter(pctile<5 | pctile > 95) %>%
+#   mutate(QUAL=ifelse(pctile<10, 1, 0))
+
+# svmmod <- svm(pctile~S1+S2+S3, rmse_m2)
+# rmse_m2$QUAL <- predict(svmmod, rmse_m2)
+
+spectra_r <- spectra_rates %>%
+  mutate_at(vars(-1), funs(./mean(.))) %>%
+  gather(subtype, err, 2:ncol(spectra_rates)) %>%
+  separate(subtype, c("category", "motif"), sep = "[.]") %>%
+  mutate(err=ifelse(err>5, 5, err))
+
+outlier_IDs <- drop_ids$V1
+
+rmse_ord <- rmse %>%
+  arrange(desc(RMSE)) %>%
+  mutate(ID=factor(ID, levels=rev(ID))) %>%
+  # head(nind)
+  filter(ID %in% outlier_IDs)
+
+rmse_m <- merge(rmse_ord, sig_contribs2, by="ID")
+d2a <- rmse_m %>%
+  gather(k1,k2,RMSE,contribution) %>%
+  mutate(key=ifelse(k1=="RMSE", "RMSE", "signature \n contribution")) %>%
+  mutate(NMF_out=ifelse(ID %in% drop_ids$V1, "*", ""))
+
+top_r50 <- rmse_m %>%
+  # dplyr::filter(k1 == "RMSE") %>%
+  group_by(ID) %>%
+  slice(which.max(contribution)) %>%
+  mutate(key="RMSE") %>%
+  mutate(maxgp=factor(maxgp, levels=names(sig_contribs)[-1])) %>%
+  # dplyr::filter(RMSE>cutoff) %>%
+  arrange(desc(RMSE)) %>%
+  ungroup() %>%
+  mutate(ID=factor(ID, levels=ID)) #%>%
+  # head(nind)
+
+outlier_r_m <- spectra_r %>%
+  dplyr::filter(ID %in% top_r50$ID) %>%
+  mutate(ID=factor(ID, levels=levels(top_r50$ID))) %>%
+  mutate(subtype=paste0(category, "_", motif)) %>%
+  dplyr::select(ID, subtype, err) %>%
+  spread(subtype, err)
+
+rownames(outlier_r_m) <- outlier_r_m$ID
+
+outlier_r_m <- outlier_r_m %>%
+  dplyr::select(-ID)
+
+hrm <- heatmapr(outlier_r_m,
+    k_row=3,
+    Colv=TRUE,
+    label_names = c("ID", "subtype", "error"),
+    hclust_method="ward.D2")
+
+# get_leaves_branches_col(hrm$rows)
+
+hm <- heatmaply(outlier_r_m,
+    k_row=3,
+    Colv=TRUE,
+    return_ppxpy=TRUE,
+    hclust_method="ward.D2",
+    colors=magma(20),
+    label_names = c("ID", "subtype", "error"),
+    column_text_angle = 90,
+    subplot_widths=c(0.95,0.05),
+    plot_method="ggplot")
+
+
+rmse_ord <- rmse %>%
+  arrange(desc(RMSE)) %>%
+  mutate(ID=factor(ID, levels=rev(ID))) %>%
+  # head(nind) %>%
+  filter(ID %in% outlier_IDs) %>%
+  mutate(ID=as.character(ID)) %>%
+  mutate(ID=factor(ID, levels=rownames(hrm$matrix$data)))
+
+rmse_m <- merge(rmse_ord, sig_contribs2, by="ID")
+d2a <- rmse_m %>%
+  gather(k1,k2,RMSE,contribution) %>%
+  mutate(key=ifelse(k1=="RMSE", "RMSE", "signature \n contribution")) %>%
+  mutate(NMF_out=ifelse(ID %in% drop_ids$V1, "*", ""))
+
+rmse_plot <- rmse_m %>%
+  # dplyr::filter(k1 == "RMSE") %>%
+  group_by(ID) %>%
+  slice(which.max(contribution)) %>%
+  mutate(key="RMSE") %>%
+  mutate(maxgp=factor(maxgp, levels=names(sig_contribs)[-1])) %>%
+  ungroup() %>%
+  mutate(ID=factor(ID, levels=rownames(hrm$matrix$data)))
+
+plotmin <- floor(min(rmse_plot$RMSE)/0.005)*0.005
+
+contribution_plot <- d2a %>%
+  dplyr::filter(k1 != "RMSE")
+
+breaks <- c(plotmin, plotmin/2, seq(0,abs(plotmin),abs(plotmin)/4))
+labels <- c(abs(plotmin), abs(plotmin)/2, seq(0,1,0.25))
+
+p<-ggplot(rmse_plot)+
+  geom_segment(
+    aes(y=ID, yend=ID,
+      x=0, xend=RMSE, colour=maxgp))+
+  geom_point(aes(y=ID, x=RMSE, colour=maxgp),
+    size = 2) +
+  scale_fill_viridis(discrete=TRUE, drop=FALSE) +
+  scale_color_viridis(discrete=TRUE, drop=FALSE) +
+  ylab("ID")+
+  xlab("RMSE")+
+  theme_bw()+
+  theme(axis.text.x=element_text(size=14, angle=45, hjust=1, vjust=1),
+    legend.position="none")
+
+subplot(p, hm$p, hm$px,
+    margin=0, titleX=TRUE, shareY=TRUE, widths=c(0.1, 0.85, 0.05)) %>%
+  layout(autosize=F,
+    width = 1400,
+    height = 1400,
+    margin = list(l = 130, b = 100))
+
+top_r20 <- rmse_plot %>%
+  # dplyr::filter(RMSE>cutoff) %>%
+  arrange(desc(RMSE)) %>%
+  ungroup() %>%
+  mutate(ID=factor(ID, levels=ID)) %>%
+  head(20)
+```

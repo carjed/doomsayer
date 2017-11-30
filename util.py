@@ -388,21 +388,19 @@ def aggregateM(inputM, subtypes_dict):
 ###############################################################################
 # Generate keep/drop lists
 ###############################################################################
-def detectOutliers(M, samples, filtermode, threshold, minsnvs):
+def detectOutliers(M, samples, filtermode, threshold):
     M_f = M/(M.sum(axis=1)+1e-8)[:,None]
 
     keep_samples = []
     drop_samples = []
     drop_indices = []
-    lowsnv_samples = []
+    # lowsnv_samples = []
 
     if filtermode == "fold":
         i=0
         M_err_d = np.divide(M_f, np.mean(M_f, axis=0))
         for row in M_err_d:
-            if sum(M[i]) < minsnvs:
-                lowsnv_samples.append(samples[i])
-            elif any(err > threshold for err in row):
+            if any(err > threshold for err in row):
                 drop_samples.append(samples[i])
                 drop_indices.append(i)
             else:
@@ -411,18 +409,15 @@ def detectOutliers(M, samples, filtermode, threshold, minsnvs):
     elif filtermode == "chisq":
         i=0
         mean_spectrum = np.mean(M, axis=0)
-        n_pass = sum(np.sum(M, axis=1) > minsnvs)
+        # n_pass = sum(np.sum(M, axis=1) > minsnvs)
         for row in M:
-            if sum(M[i]) < minsnvs:
-                lowsnv_samples.append(samples[i])
+            exp_spectrum = mean_spectrum*sum(row)/sum(mean_spectrum)
+            pval = chisquare(row, f_exp=exp_spectrum)[1]
+            if pval < 0.05/M.shape[0]:
+                drop_samples.append(samples[i])
+                drop_indices.append(i)
             else:
-                exp_spectrum = mean_spectrum*sum(row)/sum(mean_spectrum)
-                pval = chisquare(row, f_exp=exp_spectrum)[1]
-                if pval < 0.05/n_pass:
-                    drop_samples.append(samples[i])
-                    drop_indices.append(i)
-                else:
-                    keep_samples.append(samples[i])
+                keep_samples.append(samples[i])
             i += 1
     elif filtermode == "sd":
         i=0
@@ -431,23 +426,19 @@ def detectOutliers(M, samples, filtermode, threshold, minsnvs):
         std_threshold = mean_spectrum + threshold*spec_std
 
         for row in M_f:
-            if sum(M[i]) < minsnvs:
-                lowsnv_samples.append(samples[i])
+            if np.greater(row, std_threshold).any():
+                drop_samples.append(samples[i])
+                drop_indices.append(i)
             else:
-                if np.greater(row, std_threshold).any():
-                    drop_samples.append(samples[i])
-                    drop_indices.append(i)
-                else:
-                    keep_samples.append(samples[i])
+                keep_samples.append(samples[i])
             i += 1
 
     out_handles = ['keep_samples',
         'drop_samples',
-        'lowsnv_samples',
         'drop_indices']
 
     out = collections.namedtuple('Out', out_handles) \
-        (keep_samples, drop_samples, lowsnv_samples, drop_indices)
+        (keep_samples, drop_samples, drop_indices)
     return out
 
 ###############################################################################
