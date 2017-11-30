@@ -2,6 +2,8 @@
 
 ![](assets/doomsayer_logo.png)
 
+[![DOI](https://zenodo.org/badge/95728792.svg)](https://zenodo.org/badge/latestdoi/95728792)
+
 ## Introduction
 
 _**DOOMSAYER** ( **D**etection **O**f **O**utliers using **M**utation **S**pectrum **A**nal**Y**sis in **E**xtremely **R**are variants) is a utility for analyzing patterns of rare, single-nucleotide variants (SNVs) in whole-genome (WGS) or whole-exome sequencing (WES) data._
