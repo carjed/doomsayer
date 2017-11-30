@@ -1,0 +1,13 @@
+```{r sigloads_bar, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 8, fig.width = 14}
+ggplot(sig_loads_long, aes(x=motif, y=loading, fill=Sig))+
+  geom_bar(stat="identity")+
+  facet_grid(Sig~category, scales="free_x")+
+  scale_fill_viridis(discrete=TRUE)+
+  theme_bw()+
+  theme(axis.text.x=element_text(angle=90, vjust=0, size=10),
+        axis.text.y=element_text(size=20),
+        axis.title.x=element_text(size=24),
+        axis.title.y=element_text(size=24),
+        strip.text=element_text(size=24),
+        legend.position="none")
+```

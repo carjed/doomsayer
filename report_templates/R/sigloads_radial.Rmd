@@ -1,0 +1,66 @@
+```{r sigloads_radial, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 14, fig.width = 14}
+# custom coord
+coord_radar <- function (theta = "x", start = 0, direction = 1){
+	 theta <- match.arg(theta, c("x", "y"))
+	 r <- if (theta == "x")
+			 "y"
+	 else "x"
+	 ggproto("CordRadar", CoordPolar, theta = theta, r = r, start = start,
+			 direction = sign(direction),
+			 is_linear = function(coord) TRUE)
+}
+
+# set angles of radius labels
+sequence_length = length(unique(sig_loads_long$subtype))
+first_sequence = c(1:(sequence_length%/%2))
+second_sequence = c((sequence_length%/%2+1):sequence_length)
+first_angles = c(90 - 180/length(first_sequence) * first_sequence)
+second_angles = c(-90 - 180/length(second_sequence) * second_sequence)
+
+plotlabs <- data.frame(y=seq(0,0.1,0.05), x=0)
+
+radarplot <- ggplot()+
+	# geom_polygon(data=sig_loads_long,
+	# 	aes(x=subtype, y=loading, group = Sig),
+	# 	colour="grey60", fill = NA, size = 3) +
+	geom_polygon(data=sig_loads_long,
+		aes(x=subtype, y=loading, group = Sig, colour=Sig),
+		 fill = NA, size = 1.5, alpha=0.4) +
+	geom_point(data=sig_loads_long,
+		aes(x=subtype, y=loading, colour=Sig),
+		alpha=0.6, size=3)+
+  geom_text(data=plotlabs, aes(x=x,y=y,label=y, vjust=-0.5))+
+	# geom_point(data=sdd1a,
+	# 	aes(x=subtype, y=n),
+	# 	colour="black", alpha=0.6, size=4)+
+	# geom_line(data=sdd1a,
+	# 	aes(x=subtype, y=n, group = mod),
+	# 	colour="black", linetype="dashed", size = 0.8) +
+	# geom_line(data=sdd2,
+	# 	aes(x=subtype, y=n, group = mod, colour=mod),
+	# 	size = 1.2, alpha=0.8) +
+	coord_radar()+
+	# scale_y_continuous(limits=c(0,max(sig_loads_long$loading*100)))+
+	scale_y_continuous(limits=c(-max(sig_loads_long$loading),max(sig_loads_long$loading)),
+	                   breaks=plotlabs$y)+
+  scale_colour_viridis(discrete=TRUE)+
+  scale_fill_viridis(discrete=TRUE)+
+	# scale_colour_manual("Model",
+	# 	values=c(brewer.pal(10, "Spectral")[c(1,3)], "black"))+
+	theme_minimal()+
+	theme(axis.text.x = element_text(
+  	 angle= c(first_angles,second_angles),
+  	 vjust=-1,
+  	 size=20,
+  	 colour=as.character(sdd1a$gp_cols)),
+	 axis.title.x=element_blank(),
+	 legend.text=element_text(size=20),
+	 axis.title.y=element_blank(),
+	 axis.text.y=element_blank(),
+	 axis.ticks=element_blank(),
+	 # panel.grid.major.y = element_blank(),
+	 panel.grid.major.y=element_line(size = 2, colour = c(rep("grey80", length(plotlabs$y)), NA)),
+	 legend.position="bottom")
+
+radarplot
+```
