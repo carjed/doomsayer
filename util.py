@@ -347,7 +347,7 @@ def aggregateM(inputM, subtypes_dict):
     M_colnames = colnames + list(sorted(subtypes_dict.keys()))
     colrange = range(1,len(M_colnames))
 
-    if input.lower().endswith('nmf_m_spectra.txt'):
+    if inputM.lower().endswith('nmf_m_spectra.txt'):
         samples = getSamples(inputM)
         M = np.loadtxt(inputM, skiprows=1, usecols=colrange)
         M = M.astype(np.float)

@@ -384,7 +384,7 @@ Specify the method Doomsayer uses for detecting outliers. Must be one of the fol
 #### Stringency threshold for outlier check
 `-t, --threshold`
 
-This parameter specifies the stringency for identifying outliers when using the `fold` or `sd` [outlier filter modes](#choose-outlier-detection-mode). Must be a real number >=1. Higher values correspond to a more stringent threshold (i.e., fewer outliers identified♥).
+This parameter specifies the stringency for identifying outliers when using the `fold` or `sd` [outlier filter modes](#choose-outlier-detection-mode). Must be a real number >=1. Higher values correspond to a more stringent threshold (i.e., fewer outliers identified).
 
 #### Specify NMF rank
 `-r [2-10], --rank [2-10]`
