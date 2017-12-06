@@ -16,9 +16,9 @@ LABEL maintainer="Jupyter Project <jupyter@googlegroups.com>"
 ENV CONDA_DIR=/opt/conda \
     NB_UID=1000 \
     NB_GID=100 \
-    SHELL=/bin/bash
-ENV PATH=$CONDA_DIR/bin:$PATH \
+    SHELL=/bin/bash \
     HOME=/home/$NB_USER
+# ENV PATH=$CONDA_DIR/bin:$PATH \
 
 # create conda install directory
 RUN mkdir -p $CONDA_DIR && \
@@ -53,10 +53,15 @@ RUN apt-get update && \
 
 USER ${NB_USER}
 COPY . ${HOME}
+
 USER root
 RUN chown -R ${NB_UID} ${HOME}
-RUN conda env create -n doomsayer -f env.yml
+
 USER ${NB_USER}
+RUN conda env create -n doomsayer -f env.yml && \
+  conda clean -tipsy
+
+ENV PATH="/opt/conda/envs/doomsayer/bin:${PATH}"
 
 # run install.r script to load R package dependencies
 # RUN R --quiet -e "install.packages('devtools', repos = 'http://cran.us.r-project.org')"
@@ -74,7 +79,7 @@ USER ${NB_USER}
 
 
 # activate the conda environment
-ENV PATH /opt/conda/envs/doomsayer/bin:$PATH
+
 
 # old version; installs via pip
 # causes problems with cyvcf2--better to use bioconda
