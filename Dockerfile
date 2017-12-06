@@ -5,6 +5,7 @@
 # Modified from https://github.com/jupyter/docker-stacks/blob/master/r-notebook/Dockerfile
 # Distributed under the terms of the Modified BSD License.
 FROM jupyter/minimal-notebook:c7fb6660d096
+# FROM jupyter/minimal-notebook:033056e6d164
 
 LABEL maintainer="Jedidiah Carlson <jed.e.carlson@gmail.com>"
 
@@ -47,6 +48,8 @@ USER ${NB_USER}
 
 # R packages
 RUN conda install --quiet --yes \
+    'gcc_linux-64' \
+    'gxx_linux-64' \
     'r-base=3.4.2' \
     'r-irkernel=0.8*' \
     'r-devtools=1.13*' && \
