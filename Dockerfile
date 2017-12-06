@@ -44,20 +44,20 @@ ENV CONDA_DIR=/opt/conda \
 ENV PATH=$CONDA_DIR/bin:$PATH \
     HOME=/home/$NB_USER
 
-ADD fix-permissions /usr/local/bin/fix-permissions
-# Create jovyan user with UID=1000 and in the 'users' group
-# and make sure these dirs are writable by the `users` group.
-RUN useradd -m -s /bin/bash -N -u $NB_UID $NB_USER && \
-    mkdir -p $CONDA_DIR && \
-    chown $NB_USER:$NB_GID $CONDA_DIR && \
-    fix-permissions $HOME && \
-    fix-permissions $CONDA_DIR
+# ADD fix-permissions /usr/local/bin/fix-permissions
+# # Create jovyan user with UID=1000 and in the 'users' group
+# # and make sure these dirs are writable by the `users` group.
+# RUN useradd -m -s /bin/bash -N -u $NB_UID $NB_USER && \
+#     mkdir -p $CONDA_DIR && \
+#     chown $NB_USER:$NB_GID $CONDA_DIR && \
+#     fix-permissions $HOME && \
+#     fix-permissions $CONDA_DIR
 
 USER $NB_USER
 
-# Setup work directory for backward-compatibility
-RUN mkdir /home/$NB_USER/work && \
-    fix-permissions /home/$NB_USER
+# # Setup work directory for backward-compatibility
+# RUN mkdir /home/$NB_USER/work && \
+#     fix-permissions /home/$NB_USER
 
 # Install conda as jovyan and check the md5 sum provided on the download site
 ENV MINICONDA_VERSION 4.3.30
@@ -83,21 +83,21 @@ RUN conda install --quiet --yes \
     rm -rf $CONDA_DIR/share/jupyter/lab/staging && \
     fix-permissions $CONDA_DIR
 
-USER root
+# USER root
 
-EXPOSE 8888
-WORKDIR $HOME
+# EXPOSE 8888
+# WORKDIR $HOME
 
-# Configure container startup
-ENTRYPOINT ["tini", "--"]
-CMD ["start-notebook.sh"]
-
-# Add local files as late as possible to avoid cache busting
-COPY start.sh /usr/local/bin/
-COPY start-notebook.sh /usr/local/bin/
-COPY start-singleuser.sh /usr/local/bin/
-COPY jupyter_notebook_config.py /etc/jupyter/
-RUN fix-permissions /etc/jupyter/
+# # Configure container startup
+# ENTRYPOINT ["tini", "--"]
+# CMD ["start-notebook.sh"]
+#
+# # Add local files as late as possible to avoid cache busting
+# COPY start.sh /usr/local/bin/
+# COPY start-notebook.sh /usr/local/bin/
+# COPY start-singleuser.sh /usr/local/bin/
+# COPY jupyter_notebook_config.py /etc/jupyter/
+# RUN fix-permissions /etc/jupyter/
 
 # switch to user for R install
 USER ${NB_USER}
