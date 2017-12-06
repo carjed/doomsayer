@@ -5,6 +5,11 @@ LABEL maintainer="Jedidiah Carlson <jed.e.carlson@gmail.com>"
 # add contents of repo to ${HOME}
 COPY . ${HOME}
 
+ENV NB_USER rstudio
+ENV NB_UID 1000
+ENV HOME /home/rstudio
+WORKDIR ${HOME}
+
 # go to root to own dir and pre-requisite installs
 USER root
 RUN chown -R ${NB_UID}:${NB_UID} ${HOME}
@@ -35,7 +40,7 @@ RUN wget --quiet https://github.com/krallin/tini/releases/download/v0.10.0/tini 
 # Configure environment
 ENV CONDA_DIR=/opt/conda \
     SHELL=/bin/bash \
-    NB_USER=jovyan \
+    NB_USER=rstudio \
     NB_UID=1000 \
     NB_GID=100 \
     LC_ALL=en_US.UTF-8 \
