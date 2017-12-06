@@ -39,6 +39,9 @@ FROM jupyter/all-spark-notebook:c7fb6660d096
 # USER ${NB_USER}
 
 # Run install.r if it exists
+ADD install.r ./
+ADD pip_reqs.txt /
+
 RUN if [ -f install.r ]; then R --quiet -f install.r; fi
 
 RUN pip install -r --no-cache-dir pip_reqs.txt
