@@ -12,6 +12,20 @@ FROM jupyter/scipy-notebook:c7fb6660d096
 
 LABEL maintainer="Jupyter Project <jupyter@googlegroups.com>"
 
+# Configure environment
+ENV CONDA_DIR=/opt/conda \
+    SHELL=/bin/bash \
+ENV PATH=$CONDA_DIR/bin:$PATH \
+    HOME=/home/$NB_USER
+
+# create conda install directory
+RUN mkdir -p $CONDA_DIR && \
+  chown $NB_USER:$NB_GID $CONDA_DIR
+
+WORKDIR ${HOME}
+
+# ADD fix-permissions /usr/local/bin/fix-permissions
+
 USER root
 
 # R pre-requisites
