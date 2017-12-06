@@ -9,7 +9,7 @@ package.check <- lapply(packages, FUN = function(x) {
         install.packages(x,
           dependencies = TRUE,
           repos = "http://cran.us.r-project.org")
-        library(x, character.only = TRUE, silent=TRUE)
+        suppressPackageStartupMessages(library(x, character.only = TRUE, silent=TRUE))
     }
 })
 
