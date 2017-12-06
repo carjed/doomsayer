@@ -1,4 +1,5 @@
 ```{r heatmap, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 18, fig.width = 14}
+
 cutoff <- ifelse(ncol(spectra_rates)-1==6, 0.05, 0.005)
 nind <- 100
 names(rmse) <- c("ID", "RMSE")

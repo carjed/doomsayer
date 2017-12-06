@@ -1,50 +1,37 @@
 # FROM jupyter/all-spark-notebook:c7fb6660d096
 # FROM rocker/tidyverse:3.4.2
-FROM jupyter/r-notebook:c7fb6660d096
-# FROM rocker/binder:3.4.2
-#
-# # Copy repo into ${HOME}, make user own $HOME
+# FROM jupyter/r-notebook
 
-#
-# ## run any install.R script we find
-# RUN if [ -f install.R ]; then R --quiet -f install.R; fi
-#
-# FROM rocker/tidyverse:3.4.2
-#
-# RUN apt-get update && \
-#     apt-get -y install python3-pip && \
-#     pip3 install --no-cache-dir notebook==5.2 && \
-#     apt-get purge && \
-#     apt-get clean && \
-#     rm -rf /var/lib/apt/lists/*
-#
-# ENV NB_USER rstudio
-# ENV NB_UID 1000
-# ENV HOME /home/rstudio
-# WORKDIR ${HOME}
-#
-# USER ${NB_USER}
-#
-# # Set up R Kernel for Jupyter
-# RUN R --quiet -e "install.packages(c('repr', 'IRdisplay', 'evaluate', 'crayon', 'pbdZMQ', 'devtools', 'uuid', 'digest'))"
-# RUN R --quiet -e "devtools::install_github('IRkernel/IRkernel')"
-# RUN R --quiet -e "IRkernel::installspec()"
-#
-# # Make sure the contents of our repo are in ${HOME}
-# COPY . ${HOME}
-# USER root
-# RUN chown -R ${NB_UID}:${NB_UID} ${HOME}
-# USER ${NB_USER}
+# Modified from https://github.com/jupyter/docker-stacks/blob/master/r-notebook/Dockerfile
+# Distributed under the terms of the Modified BSD License.
+FROM jupyter/minimal-notebook:c7fb6660d096
 
-# Run install.r if it exists
-# ADD install.r ./
+LABEL maintainer="Jedidiah Carlson <jed.e.carlson@gmail.com>"
 
 # add contents of repo to ${HOME}
 COPY . ${HOME}
+
+# go to root to own dir and pre-requisite installs
 USER root
 RUN chown -R ${NB_UID}:${NB_UID} ${HOME}
+
+# R pre-requisites
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    fonts-dejavu \
+    tzdata \
+    gfortran \
+    gcc && apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# switch to user for R install
 USER ${NB_USER}
 
+# R packages
+RUN conda install --quiet --yes \
+    'r-base=3.4.2' && \
+    conda clean -tipsy && \
+    fix-permissions $CONDA_DIR
 
 # RUN apt-get update && \
 #     apt-get -y install python3-pip && \
@@ -60,7 +47,6 @@ RUN if [ -f install.r ]; then R --quiet -f install.r; fi
 # FROM jupyter/scipy-notebook:c7fb6660d096
 # ADD pip_reqs.txt ./
 # ADD env.yml ./
-
 
 # RUN conda create -n doomsayer-environment python=3.6 anaconda
 # RUN source activate doomsayer-environment

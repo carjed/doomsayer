@@ -1,4 +1,5 @@
 ```{r sigloads_radial, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 14, fig.width = 14}
+
 # custom coord
 coord_radar <- function (theta = "x", start = 0, direction = 1){
 	 theta <- match.arg(theta, c("x", "y"))

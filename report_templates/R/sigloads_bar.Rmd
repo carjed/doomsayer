@@ -1,4 +1,5 @@
 ```{r sigloads_bar, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 8, fig.width = 14}
+
 ggplot(sig_loads_long, aes(x=motif, y=loading, fill=Sig))+
   geom_bar(stat="identity")+
   facet_grid(Sig~category, scales="free_x")+
