@@ -28,7 +28,7 @@ RUN conda config --system --append channels r && \
     conda install --quiet --yes \
     'r-base=3.4.2' \
     'r-irkernel=0.8*' \
-    'r-devtools=1.12*' \
+    'r-devtools=1.13*' \
     'r-tidyverse=1.1*' \
     'r-shiny=1.0*' \
     'r-rmarkdown=1.6*' \
