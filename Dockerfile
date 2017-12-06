@@ -39,10 +39,9 @@ ENV PATH=$CONDA_DIR/bin:$PATH \
 
 WORKDIR ${HOME}
 
+# ADD fix-permissions /usr/local/bin/fix-permissions
 RUN mkdir -p $CONDA_DIR && \
-  chown $NB_USER:$NB_GID $CONDA_DIR && \
-  fix-permissions $HOME && \
-  fix-permissions $CONDA_DIR
+  chown $NB_USER:$NB_GID $CONDA_DIR
 
 # ADD fix-permissions /usr/local/bin/fix-permissions
 # # Create jovyan user with UID=1000 and in the 'users' group
@@ -67,8 +66,7 @@ RUN cd /tmp && \
     $CONDA_DIR/bin/conda config --system --set auto_update_conda false && \
     $CONDA_DIR/bin/conda config --system --set show_channel_urls true && \
     $CONDA_DIR/bin/conda update --all --quiet --yes && \
-    conda clean -tipsy && \
-    fix-permissions $CONDA_DIR
+    conda clean -tipsy
 
 # Install Jupyter Notebook and Hub
 RUN conda install --quiet --yes \
@@ -77,9 +75,7 @@ RUN conda install --quiet --yes \
     'jupyterlab=0.29.*' \
     && conda clean -tipsy && \
     jupyter labextension install @jupyterlab/hub-extension@^0.6.0 && \
-    rm -rf $CONDA_DIR/share/jupyter/lab/staging && \
-    fix-permissions $CONDA_DIR
-
+    rm -rf $CONDA_DIR/share/jupyter/lab/staging
 # USER root
 
 # EXPOSE 8888
