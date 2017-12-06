@@ -2,18 +2,6 @@ FROM rocker/tidyverse:3.4.2
 
 LABEL maintainer="Jedidiah Carlson <jed.e.carlson@gmail.com>"
 
-# add contents of repo to ${HOME}
-COPY . ${HOME}
-
-ENV NB_USER rstudio
-ENV NB_UID 1000
-ENV HOME /home/rstudio
-WORKDIR ${HOME}
-
-# go to root to own dir and pre-requisite installs
-USER root
-RUN chown -R ${NB_UID}:${NB_UID} ${HOME}
-
 # Install all OS dependencies for notebook server that starts but lacks all
 # features (e.g., download as all possible file formats)
 ENV DEBIAN_FRONTEND noninteractive
@@ -49,16 +37,20 @@ ENV CONDA_DIR=/opt/conda \
 ENV PATH=$CONDA_DIR/bin:$PATH \
     HOME=/home/$NB_USER
 
+WORKDIR ${HOME}
+
+RUN mkdir -p $CONDA_DIR && \
+  chown $NB_USER:$NB_GID $CONDA_DIR && \
+  fix-permissions $HOME && \
+  fix-permissions $CONDA_DIR
+
 # ADD fix-permissions /usr/local/bin/fix-permissions
 # # Create jovyan user with UID=1000 and in the 'users' group
 # # and make sure these dirs are writable by the `users` group.
 # RUN useradd -m -s /bin/bash -N -u $NB_UID $NB_USER && \
-#     mkdir -p $CONDA_DIR && \
-#     chown $NB_USER:$NB_GID $CONDA_DIR && \
-#     fix-permissions $HOME && \
-#     fix-permissions $CONDA_DIR
 
-USER $NB_USER
+
+# USER $NB_USER
 
 # # Setup work directory for backward-compatibility
 # RUN mkdir /home/$NB_USER/work && \
@@ -104,7 +96,11 @@ RUN conda install --quiet --yes \
 # COPY jupyter_notebook_config.py /etc/jupyter/
 # RUN fix-permissions /etc/jupyter/
 
-# switch to user for R install
+# add contents of repo to ${HOME}
+COPY . ${HOME}
+USER root
+RUN chown -R ${NB_UID}:${NB_UID} ${HOME}
+
 USER ${NB_USER}
 
 # run install.r script to load R package dependencies
