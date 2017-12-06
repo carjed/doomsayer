@@ -4,6 +4,8 @@
 
 [![DOI](https://zenodo.org/badge/95728792.svg)](https://zenodo.org/badge/latestdoi/95728792)
 
+[![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/carjed/doomsayer/develop)
+
 ## Introduction
 
 _**DOOMSAYER** ( **D**etection **O**f **O**utliers using **M**utation **S**pectrum **A**nal**Y**sis in **E**xtremely **R**are variants) is a utility for analyzing patterns of rare, single-nucleotide variants (SNVs) in whole-genome (WGS) or whole-exome sequencing (WES) data._
@@ -144,6 +146,8 @@ optional arguments:
 ```
 
 ## Tutorial
+
+[![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/carjed/doomsayer/develop)
 
 Doomsayer provides several options for performing outlier detection and mutation signature analysis on various types of data. The following tutorial walks through the options and use cases for Doomsayer. Where possible, examples are provided using the demonstration data, which can be downloaded using the [download_demo_data.sh](download_demo_data.sh) script:
 
