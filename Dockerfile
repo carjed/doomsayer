@@ -54,7 +54,7 @@ RUN if [ -f install.r ]; then R --quiet -f install.r; fi
 FROM jupyter/scipy-notebook:c7fb6660d096
 ADD pip_reqs.txt ./
 ADD env.yml ./
-RUN source activate doomsayer-environment
+RUN conda source activate doomsayer-environment
 RUN conda env export > environment.yml
 # RUN conda env create -f env.yml
 
