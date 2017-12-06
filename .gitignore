@@ -4,3 +4,4 @@ doomsayer_output/*
 __pycache__/*
 useful_cmds.md
 .Rhistory
+*.pyc

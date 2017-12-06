@@ -241,7 +241,7 @@ if args.mode == "vcf":
 
         for M_sub in results:
             M = np.add(M, M_sub)
-        samples = getSamplesVCF(args, vcf_list[1])
+        samples = np.array([getSamplesVCF(args, vcf_list[1])])
 
 elif args.mode == "agg":
     data = aggregateM(args.input, subtypes_dict)
@@ -252,7 +252,7 @@ elif args.mode == "txt":
     data = processTxt(args, subtypes_dict)
     M = data.M
     samples = data.samples
-	
+
 ###############################################################################
 # Write out M matrix if preparing for aggregation mode
 ###############################################################################
@@ -276,14 +276,14 @@ else:
         i = 0
         for row in M:
             if sum(M[i]) < args.minsnvs:
-                lowsnv_samples.append(samples[i])
+                lowsnv_samples.append(samples.flatten()[i])
             else:
-                highsnv_samples.append(samples[i])
+                highsnv_samples.append(samples.flatten()[i])
             i += 1
 
         if len(lowsnv_samples) > 0:
             M = M[np.sum(M, axis=1)>=args.minsnvs,]
-            samples = highsnv_samples
+            samples = np.array([highsnv_samples])
             lowsnv_path = projdir + \
                 "/doomsayer_snvs_lt" + str(args.minsnvs) + ".txt"
             lowsnv_fh = open(lowsnv_path, "w")
@@ -347,13 +347,13 @@ else:
             drop_indices = kd_lists.drop_indices
 
         keep_path = projdir + "/doomsayer_keep.txt"
-        keep_fh = open(keep_path, 'wt', encoding='ascii')
+        keep_fh = open(keep_path, 'wt')
         for sample in keep_samples:
             keep_fh.write("%s\n" % sample)
         keep_fh.close()
 
         drop_path = projdir + "/doomsayer_drop.txt"
-        drop_fh = open(drop_path, 'wt', encoding='ascii')
+        drop_fh = open(drop_path, 'wt')
         for sample in drop_samples:
             drop_fh.write("%s\n" % sample)
         drop_fh.close()
