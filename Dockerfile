@@ -40,9 +40,20 @@ FROM rocker/tidyverse:3.4.2
 
 # Run install.r if it exists
 ADD install.r ./
-ADD pip_reqs.txt /
+
+# RUN apt-get update && \
+#     apt-get -y install python3-pip && \
+#     pip3 install --no-cache-dir notebook==5.2 && \
+#     apt-get purge && \
+#     apt-get clean && \
+#     rm -rf /var/lib/apt/lists/*
 
 RUN R --quiet -e "install.packages('devtools', repos = 'http://cran.us.r-project.org')"
 RUN if [ -f install.r ]; then R --quiet -f install.r; fi
 
-RUN pip install -r pip_reqs.txt
+FROM jupyter/scipy-notebook:c7fb6660d096
+ADD pip_reqs.txt ./
+ADD env.yml ./
+RUN conda env create -f env.yml
+
+# RUN pip3 install -r pip_reqs.txt
