@@ -55,15 +55,8 @@ ADD env.yml ./
 # RUN conda create -n doomsayer-environment python=3.6 anaconda
 # RUN source activate doomsayer-environment
 # RUN conda env export > environment.yml
-# RUN conda env create -f env.yml
+RUN conda env create -f env.yml
 
 # required for cyvcf2 install
-USER root
-COPY . ${HOME}
-RUN chown -R ${NB_USER} ${HOME}
-USER ${NB_USER}
 
-RUN apt-get install python-dev
-RUN apt-get install python3-dev
-
-RUN pip install -r pip_reqs.txt
+# RUN pip install -r pip_reqs.txt
