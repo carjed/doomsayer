@@ -26,7 +26,6 @@ RUN apt-get update && \
 # R packages including IRKernel which gets installed globally.
 RUN conda config --system --append channels r && \
     conda install --quiet --yes \
-    'rpy2=2.8*' \
     'r-base=3.4.2' \
     'r-irkernel=0.8*' \
     'r-devtools=1.12*' \
