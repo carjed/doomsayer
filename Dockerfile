@@ -37,7 +37,14 @@ FROM jupyter/r-notebook:c7fb6660d096
 # USER ${NB_USER}
 
 # Run install.r if it exists
-ADD install.r ./
+# ADD install.r ./
+
+# add contents of repo to ${HOME}
+COPY . ${HOME}
+USER root
+RUN chown -R ${NB_UID}:${NB_UID} ${HOME}
+USER ${NB_USER}
+
 
 # RUN apt-get update && \
 #     apt-get -y install python3-pip && \
@@ -46,18 +53,25 @@ ADD install.r ./
 #     apt-get clean && \
 #     rm -rf /var/lib/apt/lists/*
 
+# run install.r script to load R package dependencies
 RUN R --quiet -e "install.packages('devtools', repos = 'http://cran.us.r-project.org')"
 RUN if [ -f install.r ]; then R --quiet -f install.r; fi
 
 # FROM jupyter/scipy-notebook:c7fb6660d096
-ADD pip_reqs.txt ./
-ADD env.yml ./
+# ADD pip_reqs.txt ./
+# ADD env.yml ./
+
 
 # RUN conda create -n doomsayer-environment python=3.6 anaconda
 # RUN source activate doomsayer-environment
 # RUN conda env export > environment.yml
-RUN conda env create -f env.yml
 
-# required for cyvcf2 install
+# create conda environment and install Python library dependencies
+RUN conda env create -n doomsayer -f env.yml
 
+# activate the conda environment
+ENV PATH /opt/conda/envs/doomsayer/bin:$PATH
+
+# old version; installs via pip
+# causes problems with cyvcf2--better to use bioconda
 # RUN pip install -r pip_reqs.txt
