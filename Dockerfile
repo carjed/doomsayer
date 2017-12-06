@@ -50,6 +50,7 @@ USER ${NB_USER}
 RUN conda install --quiet --yes \
     'gcc_linux-64' \
     'gxx_linux-64' \
+    'libgfortran' \
     'r-base=3.4.2' \
     'r-irkernel=0.8*' \
     'r-devtools=1.13*' && \
