@@ -1,0 +1,14 @@
+name: example-environment
+channels:
+  - conda-forge
+dependencies:
+  - python
+  - argparse
+  - biopython
+  - cyvcf2
+  - joblib
+  - nimfa
+  - numpy
+  - pandas
+  - pyfaidx
+  - scipy
