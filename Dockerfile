@@ -1,5 +1,6 @@
 # FROM jupyter/all-spark-notebook:c7fb6660d096
-FROM rocker/tidyverse:3.4.2
+# FROM rocker/tidyverse:3.4.2
+FROM jupyter/r-notebook:c7fb6660d096
 # FROM rocker/binder:3.4.2
 #
 # # Copy repo into ${HOME}, make user own $HOME
@@ -48,7 +49,7 @@ ADD install.r ./
 RUN R --quiet -e "install.packages('devtools', repos = 'http://cran.us.r-project.org')"
 RUN if [ -f install.r ]; then R --quiet -f install.r; fi
 
-FROM jupyter/scipy-notebook:c7fb6660d096
+# FROM jupyter/scipy-notebook:c7fb6660d096
 ADD pip_reqs.txt ./
 ADD env.yml ./
 
