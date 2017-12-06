@@ -251,7 +251,7 @@ elif args.mode == "agg":
 elif args.mode == "txt":
     data = processTxt(args, subtypes_dict)
     M = data.M
-    samples = data.samples
+    samples = np.array([data.samples], dtype=str)
 
 ###############################################################################
 # Write out M matrix if preparing for aggregation mode

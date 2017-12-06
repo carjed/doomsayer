@@ -5,11 +5,11 @@ contribution_plot <- sig_contribs2 %>%
   spread(signature, contribution) %>%
     mutate(ID=factor(ID, levels=levels(rmse_plot$ID)))
 
-pc <- plot_ly(contribution_plot, x=~S1, y=~ID, type = 'bar', orientation = 'h', marker=list(color=viridis(3)[1])) %>%
+pc <- suppressMessages(plot_ly(contribution_plot, x=~S1, y=~ID, type = 'bar', orientation = 'h', marker=list(color=viridis(3)[1])) %>%
   add_trace(x = ~S2, marker=list(color=viridis(3)[2])) %>%
     add_trace(x = ~S3, marker=list(color=viridis(3)[3])) %>%
   layout(barmode = 'stack',
-    showlegend = FALSE)
+    showlegend = FALSE))
 
 pc
 ```

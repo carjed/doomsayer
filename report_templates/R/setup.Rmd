@@ -1,17 +1,18 @@
 ```{r setup, message=FALSE, warning=FALSE, echo=FALSE}
 # knitr::opts_chunk$set(echo = TRUE)
+options(warn=-1)
 
 # check and load packages
 packages <- c("dplyr", "tidyr", "ggplot2", "yaml", "devtools", "knitr", "corrr", "viridis", "RColorBrewer", "heatmaply", "dendextend", "e1071")
 
-package.check <- lapply(packages, FUN = function(x) {
+package.check <- suppressWarnings(suppressMessages(lapply(packages, FUN = function(x) {
     if (!require(x, character.only = TRUE)) {
         install.packages(x,
           dependencies = TRUE,
           repos = "http://cran.us.r-project.org")
-        suppressPackageStartupMessages(library(x, character.only = TRUE, silent=TRUE))
+        library(x, character.only = TRUE, silent=TRUE, verbose=FALSE)
     }
-})
+})))
 
 if(params$dev){
   setwd("../../../Github/doomsayer/sample_output")
