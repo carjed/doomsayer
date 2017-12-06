@@ -7,6 +7,6 @@ package.check <- suppressWarnings(suppressMessages(lapply(packages, FUN = functi
         install.packages(x,
           dependencies = TRUE,
           repos = "http://cran.us.r-project.org")
-        library(x, character.only = TRUE, silent=TRUE, verbose=FALSE)
+        library(x, character.only = TRUE, verbose=FALSE)
     }
-}))) 
+})))
