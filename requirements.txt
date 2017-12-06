@@ -7,5 +7,3 @@ numpy==1.13.1
 pandas==0.20.3
 pyfaidx==0.4.9.2
 scipy==0.13.3
-subprocess32==3.2.7
-unicodecsv==0.14.1
