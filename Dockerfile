@@ -60,4 +60,8 @@ ADD env.yml ./
 # RUN conda env export > environment.yml
 # RUN conda env create -f env.yml
 
+# required for cyvcf2 install
+RUN apt-get install python-dev
+RUN apt-get install python3-dev
+
 RUN pip install -r pip_reqs.txt
