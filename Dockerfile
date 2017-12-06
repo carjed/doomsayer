@@ -42,8 +42,7 @@ FROM jupyter/all-spark-notebook:c7fb6660d096
 ADD install.r ./
 ADD pip_reqs.txt /
 
+RUN R --quiet -e "install.packages('devtools', repos = 'http://cran.us.r-project.org')"
 RUN if [ -f install.r ]; then R --quiet -f install.r; fi
 
 RUN pip install -r --no-cache-dir pip_reqs.txt
-
-# RUN R --quiet -e "install.packages(c('heatmaply', 'viridis'), repos = 'http://cran.us.r-project.org')"
