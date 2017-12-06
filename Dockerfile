@@ -48,7 +48,7 @@ USER ${NB_USER}
 # R packages
 RUN conda install --quiet --yes \
     'r-base=3.4.2' \
-    'r-irkernel=0.7*' \
+    'r-irkernel=0.8*' \
     'r-devtools=1.13*' && \
     conda clean -tipsy && \
     fix-permissions $CONDA_DIR
