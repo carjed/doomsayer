@@ -24,26 +24,27 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # R packages including IRKernel which gets installed globally.
-RUN conda config --system --append channels r && \
-    conda install --quiet --yes \
-    'r-base=3.4.2' \
-    'r-irkernel=0.8*' \
-    'r-devtools=1.13*' \
-    'r-tidyverse=1.1*' \
-    'r-shiny=1.0*' \
-    'r-rmarkdown=1.6*' \
-    'r-rcurl=1.95*' && \
-    conda clean -tipsy
+# RUN conda config --system --append channels r && \
+#     conda install --quiet --yes \
+#     'r-base=3.4.2' \
+#     'r-irkernel=0.8*' \
+#     'r-devtools=1.13*' \
+#     'r-tidyverse=1.1*' \
+#     'r-shiny=1.0*' \
+#     'r-rmarkdown=1.6*' \
+#     'r-rcurl=1.95*' && \
+#     conda clean -tipsy
 
 USER ${NB_USER}
 COPY . ${HOME}
 USER root
 RUN chown -R ${NB_UID} ${HOME}
+RUN conda env create -n doomsayer -f env.yml
 USER ${NB_USER}
 
 # run install.r script to load R package dependencies
 # RUN R --quiet -e "install.packages('devtools', repos = 'http://cran.us.r-project.org')"
-RUN if [ -f install.r ]; then R --quiet -f install.r; fi
+# RUN if [ -f install.r ]; then R --quiet -f install.r; fi
 
 # FROM jupyter/scipy-notebook:c7fb6660d096
 # ADD pip_reqs.txt ./
@@ -54,7 +55,7 @@ RUN if [ -f install.r ]; then R --quiet -f install.r; fi
 # RUN conda env export > environment.yml
 
 # create conda environment and install Python library dependencies
-RUN conda env create -n doomsayer -f env.yml
+
 
 # activate the conda environment
 ENV PATH /opt/conda/envs/doomsayer/bin:$PATH
