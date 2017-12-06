@@ -401,10 +401,10 @@ def detectOutliers(M, samples, filtermode, threshold):
         M_err_d = np.divide(M_f, np.mean(M_f, axis=0))
         for row in M_err_d:
             if any(err > threshold for err in row):
-                drop_samples.append(samples[i])
+                drop_samples.append(samples.flatten()[i])
                 drop_indices.append(i)
             else:
-                keep_samples.append(samples[i])
+                keep_samples.append(samples.flatten()[i])
             i += 1
     elif filtermode == "chisq":
         i=0
@@ -414,10 +414,10 @@ def detectOutliers(M, samples, filtermode, threshold):
             exp_spectrum = mean_spectrum*sum(row)/sum(mean_spectrum)
             pval = chisquare(row, f_exp=exp_spectrum)[1]
             if pval < 0.05/M.shape[0]:
-                drop_samples.append(samples[i])
+                drop_samples.append(samples.flatten()[i])
                 drop_indices.append(i)
             else:
-                keep_samples.append(samples[i])
+                keep_samples.append(samples.flatten()[i])
             i += 1
     elif filtermode == "sd":
         i=0
@@ -427,10 +427,10 @@ def detectOutliers(M, samples, filtermode, threshold):
 
         for row in M_f:
             if np.greater(row, std_threshold).any():
-                drop_samples.append(samples[i])
+                drop_samples.append(samples.flatten()[i])
                 drop_indices.append(i)
             else:
-                keep_samples.append(samples[i])
+                keep_samples.append(samples.flatten()[i])
             i += 1
 
     out_handles = ['keep_samples',
@@ -505,7 +505,8 @@ def writeM(M, M_path, subtypes_dict, samples):
     M_colnames = colnames + list(sorted(subtypes_dict.keys()))
 
     # add ID as first column
-    M_fmt = np.concatenate((np.array([samples]).T, M.astype('|S20')), axis=1)
+    #M_fmt = np.concatenate((np.array([samples]).T, M.astype('|S20')), axis=1)
+    M_fmt = np.concatenate((samples.T, M.astype('|S20')), axis=1)
 
     # add header
     M_fmt = np.concatenate((np.array([M_colnames]), M_fmt), axis=0)
@@ -520,7 +521,7 @@ def writeW(W, W_path, samples):
     colnames = ["ID"]
 
     # add ID as first column
-    W_fmt = np.concatenate((np.array([samples]).T, W.astype('|S20')), axis=1)
+    W_fmt = np.concatenate((samples.T, W.astype('|S20')), axis=1)
     num_samples, num_sigs = W.shape
 
     # add header
@@ -550,14 +551,10 @@ def writeH(H, H_path, subtypes_dict):
 # write RMSE per sample
 ###############################################################################
 def writeRMSE(M_rmse, rmse_path, samples):
-    rmse = open(rmse_path, "w")
-    i = 0
-    for val in np.nditer(M_rmse):
-        # if val > 0.002:
-        line = str(samples[i]) + "\t" + str(val) + "\n"
-        rmse.write(line.decode('utf-8'))
-        i += 1
-    rmse.close()
+	sample_col = samples.T
+	rmse_col = np.array([M_rmse]).T
+	rmse_arr = np.column_stack((sample_col, rmse_col))
+	np.savetxt(rmse_path, rmse_arr, delimiter='\t', fmt="%s")
 
 ###############################################################################
 # filter VCF input by kept samples
