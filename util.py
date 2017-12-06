@@ -555,7 +555,7 @@ def writeRMSE(M_rmse, rmse_path, samples):
     for val in np.nditer(M_rmse):
         # if val > 0.002:
         line = str(samples[i]) + "\t" + str(val) + "\n"
-        rmse.write("%s" % line)
+        rmse.write(line)
         i += 1
     rmse.close()
 
