@@ -14,7 +14,8 @@ LABEL maintainer="Jupyter Project <jupyter@googlegroups.com>"
 
 # Configure environment
 ENV CONDA_DIR=/opt/conda \
-    SHELL=/bin/bash \
+    NB_GID=100 \
+    SHELL=/bin/bash
 ENV PATH=$CONDA_DIR/bin:$PATH \
     HOME=/home/$NB_USER
 
