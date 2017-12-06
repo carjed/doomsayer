@@ -31,7 +31,7 @@ RUN conda config --system --append channels r && \
     'r-devtools=1.12*' \
     'r-tidyverse=1.1*' \
     'r-shiny=0.14*' \
-    'r-rmarkdown=1.2*' \
+    'r-rmarkdown=1.6*' \
     'r-rcurl=1.95*' && \
     conda clean -tipsy
 
