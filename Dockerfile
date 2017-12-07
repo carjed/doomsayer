@@ -67,6 +67,11 @@ ENV CONDA_PREFIX /opt/conda/envs/doomsayer
 # run install.r script to load R package dependencies
 
 USER root
+
+# must install rmarkdown via devtools to resolve issue with pandoc
+# https://github.com/rstudio/rmarkdown/issues/1120
+# --this requires tar to be aliased as gtar
+# per https://github.com/hadley/devtools/issues/379
 RUN ln -s /bin/tar /bin/gtar
 RUN R --quiet -e "devtools::install_github('rstudio/rmarkdown')"
 RUN if [ -f install.r ]; then R --quiet -f install.r; fi
