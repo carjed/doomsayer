@@ -64,8 +64,8 @@ ENV PATH="/opt/conda/envs/doomsayer/bin:${PATH}"
 # --for some reason, this requires tar to be aliased as gtar
 # per https://github.com/hadley/devtools/issues/379
 ###############################################################################
-RUN ln -s /bin/tar /bin/gtar
-RUN R --quiet -e "devtools::install_github('rstudio/rmarkdown')"
+# RUN ln -s /bin/tar /bin/gtar
+# RUN R --quiet -e "devtools::install_github('rstudio/rmarkdown')"
 RUN if [ -f install.r ]; then R --quiet -f install.r; fi
 
 USER ${NB_USER}
