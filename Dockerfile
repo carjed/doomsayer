@@ -50,15 +50,18 @@ USER ${NB_USER}
 ###############################################################################
 # create environment from config file and activate
 ###############################################################################
-ENV CONDA_DS_ENV="doomsayer"
-RUN conda env create -n ${CONDA_DS_ENV} -f env.yml && \
+# ENV CONDA_DS_ENV="doomsayer"
+# RUN conda env create -n ${CONDA_DS_ENV} -f env.yml && \
+# conda clean -tipsy
+
+RUN conda env update -n root -f env.yml && \
 conda clean -tipsy
 
 # ENV CONDA_DS_ENV "doomsayer"
 # ENV CONDA_ACTIVATE "source activate $CONDA_DS_ENV"
-RUN ["/bin/bash", "-c", "source activate $CONDA_DS_ENV"]
-RUN conda config --set default_env ${CONDA_DS_ENV}
-ENV PATH="/opt/conda/envs/doomsayer/bin:${PATH}"
+# RUN ["/bin/bash", "-c", "source activate $CONDA_DS_ENV"]
+# RUN conda config --set default_env ${CONDA_DS_ENV}
+# ENV PATH="/opt/conda/envs/doomsayer/bin:${PATH}"
 # ENV CONDA_PREFIX /opt/conda/envs/doomsayer
 
 ###############################################################################
