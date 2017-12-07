@@ -65,9 +65,12 @@ ENV PATH="/opt/conda/envs/doomsayer/bin:${PATH}"
 ENV CONDA_DEFAULT_ENV=doomsayer
 ENV CONDA_PREFIX /opt/conda/envs/doomsayer
 # run install.r script to load R package dependencies
+
+USER root
 RUN if [ -f install.r ]; then R --quiet -f install.r; fi
 # RUN R --quiet -e "install.packages('devtools', repos = 'http://cran.us.r-project.org')"
 
+USER ${NB_USER}
 # FROM jupyter/scipy-notebook:c7fb6660d096
 # ADD pip_reqs.txt ./
 # ADD env.yml ./
