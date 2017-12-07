@@ -66,8 +66,8 @@ ENV CONDA_DEFAULT_ENV=doomsayer
 ENV CONDA_PREFIX /opt/conda/envs/doomsayer
 # run install.r script to load R package dependencies
 
-# USER root
-#
+USER root
+RUN ln -s /bin/tar /bin/gtar
 RUN R --quiet -e "devtools::install_github('rstudio/rmarkdown')"
 RUN if [ -f install.r ]; then R --quiet -f install.r; fi
 
