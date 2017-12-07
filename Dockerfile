@@ -58,12 +58,17 @@ USER root
 RUN chown -R ${NB_UID} ${HOME}
 
 USER ${NB_USER}
+
+# create environment from config file
 RUN conda env create -n doomsayer -f env.yml && \
   conda clean -tipsy
 
+# set doomsayer environment as default
+ENV CONDA_DS_ENV "doomsayer"
+ENV CONDA_ACTIVATE "source $CONDA_DIR/bin/activate $CONDA_DS_ENV"
 ENV PATH="/opt/conda/envs/doomsayer/bin:${PATH}"
-ENV CONDA_DEFAULT_ENV=doomsayer
-ENV CONDA_PREFIX /opt/conda/envs/doomsayer
+RUN $CONDA_ACTIVATE
+# ENV CONDA_PREFIX /opt/conda/envs/doomsayer
 # run install.r script to load R package dependencies
 
 USER root
