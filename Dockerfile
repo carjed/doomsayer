@@ -1,11 +1,12 @@
+###############################################################################
+# Modified from https://github.com/jupyter/docker-stacks/blob/master/base-notebook/Dockerfile
+# Distributed under the terms of the Modified BSD License.
+###############################################################################
+FROM jupyter/scipy-notebook:c7fb6660d096
+# FROM jupyter/minimal-notebook:033056e6d164
 # FROM jupyter/all-spark-notebook:c7fb6660d096
 # FROM rocker/tidyverse:3.4.2
 # FROM jupyter/r-notebook
-
-# Modified from https://github.com/jupyter/docker-stacks/blob/master/r-notebook/Dockerfile
-# Distributed under the terms of the Modified BSD License.
-FROM jupyter/scipy-notebook:c7fb6660d096
-# FROM jupyter/minimal-notebook:033056e6d164
 
 LABEL maintainer="Jedidiah Carlson <jed.e.carlson@gmail.com>"
 
@@ -30,7 +31,6 @@ LABEL maintainer="Jedidiah Carlson <jed.e.carlson@gmail.com>"
 
 USER root
 
-# R pre-requisites
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     fonts-dejavu \
@@ -45,22 +45,25 @@ COPY . ${HOME}
 USER root
 RUN chown -R ${NB_UID} ${HOME}
 
-# create environment from config file
+###############################################################################
+# create environment from config file and activate
+###############################################################################
 RUN conda env create -n doomsayer -f env.yml && \
   conda clean -tipsy
 
-# set doomsayer environment as default
-ENV CONDA_DS_ENV "doomsayer"
-ENV CONDA_ACTIVATE "source activate $CONDA_DS_ENV"
-RUN $CONDA_ACTIVATE
+# ENV CONDA_DS_ENV "doomsayer"
+# ENV CONDA_ACTIVATE "source activate $CONDA_DS_ENV"
+RUN ["/bin/bash", "-c", "source activate doomsayer"]
 ENV PATH="/opt/conda/envs/doomsayer/bin:${PATH}"
 # ENV CONDA_PREFIX /opt/conda/envs/doomsayer
 
+###############################################################################
 # Install R packages
 # rmarkdown is installed separately via devtools to resolve issue
 # with pandoc (https://github.com/rstudio/rmarkdown/issues/1120)
 # --for some reason, this requires tar to be aliased as gtar
 # per https://github.com/hadley/devtools/issues/379
+###############################################################################
 RUN ln -s /bin/tar /bin/gtar
 RUN R --quiet -e "devtools::install_github('rstudio/rmarkdown')"
 RUN if [ -f install.r ]; then R --quiet -f install.r; fi
