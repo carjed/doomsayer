@@ -48,7 +48,7 @@ RUN chown -R ${NB_UID} ${HOME}
 ###############################################################################
 # create environment from config file and activate
 ###############################################################################
-ENV $CONDA_DS_ENV="doomsayer"
+ENV CONDA_DS_ENV="doomsayer"
 RUN conda env create -n $CONDA_DS_ENV -f env.yml && \
 conda clean -tipsy
 
