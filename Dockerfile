@@ -45,11 +45,13 @@ COPY . ${HOME}
 USER root
 RUN chown -R ${NB_UID} ${HOME}
 
+
+USER ${NB_USER}
 ###############################################################################
 # create environment from config file and activate
 ###############################################################################
 RUN conda env create -n doomsayer -f env.yml && \
-  conda clean -tipsy
+conda clean -tipsy
 
 # ENV CONDA_DS_ENV "doomsayer"
 # ENV CONDA_ACTIVATE "source activate $CONDA_DS_ENV"
@@ -67,8 +69,6 @@ ENV PATH="/opt/conda/envs/doomsayer/bin:${PATH}"
 # RUN ln -s /bin/tar /bin/gtar
 # RUN R --quiet -e "devtools::install_github('rstudio/rmarkdown')"
 RUN if [ -f install.r ]; then R --quiet -f install.r; fi
-
-USER ${NB_USER}
 # FROM jupyter/scipy-notebook:c7fb6660d096
 # ADD pip_reqs.txt ./
 # ADD env.yml ./
