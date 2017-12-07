@@ -45,17 +45,17 @@ COPY . ${HOME}
 USER root
 RUN chown -R ${NB_UID} ${HOME}
 
-
-USER ${NB_USER}
 ###############################################################################
 # create environment from config file and activate
 ###############################################################################
-RUN conda env create -n doomsayer -f env.yml && \
+ENV $CONDA_DS_ENV="doomsayer"
+RUN conda env create -n $CONDA_DS_ENV -f env.yml && \
 conda clean -tipsy
 
 # ENV CONDA_DS_ENV "doomsayer"
 # ENV CONDA_ACTIVATE "source activate $CONDA_DS_ENV"
-RUN ["/bin/bash", "-c", "source activate doomsayer"]
+RUN ["/bin/bash", "-c", "source activate $CONDA_DS_ENV"]
+RUN conda config --set core.default_env=$CONDA_DS_ENV
 ENV PATH="/opt/conda/envs/doomsayer/bin:${PATH}"
 # ENV CONDA_PREFIX /opt/conda/envs/doomsayer
 
@@ -73,6 +73,7 @@ RUN if [ -f install.r ]; then R --quiet -f install.r; fi
 # ADD pip_reqs.txt ./
 # ADD env.yml ./
 
+USER ${NB_USER}
 # RUN conda create -n doomsayer-environment python=3.6 anaconda
 # RUN source activate doomsayer-environment
 # RUN conda env export > environment.yml
