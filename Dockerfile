@@ -7,24 +7,24 @@
 FROM jupyter/scipy-notebook:c7fb6660d096
 # FROM jupyter/minimal-notebook:033056e6d164
 
-# Copyright (c) Jupyter Development Team.
-# Distributed under the terms of the Modified BSD License.
-
-LABEL maintainer="Jupyter Project <jupyter@googlegroups.com>"
+LABEL maintainer="Jedidiah Carlson <jed.e.carlson@gmail.com>"
 
 # Configure environment
-ENV CONDA_DIR=/opt/conda \
-    NB_UID=1000 \
-    NB_GID=100 \
-    SHELL=/bin/bash \
-    HOME=/home/$NB_USER
+# ENV CONDA_DIR=/opt/conda \
+#     NB_UID=1000 \
+#     NB_GID=100 \
+#     SHELL=/bin/bash \
+#     HOME=/home/$NB_USER
 # ENV PATH=$CONDA_DIR/bin:$PATH \
 
 # create conda install directory
-RUN mkdir -p $CONDA_DIR && \
-  chown $NB_USER:$NB_GID $CONDA_DIR
+# RUN mkdir -p $CONDA_DIR && \
+#   chown $NB_USER:$NB_GID $CONDA_DIR
 
-WORKDIR ${HOME}
+# WORKDIR ${HOME}
+
+# Force bash always
+# RUN rm /bin/sh && ln -s /bin/bash /bin/sh
 
 # ADD fix-permissions /usr/local/bin/fix-permissions
 
@@ -39,25 +39,11 @@ RUN apt-get update && \
     gcc && apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# R packages including IRKernel which gets installed globally.
-# RUN conda config --system --append channels r && \
-#     conda install --quiet --yes \
-#     'r-base=3.4.2' \
-#     'r-irkernel=0.8*' \
-#     'r-devtools=1.13*' \
-#     'r-tidyverse=1.1*' \
-#     'r-shiny=1.0*' \
-#     'r-rmarkdown=1.6*' \
-#     'r-rcurl=1.95*' && \
-#     conda clean -tipsy
-
 USER ${NB_USER}
 COPY . ${HOME}
 
 USER root
 RUN chown -R ${NB_UID} ${HOME}
-
-USER ${NB_USER}
 
 # create environment from config file
 RUN conda env create -n doomsayer -f env.yml && \
@@ -65,17 +51,15 @@ RUN conda env create -n doomsayer -f env.yml && \
 
 # set doomsayer environment as default
 ENV CONDA_DS_ENV "doomsayer"
-ENV CONDA_ACTIVATE "source $CONDA_DIR/bin/activate $CONDA_DS_ENV"
-ENV PATH="/opt/conda/envs/doomsayer/bin:${PATH}"
+ENV CONDA_ACTIVATE "source activate $CONDA_DS_ENV"
 RUN $CONDA_ACTIVATE
+ENV PATH="/opt/conda/envs/doomsayer/bin:${PATH}"
 # ENV CONDA_PREFIX /opt/conda/envs/doomsayer
-# run install.r script to load R package dependencies
 
-USER root
-
-# must install rmarkdown via devtools to resolve issue with pandoc
-# https://github.com/rstudio/rmarkdown/issues/1120
-# --this requires tar to be aliased as gtar
+# Install R packages
+# rmarkdown is installed separately via devtools to resolve issue
+# with pandoc (https://github.com/rstudio/rmarkdown/issues/1120)
+# --for some reason, this requires tar to be aliased as gtar
 # per https://github.com/hadley/devtools/issues/379
 RUN ln -s /bin/tar /bin/gtar
 RUN R --quiet -e "devtools::install_github('rstudio/rmarkdown')"
