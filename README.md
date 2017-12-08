@@ -2,7 +2,8 @@
 
 ![](assets/doomsayer_logo.png)
 
-[![DOI](https://zenodo.org/badge/95728792.svg)](https://zenodo.org/badge/latestdoi/95728792) [![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/carjed/doomsayer/develop) [![Build Status](https://travis-ci.org/carjed/doomsayer.svg?branch=master)](https://travis-ci.org/carjed/doomsayer)
+[![DOI](https://zenodo.org/badge/95728792.svg)](https://zenodo.org/badge/latestdoi/95728792) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) <!-- Master:
+[![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/carjed/doomsayer/master) [![Build Status](https://travis-ci.org/carjed/doomsayer.svg?branch=master)](https://travis-ci.org/carjed/doomsayer) --> [![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/carjed/doomsayer/master) [![Build Status](https://travis-ci.org/carjed/doomsayer.svg?branch=master)](https://travis-ci.org/carjed/doomsayer)
 
 ## Introduction
 
@@ -12,7 +13,7 @@ _The basic intuition behind Doomsayer is that the non-somatic mutation spectra o
 
 _In addition to its purpose as a quality control program, Doomsayer can be applied more generally to study between-sample differences in somatic and germline mutation signatures._
 
-<!-- ## Citation
+<!-- ### Citation
 
 If you use DOOMSAYER in your research, please cite our [paper](#) (citation pending). -->
 
@@ -77,7 +78,7 @@ R --quiet -f install.r
 
 Note that this method assumes you have `pip` and `R` (version 3.1 or higher) already installed. You will also need `pandoc` (version 1.19) installed in order to render RMarkdown reports. If [RStudio](https://www.rstudio.com/products/rstudio/download/#download) (or [RStudio Server]()) is installed on your system, the necessary pandoc binaries should already be available, and no additional acction is needed.
 
-Debian/Ubuntu users may run the `check_pandoc.sh` script to confirm if the pandoc binaries are installed--if they are not found, the script will attempt to download the binaries to `doomsayer/pandoc/`.
+Debian/Ubuntu users may run the [`check_pandoc.sh`](check_pandoc.sh) script to confirm if the pandoc binaries are installed--if they are not found, the script will attempt to download the binaries to `doomsayer/pandoc/`.
 
 ```{sh id:"check_pandoc"}
 bash check_pandoc.sh
