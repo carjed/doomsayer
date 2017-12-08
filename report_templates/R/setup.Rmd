@@ -4,7 +4,7 @@
 options(warn=-1)
 
 # check and load packages
-packages <- c("dplyr", "tidyr", "ggplot2", "yaml", "devtools", "knitr", "corrr", "viridis", "RColorBrewer", "heatmaply", "dendextend", "e1071")
+packages <- c("dplyr", "tidyr", "ggplot2", "yaml", "devtools", "knitr", "viridis", "RColorBrewer", "heatmaply", "dendextend")
 
 package.check <- suppressWarnings(suppressMessages(lapply(packages, FUN = function(x) {
     if (!require(x, character.only = TRUE)) {

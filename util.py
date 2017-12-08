@@ -181,7 +181,7 @@ def processVCF(args, inputvcf, subtypes_dict, par):
         eprint("----------------------------------")
         eprint("INDEXING SAMPLES")
         eprint("----------------------------------")
-        eprint("using file:")
+        eprint("Looking for sample IDs in:")
         eprint("\t", inputvcf)
 
     if args.groupfile:
