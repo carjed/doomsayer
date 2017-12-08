@@ -24,7 +24,7 @@ install:
   # Replace dep1 dep2 ... with your dependencies
   - conda env create -q -n test-environment python=$TRAVIS_PYTHON_VERSION -f env.yml
   - source activate test-environment
-  - python setup.py install
+  # - python setup.py install
   - R --quiet -f install.r
 
 script:
