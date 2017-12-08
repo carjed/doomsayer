@@ -198,22 +198,29 @@ args = parser.parse_args()
 ###############################################################################
 projdir = os.path.realpath(args.projectdir)
 
+if args.verbose:
+    eprint("----------------------------------")
+    eprint("PREPARING OUTPUT DIRECTORY")
+    eprint("----------------------------------")
+    eprint("All output files will be located in:")
+    eprint("\t", projdir)
+
 if not os.path.exists(args.projectdir):
     if args.verbose:
-        eprint("Creating output directory:", projdir)
+        eprint("\t", projdir, "does not exist--creating now")
     os.makedirs(args.projectdir)
-else:
-    if args.verbose:
-        eprint(projdir, "already exists")
-
-if args.verbose:
-    eprint("All output files will be located in ", projdir)
 
 ###############################################################################
 # index subtypes
 ###############################################################################
-eprint("indexing subtypes...") if args.verbose else None
+if args.verbose:
+    eprint("----------------------------------")
+    eprint("INDEXING SUBTYPES")
+    eprint("----------------------------------")
 subtypes_dict = indexSubtypes(args.length)
+
+if args.verbose:
+    eprint("DONE")
 
 ###############################################################################
 # Build M matrix from inputs
@@ -225,7 +232,7 @@ if args.mode == "vcf":
         par = False
         data = processVCF(args, args.input, subtypes_dict, par)
         M = data.M
-        samples = data.samples
+        samples = np.array([data.samples], dtype=str)
 
     elif(args.input.lower().endswith(('.txt'))):
         par = True
@@ -241,17 +248,17 @@ if args.mode == "vcf":
 
         for M_sub in results:
             M = np.add(M, M_sub)
-        samples = getSamplesVCF(args, vcf_list[1])
+        samples = np.array([getSamplesVCF(args, vcf_list[1])])
 
 elif args.mode == "agg":
     data = aggregateM(args.input, subtypes_dict)
     M = data.M
-    samples = data.samples
+    samples = np.array([data.samples], dtype=str)
 
 elif args.mode == "txt":
     data = processTxt(args, subtypes_dict)
     M = data.M
-    samples = data.samples
+    samples = np.array([data.samples], dtype=str)
 
 ###############################################################################
 # Write out M matrix if preparing for aggregation mode
@@ -262,6 +269,7 @@ if args.matrixname != "NMF_M_spectra":
             build the input matrix. Keep and drop lists will not be generated.
             """))
     if args.verbose:
+        eprint("----------------------------------")
         eprint("Saving M matrix (spectra counts) to:", args.matrixname)
 
     M_path = projdir + "/" + args.matrixname + ".txt"
@@ -276,14 +284,14 @@ else:
         i = 0
         for row in M:
             if sum(M[i]) < args.minsnvs:
-                lowsnv_samples.append(samples[i])
+                lowsnv_samples.append(samples.flatten()[i])
             else:
-                highsnv_samples.append(samples[i])
+                highsnv_samples.append(samples.flatten()[i])
             i += 1
 
         if len(lowsnv_samples) > 0:
             M = M[np.sum(M, axis=1)>=args.minsnvs,]
-            samples = highsnv_samples
+            samples = np.array([highsnv_samples])
             lowsnv_path = projdir + \
                 "/doomsayer_snvs_lt" + str(args.minsnvs) + ".txt"
             lowsnv_fh = open(lowsnv_path, "w")
@@ -291,23 +299,36 @@ else:
                 lowsnv_fh.write("%s\n" % sample)
             lowsnv_fh.close()
 
+
+    M_path = projdir + "/" + args.matrixname + ".txt"
+
     # M_f is the relative contribution of each subtype per sample
     M_f = M/(M.sum(axis=1)+1e-8)[:,None]
+    M_path_rates = projdir + "/NMF_M_spectra_rates.txt"
 
-    eprint("Writing M matrices and RMSE per sample") if args.verbose else None
-    M_path = projdir + "/" + args.matrixname + ".txt"
+    if args.verbose:
+        eprint("----------------------------------")
+        eprint("RUNNING NMF MODEL")
+        eprint("----------------------------------")
+        eprint("Writing subtype count matrix M to:")
+        eprint("\t", M_path)
     writeM(M, M_path, subtypes_dict, samples)
 
-    M_path_rates = projdir + "/NMF_M_spectra_rates.txt"
+    if args.verbose:
+        eprint("Writing normalized matrix M to:")
+        eprint("\t", M_path_rates)
     writeM(M_f, M_path_rates, subtypes_dict, samples)
 
     # M_err is N x K matrix of residual error profiles, used for RMSE calc
     M_err = np.subtract(M_f, np.mean(M_f, axis=0))
     M_rmse = np.sqrt(np.sum(np.square(M_err), axis=1)/M_err.shape[1])
     rmse_path = projdir + "/doomsayer_rmse.txt"
+
+    if args.verbose:
+        eprint("Writing RMSE per sample to:")
+        eprint("\t", M_path_rates)
     writeRMSE(M_rmse, rmse_path, samples)
 
-    eprint("Running NMF model") if args.verbose else None
     NMFdata = NMFRun(M_f, args, projdir, samples, subtypes_dict)
 
     # W matrix (contributions)
@@ -321,7 +342,7 @@ else:
     if args.filtermode == "none":
         eprint("No outlier detection will be performed")
     else:
-        eprint("Generating keep and drop lists") if args.verbose else None
+        eprint("generating keep and drop lists...") if args.verbose else None
         if args.filtermode == "nmf":
             colmeans = np.mean(NMFdata.W, axis=0)
             colstd = np.std(NMFdata.W, axis=0)
@@ -333,9 +354,9 @@ else:
             i=0
             for n in NMFdata.W:
                 if(np.greater(n, upper).any() or np.less(n, lower).any()):
-                    drop_samples.append(samples[i])
+                    drop_samples.append(samples.flatten()[i])
                 else:
-                    keep_samples.append(samples[i])
+                    keep_samples.append(samples.flatten()[i])
                 i += 1
 
         else:
@@ -347,13 +368,13 @@ else:
             drop_indices = kd_lists.drop_indices
 
         keep_path = projdir + "/doomsayer_keep.txt"
-        keep_fh = open(keep_path, "w")
+        keep_fh = open(keep_path, 'wt')
         for sample in keep_samples:
             keep_fh.write("%s\n" % sample)
         keep_fh.close()
 
         drop_path = projdir + "/doomsayer_drop.txt"
-        drop_fh = open(drop_path, "w")
+        drop_fh = open(drop_path, 'wt')
         for sample in drop_samples:
             drop_fh.write("%s\n" % sample)
         drop_fh.close()
@@ -378,12 +399,22 @@ else:
 ###############################################################################
 if args.filterout:
     if(args.mode == "vcf" and not(args.input.lower().endswith(('.txt')))):
-        eprint("Filtering input by drop list...") if args.verbose else None
+        if args.verbose:
+            eprint("----------------------------------")
+            eprint("Filtering input by drop list...")
+            eprint("----------------------------------")
         filterVCF(args.input, keep_samples)
+        if args.verbose:
+            eprint("DONE")
 
     elif args.mode =="txt":
-        eprint("Filtering input by drop list...") if args.verbose else None
+        if args.verbose:
+            eprint("----------------------------------")
+            eprint("Filtering input by drop list...")
+            eprint("----------------------------------")
         filterTXT(args.input, keep_samples)
+        if args.verbose:
+            eprint("DONE")
 
     else:
         eprint("Input not compatible with auto-filtering function")
@@ -393,6 +424,11 @@ if args.filterout:
 ###############################################################################
 if(args.report and args.matrixname == "NMF_M_spectra"):
 
+    if args.verbose:
+        eprint("----------------------------------")
+        eprint("GENERATING REPORT")
+        eprint("----------------------------------")
+
     template_src = sys.path[0] + "/report_templates/" + args.template + ".Rmd"
     template_dest = projdir + "/report.Rmd"
     shutil.copy(template_src, template_dest)
@@ -401,9 +437,13 @@ if(args.report and args.matrixname == "NMF_M_spectra"):
     cmd = "Rscript --vanilla generate_report.r " + projdir + "/config.yaml"
     if args.verbose:
         eprint("Rscript will run the following command:")
-        eprint(cmd)
+        eprint("\t", cmd)
     call(cmd, shell=True)
 
 stop = timeit.default_timer()
 tottime = round(stop - start, 2)
-eprint("Total runtime:", tottime, "seconds") if args.verbose else None
+
+if args.verbose:
+    eprint("----------------------------------")
+    eprint("Total runtime:", tottime, "seconds")
+    eprint("----------------------------------")

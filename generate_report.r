@@ -13,12 +13,12 @@ if(dir.exists(rstdir)){
 # check and load packages
 packages <- c("rmarkdown", "knitr")
 
-package.check <- lapply(packages, FUN = function(x) {
+package.check <- suppressMessages(lapply(packages, FUN = function(x) {
     if (!require(x, character.only = TRUE)) {
         install.packages(x, dependencies = TRUE)
         library(x, character.only = TRUE, silent=TRUE)
     }
-})
+}))
 
 # receive YAML config file name as argument
 cmd_args <- commandArgs(TRUE)

@@ -153,8 +153,12 @@ def getSamplesVCF(args, inputvcf):
 # Main function for parsing VCF
 ###############################################################################
 def processVCF(args, inputvcf, subtypes_dict, par):
-    eprint("Initializing reference genome...") if args.verbose else None
+    if args.verbose:
+        eprint("----------------------------------")
+        eprint("INITIALIZING REFERENCE GENOME")
+        eprint("----------------------------------")
     fasta_reader = Fasta(args.fastafile, read_ahead=1000000)
+    eprint("\tDONE") if args.verbose else None
     # record_dict = SeqIO.to_dict(SeqIO.parse(args.fastafile, "fasta"))
 
     # 'demo/input/keep.txt'
@@ -173,7 +177,12 @@ def processVCF(args, inputvcf, subtypes_dict, par):
     nbp = (args.length-1)//2
 
     # index samples
-    eprint("Indexing samples in", inputvcf, "...") if args.verbose else None
+    if args.verbose:
+        eprint("----------------------------------")
+        eprint("INDEXING SAMPLES")
+        eprint("----------------------------------")
+        eprint("Looking for sample IDs in:")
+        eprint("\t", inputvcf)
 
     if args.groupfile:
         all_samples = vcf_reader.samples
@@ -185,10 +194,14 @@ def processVCF(args, inputvcf, subtypes_dict, par):
     for i in range(len(samples)):
         samples_dict[samples[i]] = i
 
-    eprint(len(samples), "samples indexed") if args.verbose else None
+    if args.verbose:
+        eprint("DONE [", len(samples), "samples indexed ]")
 
     # Query records in VCF and build matrix
-    eprint("Parsing VCF records...") if args.verbose else None
+    if args.verbose:
+        eprint("----------------------------------")
+        eprint("PARSING VCF RECORDS")
+        eprint("----------------------------------")
     M = np.zeros((len(samples), len(subtypes_dict)))
     numsites_keep = 0
     numsites_skip = 0
@@ -207,10 +220,10 @@ def processVCF(args, inputvcf, subtypes_dict, par):
 
         # Filter by allele count, SNP status, and FILTER column
         # if len(record.ALT[0])==1:
-        if record.is_snp:
+        if record.is_snp and len(record.ALT)==1:
             # eprint("SNP check: PASS")
             acval = record.INFO['AC']
-            # eprint(record.POS, acval)
+#             eprint(record.POS, acval)
 
             if ((acval<=args.maxac or args.maxac==0) and record.FILTER is None):
                 # eprint(record.CHROM, record.POS, record.REF, record.ALT[0],
@@ -250,17 +263,19 @@ def processVCF(args, inputvcf, subtypes_dict, par):
                     numsites_skip += 1
 
                 if args.verbose:
-                    if (numsites_keep%10000==0):
-                        eprint("Processed", numsites_keep, "sites",
-                            "(Skipped", numsites_skip, "sites)")
+                    if (numsites_keep%100000==0):
+                        eprint("...", numsites_keep, "sites processed",
+                            "(", numsites_skip, "sites skipped)")
             else:
                 numsites_skip += 1
 
     if args.verbose:
+        eprint("----------------------------------")
+        eprint("VCF PROCESSING COMPLETE")
+        eprint("----------------------------------")
         eprint(numsites_keep, "sites kept")
         eprint(numsites_skip, "sites skipped")
 
-    vcf_reader.close()
     out = collections.namedtuple('Out', ['M', 'samples'])(M, samples)
 
     if par:
@@ -273,7 +288,9 @@ def processVCF(args, inputvcf, subtypes_dict, par):
 # CHR    POS    REF    ALT    SAMPLE_ID
 ###############################################################################
 def processTxt(args, subtypes_dict):
-    eprint("Initializing reference genome...") if args.verbose else None
+    if args.verbose:
+        eprint("----------------------------------")
+        eprint("Initializing reference genome...")
     fasta_reader = Fasta(args.fastafile, read_ahead=1000000)
 
     nbp = (args.length-1)//2
@@ -324,6 +341,9 @@ def processTxt(args, subtypes_dict):
         M = DataFrame(samples_dict).T.fillna(0).values
         samples = sorted(samples_dict)
 
+    if args.verbose:
+        eprint("...DONE")
+
     out = collections.namedtuple('Out', ['M', 'samples'])(M, samples)
     return out
 
@@ -347,7 +367,7 @@ def aggregateM(inputM, subtypes_dict):
     M_colnames = colnames + list(sorted(subtypes_dict.keys()))
     colrange = range(1,len(M_colnames))
 
-    if input.lower().endswith('nmf_m_spectra.txt'):
+    if inputM.lower().endswith('nmf_m_spectra.txt'):
         samples = getSamples(inputM)
         M = np.loadtxt(inputM, skiprows=1, usecols=colrange)
         M = M.astype(np.float)
@@ -401,10 +421,10 @@ def detectOutliers(M, samples, filtermode, threshold):
         M_err_d = np.divide(M_f, np.mean(M_f, axis=0))
         for row in M_err_d:
             if any(err > threshold for err in row):
-                drop_samples.append(samples[i])
+                drop_samples.append(samples.flatten()[i])
                 drop_indices.append(i)
             else:
-                keep_samples.append(samples[i])
+                keep_samples.append(samples.flatten()[i])
             i += 1
     elif filtermode == "chisq":
         i=0
@@ -414,10 +434,10 @@ def detectOutliers(M, samples, filtermode, threshold):
             exp_spectrum = mean_spectrum*sum(row)/sum(mean_spectrum)
             pval = chisquare(row, f_exp=exp_spectrum)[1]
             if pval < 0.05/M.shape[0]:
-                drop_samples.append(samples[i])
+                drop_samples.append(samples.flatten()[i])
                 drop_indices.append(i)
             else:
-                keep_samples.append(samples[i])
+                keep_samples.append(samples.flatten()[i])
             i += 1
     elif filtermode == "sd":
         i=0
@@ -427,10 +447,10 @@ def detectOutliers(M, samples, filtermode, threshold):
 
         for row in M_f:
             if np.greater(row, std_threshold).any():
-                drop_samples.append(samples[i])
+                drop_samples.append(samples.flatten()[i])
                 drop_indices.append(i)
             else:
-                keep_samples.append(samples[i])
+                keep_samples.append(samples.flatten()[i])
             i += 1
 
     out_handles = ['keep_samples',
@@ -505,7 +525,8 @@ def writeM(M, M_path, subtypes_dict, samples):
     M_colnames = colnames + list(sorted(subtypes_dict.keys()))
 
     # add ID as first column
-    M_fmt = np.concatenate((np.array([samples]).T, M.astype('|S20')), axis=1)
+    #M_fmt = np.concatenate((np.array([samples]).T, M.astype('|S20')), axis=1)
+    M_fmt = np.concatenate((samples.T, M.astype('|S20')), axis=1)
 
     # add header
     M_fmt = np.concatenate((np.array([M_colnames]), M_fmt), axis=0)
@@ -520,7 +541,7 @@ def writeW(W, W_path, samples):
     colnames = ["ID"]
 
     # add ID as first column
-    W_fmt = np.concatenate((np.array([samples]).T, W.astype('|S20')), axis=1)
+    W_fmt = np.concatenate((samples.T, W.astype('|S20')), axis=1)
     num_samples, num_sigs = W.shape
 
     # add header
@@ -550,14 +571,10 @@ def writeH(H, H_path, subtypes_dict):
 # write RMSE per sample
 ###############################################################################
 def writeRMSE(M_rmse, rmse_path, samples):
-    rmse = open(rmse_path, "w")
-    i = 0
-    for val in np.nditer(M_rmse):
-        # if val > 0.002:
-        line = str(samples[i]) + "\t" + str(val) + "\n"
-        rmse.write("%s" % line)
-        i += 1
-    rmse.close()
+	sample_col = samples.T
+	rmse_col = np.array([M_rmse]).T
+	rmse_arr = np.column_stack((sample_col, rmse_col))
+	np.savetxt(rmse_path, rmse_arr, delimiter='\t', fmt="%s")
 
 ###############################################################################
 # filter VCF input by kept samples
@@ -574,8 +591,6 @@ def filterVCF(inputvcf, keep_samples):
             v.INFO['AN'] = str(2*v.num_called)
             v.INFO['DP'] = str(np.sum(v.format('DP')))
             print(str(v).rstrip())
-
-    vcf.close()
 
 ###############################################################################
 # filter txt input by kept samples

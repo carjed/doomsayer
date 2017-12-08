@@ -1,5 +1,7 @@
 ```{r sigloads, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 14, fig.width = 14}
+
 # signature loadings
+
 corrm <- sig_loads %>%
   gather(var, val, 2:ncol(sig_loads)) %>%
   spread(Sig, val) %>%
