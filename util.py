@@ -146,7 +146,6 @@ def getSamplesVCF(args, inputvcf):
     else:
         samples = vcf_reader.samples
 
-    vcf_reader.close()
     return samples
 
 ###############################################################################
