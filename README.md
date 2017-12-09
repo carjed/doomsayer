@@ -1,6 +1,6 @@
 <!-- # DOOMSAYER -->
 
-![](assets/doomsayer_logo.png)
+![](assets/doomsayer_logo2.png)
 
 [![DOI](https://zenodo.org/badge/95728792.svg?style=flat)](https://zenodo.org/badge/latestdoi/95728792) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg?style=flat)](https://opensource.org/licenses/MIT)  [![Binder](https://img.shields.io/badge/launch-binder-d06681.svg?style=flat)](https://mybinder.org/v2/gh/carjed/doomsayer/master) [![Build Status](https://travis-ci.org/carjed/doomsayer.svg?style=flat?branch=master)](https://travis-ci.org/carjed/doomsayer)
 
