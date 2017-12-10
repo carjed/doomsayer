@@ -1,7 +1,0 @@
-README
-setup.py
-doomsayer.egg-info/PKG-INFO
-doomsayer.egg-info/SOURCES.txt
-doomsayer.egg-info/dependency_links.txt
-doomsayer.egg-info/requires.txt
-doomsayer.egg-info/top_level.txt
