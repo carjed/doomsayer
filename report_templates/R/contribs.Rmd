@@ -2,9 +2,6 @@
 
 contribution_plot <- sig_contribs2 %>%
   filter(ID %in% drop_ids$V1)
-  # spread(signature, contribution) %>%
-  #   mutate(ID=factor(ID, levels=levels(rmse_plot$ID)))
-
 
 pc <- ggplot(contribution_plot,
     aes(x=factor(ID), y=contribution, fill=signature))+
