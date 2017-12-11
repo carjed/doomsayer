@@ -1,15 +1,18 @@
 ```{r sigs, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 12, fig.width = 10}
 
 contribution_plot <- sig_contribs2 %>%
-  filter(ID %in% rmse_plot$ID) %>%
-  spread(signature, contribution) %>%
-    mutate(ID=factor(ID, levels=levels(rmse_plot$ID)))
+  filter(ID %in% drop_ids$V1)
+  # spread(signature, contribution) %>%
+  #   mutate(ID=factor(ID, levels=levels(rmse_plot$ID)))
 
-pc <- suppressMessages(plot_ly(contribution_plot, x=~S1, y=~ID, type = 'bar', orientation = 'h', marker=list(color=viridis(3)[1])) %>%
-  add_trace(x = ~S2, marker=list(color=viridis(3)[2])) %>%
-    add_trace(x = ~S3, marker=list(color=viridis(3)[3])) %>%
-  layout(barmode = 'stack',
-    showlegend = FALSE))
 
-pc
+pc <- ggplot(contribution_plot,
+    aes(x=factor(ID), y=contribution, fill=signature))+
+  geom_bar(stat="identity", position="stack")+
+  scale_fill_viridis(discrete=TRUE)+
+  facet_wrap(~maxgp, scales="free_x")+
+  theme_bw()+
+  theme(axis.text.x=element_text(angle=90))
+
+ggplotly(pc)
 ```

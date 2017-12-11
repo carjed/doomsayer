@@ -2,13 +2,13 @@
 
 # signature loadings
 
-corrm <- sig_loads %>%
-  gather(var, val, 2:ncol(sig_loads)) %>%
-  spread(Sig, val) %>%
-  dplyr::select(-var) %>%
-  correlate
-
-corrm
+# corrm <- sig_loads %>%
+#   gather(var, val, 2:ncol(sig_loads)) %>%
+#   spread(Sig, val) %>%
+#   dplyr::select(-var) %>%
+#   correlate
+#
+# corrm
 
 orderedcatsnc <- c("A>G", "A>C", "A>T",
   "C>T", "C>A", "C>G",
