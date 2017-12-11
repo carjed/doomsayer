@@ -93,7 +93,7 @@ For more flexible deployment options, Doomsayer is available as a Docker contain
 docker run -d --name doomsayer \
   -v /path/to/local/data:/data \ # map directory containing input data
   -p 8888:8888 \ # expose jupyter notebook on port 8888
-  start-notebook.sh --NotebookApp.token='' \
+  start-notebook.sh --NotebookApp.token='' \ # start with token disabled
   carjed/doomsayer
 ```
 
