@@ -254,7 +254,9 @@ def processVCF(args, inputvcf, subtypes_dict, par):
                             ind = samples.index(sample_gp)
                             M[ind,st] += 1
                     else:
-                        M[:,st] = M[:,st]+record.gt_types
+                        gt_new = record.gt_types
+                        gt_new[gt_new == 3] = 0
+                        M[:,st] = M[:,st]+gt_new
 
                     numsites_keep += 1
 
