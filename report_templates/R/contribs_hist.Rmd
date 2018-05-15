@@ -1,0 +1,20 @@
+```{r whist, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 8, fig.width = 10}
+p<-sig_contribs %>% 
+  gather(signature, value, -ID) %>% 
+  ggplot(aes(x=value, fill=signature))+
+    geom_histogram(bins=500)+
+    facet_grid(signature~.)+
+    scale_fill_viridis(discrete=TRUE)+
+    theme_bw()+
+    theme(legend.position="none")
+
+sggplotly(p)
+
+p2 <- sig_contribs %>% 
+    dplyr::select(-ID) %>%
+    ggpairs()+
+    theme_bw()
+
+sggplotly(p2)
+
+```

@@ -11,5 +11,5 @@ pc <- ggplot(contribution_plot,
   theme_bw()+
   theme(axis.text.x=element_text(angle=90))
 
-ggplotly(pc)
+sggplotly(pc)
 ```

@@ -22,9 +22,18 @@ body {
 ```{r child="R/setup.Rmd"}
 ```
 
+### Component value distributions
+
+This plot shows the distribution of scores for each principal component (if using PCA) or NMF component (if using NMF) across the N individuals in your sample.
+
+If any component shows clear evidence of multimodality, consider changing the default outlier detection from `--f ee` (elliptic envelope) to either `--f lof` (local outlier factor) or `--f if` (isolation forest)
+
+```{r child="R/contribs_hist.Rmd"}
+```
+
 ### Error profile heatmap
 
-Left panel shows root mean squared error (RMSE) of each outlier sample's mutation spectrum. Right panel shows the fold-difference in contribution per subtype for each outlier. Fold-differences are calculated relative to the mean contribution of that subtype across all samples.
+Fold-difference in contribution per subtype for each outlier. Fold-differences are calculated relative to the mean contribution of that subtype across all samples. Scale is truncated to +/-3-fold difference
 
 ```{r child="R/heatmap.Rmd"}
 ```
@@ -47,11 +56,4 @@ Describes how each mutation subtype is loaded into the r signatures
 
 
 ```{r child="R/sigloads_bar.Rmd"}
-```
-
-### Signature contributions per sample (W matrix)
-
-Proportion each signature contributes to the mutation spectrum in each individual sample
-
-```{r child="R/contribs.Rmd"}
 ```

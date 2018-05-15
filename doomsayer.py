@@ -178,7 +178,7 @@ parser.add_argument("-r", "--rank",
                     default=0)
 
 # filtermode_opts = ["fold", "sd", "chisq", "nmf", "pca", "none"]
-filtermode_opts = ["ee", "lof", "if", "any2", "all", "none"]
+filtermode_opts = ["ee", "lof", "if", "any", "any2", "all", "none"]
 parser.add_argument("-F", "--filtermode",
                     help="Method for detecting outliers. Must be one of \
                         {"+", ".join(filtermode_opts)+"}. \
@@ -231,16 +231,16 @@ parser.add_argument("-T", "--template",
 #-----------------------------------------------------------------------------
 args = parser.parse_args()
 
+# ignore warnings in sklearn 0.19.1 about covariance matrix when performing 
+# outlier detection using elliptic envelope
+# see https://github.com/scikit-learn/scikit-learn/issues/8811
+# https://stackoverflow.com/questions/32612180
+warnings.filterwarnings("ignore", category=RuntimeWarning)
+
 if args.verbose:
     loglev = 'DEBUG' 
 else:
     loglev = 'INFO'
-    # ignore sklearn warnings about covariance matrix when performing outlier
-    # detection using elliptic envelope
-    # see https://github.com/scikit-learn/scikit-learn/issues/8811
-    # https://stackoverflow.com/questions/32612180
-    warnings.filterwarnings("ignore", category=RuntimeWarning)
-    
     # ignore warning about covariance matrix not being full rank
     warnings.filterwarnings("ignore", category=UserWarning)    
     

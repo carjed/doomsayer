@@ -487,69 +487,6 @@ def aggregateM(inputM, subtypes_dict):
     return out
 
 ###############################################################################
-# Generate keep/drop lists
-###############################################################################
-def detectOutliers(M, samples, filtermode, threshold, projdir):
-
-    # outlier detection
-    clf = LocalOutlierFactor(
-        n_neighbors=20, 
-        contamination=threshold)
-    y_pred = clf.fit_predict(M)
-    
-    cee = EllipticEnvelope(
-        contamination=threshold)
-    cee.fit(M)
-    scores_pred = cee.decision_function(M)
-    y_pred2 = cee.predict(M)
-    
-    cif = IsolationForest(
-        contamination=threshold)
-    cif.fit(M)
-    scores_pred = cif.decision_function(M)
-    y_pred3 = cif.predict(M)
-    
-    outlier_methods = ["lof", "ee", "if"]
-    ol_df = DataFrame(np.column_stack((y_pred, y_pred2, y_pred3)),
-               index=samples[0].tolist(),
-               columns=outlier_methods)
-
-    keep_samples, drop_samples, drop_indices = ([] for i in range(3))
-
-    if filtermode == "any2":
-        dft = ol_df.sum(axis=1)
-        dft = DataFrame(dft)
-        drop_samples = dft[dft[0] <= -1].index.values.tolist()
-        keep_samples = dft[dft[0] > -1].index.values.tolist()
-        
-        drop_bool = np.isin(samples[0], drop_samples)
-        drop_indices = np.where(drop_bool)[0].tolist()
-        
-    elif filtermode == "all":
-        dft = ol_df.sum(axis=1)
-        dft = DataFrame(dft)
-        drop_samples = dft[dft[0] == -3].index.values.tolist()
-        keep_samples = dft[dft[0] != -3].index.values.tolist()
-        
-        drop_bool = np.isin(samples[0], drop_samples)
-        drop_indices = np.where(drop_bool)[0].tolist()
-        
-    elif filtermode in outlier_methods:
-        drop_samples = ol_df[ol_df[filtermode] == -1].index.values.tolist()
-        keep_samples = ol_df[ol_df[filtermode] == 1].index.values.tolist()
-        
-        drop_bool = np.isin(samples[0], drop_samples)
-        drop_indices = np.where(drop_bool)[0].tolist()
-        
-    out_handles = ['keep_samples',
-        'drop_samples',
-        'drop_indices']
-
-    out = collections.namedtuple('Out', out_handles) \
-        (keep_samples, drop_samples, drop_indices)
-    return out
-
-###############################################################################
 # run PCA on input matrix
 ###############################################################################
 def PCARun(M_run, rank):
@@ -576,7 +513,6 @@ def PCARun(M_run, rank):
             if evar - evar_prev < 0.05:
                 rankout = i-1
                 evar = evar_prev
-                # print(i-1, evar_prev)
                 break
             evar_prev = evar
             i += 1
@@ -673,6 +609,65 @@ def writeH(H, H_path, subtypes_dict):
                 columns=list(sorted(subtypes_dict.keys())))
 
     H_out.to_csv(H_path, index_label="Sig", sep="\t")
+
+###############################################################################
+# Generate keep/drop lists
+###############################################################################
+def detectOutliers(M, samples, filtermode, threshold, projdir):
+
+    # outlier detection
+    clf = LocalOutlierFactor(
+        n_neighbors=20, 
+        contamination=threshold)
+    y_pred = clf.fit_predict(M)
+    
+    cee = EllipticEnvelope(
+        contamination=threshold)
+    cee.fit(M)
+    scores_pred = cee.decision_function(M)
+    y_pred2 = cee.predict(M)
+    
+    cif = IsolationForest(
+        contamination=threshold)
+    cif.fit(M)
+    scores_pred = cif.decision_function(M)
+    y_pred3 = cif.predict(M)
+    
+    outlier_methods = ["lof", "ee", "if"]
+    ol_df = DataFrame(np.column_stack((y_pred, y_pred2, y_pred3)),
+               index=samples[0].tolist(),
+               columns=outlier_methods)
+
+    keep_samples, drop_samples, drop_indices = ([] for i in range(3))
+
+    omnibus_methods = ["any", "any2", "all"]
+    if filtermode in omnibus_methods:
+        dft = ol_df.sum(axis=1)
+        dft = DataFrame(dft)
+        if filtermode == "any":
+            drop_samples = dft[dft[0] != 3].index.values.tolist()
+            keep_samples = dft[dft[0] == 3].index.values.tolist()
+        elif filtermode == "any2":
+            drop_samples = dft[dft[0] <= -1].index.values.tolist()
+            keep_samples = dft[dft[0] > -1].index.values.tolist()
+        elif filtermode == "all":
+            drop_samples = dft[dft[0] == -3].index.values.tolist()
+            keep_samples = dft[dft[0] != -3].index.values.tolist()
+        
+    elif filtermode in outlier_methods:
+        drop_samples = ol_df[ol_df[filtermode] == -1].index.values.tolist()
+        keep_samples = ol_df[ol_df[filtermode] == 1].index.values.tolist()
+        
+    drop_bool = np.isin(samples[0], drop_samples)
+    drop_indices = np.where(drop_bool)[0].tolist()
+        
+    out_handles = ['keep_samples',
+        'drop_samples',
+        'drop_indices']
+
+    out = collections.namedtuple('Out', out_handles) \
+        (keep_samples, drop_samples, drop_indices)
+    return out
 
 ###############################################################################
 # write yaml config for diagnostic reports
