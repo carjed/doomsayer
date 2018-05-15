@@ -16,6 +16,9 @@ import re
 from pandas import *
 import numpy as np
 
+from logging import StreamHandler, DEBUG, getLogger as realGetLogger, Formatter
+from colorama import Fore, Back, init, Style
+
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
@@ -51,6 +54,61 @@ def restricted_float(x):
     if x < 1.0:
         raise argparse.ArgumentTypeError("%r must be greater than 1"%(x,))
     return x
+
+###############################################################################
+# Configure color stream handler
+# http://uran198.github.io/en/python/2016/07/12/colorful-python-logging.html
+# https://gist.github.com/jonaprieto/a61d9cade3ba19487f98
+###############################################################################
+
+class ColourStreamHandler(StreamHandler):
+
+    """ A colorized output SteamHandler """
+
+    # Some basic colour scheme defaults
+    colours = {
+        'DEBUG': Fore.CYAN,
+        'INFO': Fore.GREEN,
+        'WARN': Fore.YELLOW,
+        'WARNING': Fore.YELLOW,
+        'ERROR': Fore.RED,
+        'CRIT': Back.RED + Fore.WHITE,
+        'CRITICAL': Back.RED + Fore.WHITE
+    }
+
+    def emit(self, record):
+        try:
+            message = self.format(record)
+            self.stream.write(self.colours[record.levelname] + message + Style.RESET_ALL)
+            self.stream.write(getattr(self, 'terminator', '\n'))
+            self.flush()
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except:
+            self.handleError(record)
+
+###############################################################################
+# configure logger
+###############################################################################
+def getLogger(name=None, fmt='%(levelname)s : %(message)s', level='DEBUG'):
+    """ Get and initialize a colourised logging instance if the system supports
+    it as defined by the log.has_colour
+    :param name: Name of the logger
+    :type name: str
+    :param fmt: Message format to use
+    :type fmt: str
+    :return: Logger instance
+    :rtype: Logger
+    """
+    log = realGetLogger(name)
+    # Only enable colour if support was loaded properly
+    handler = ColourStreamHandler() 
+    handler.setLevel(level)
+    handler.setFormatter(Formatter(fmt))
+    log.addHandler(handler)
+    log.setLevel(level)
+    log.propagate = 0  # Don't bubble up to the root logger
+    return log
 
 ###############################################################################
 # collapse mutation types per strand symmetry
@@ -428,101 +486,80 @@ def detectOutliers(M, samples, filtermode, threshold, projdir):
     # M_f = M/(M.sum(axis=1)+1e-8)[:,None]
     M_f = (M+1e-4)/(M.sum(axis=1))[:,None]
 
+    # number of components to evaluate
+    ncshow = 5
+    pct_outlier = 0.05
+    
+    # standarize input matrix
+    X_std = StandardScaler().fit_transform(M_f)
+    
+    # run PCA
+    ncomponents = M_f.shape[1]
+    pca = PCA(n_components=ncomponents)
+    X_pca = pca.fit_transform(X_std)
+
+    # outlier detection
+    clf = LocalOutlierFactor(
+        n_neighbors=20, 
+        contamination=pct_outlier)
+    y_pred = clf.fit_predict(X_pca)
+    
+    cee = EllipticEnvelope(
+        contamination=pct_outlier)
+    cee.fit(X_pca)
+    scores_pred = cee.decision_function(X_pca)
+    y_pred2 = cee.predict(X_pca)
+    
+    cif = IsolationForest(
+        contamination=pct_outlier)
+    cif.fit(X_pca)
+    scores_pred = cif.decision_function(X_pca)
+    y_pred3 = cif.predict(X_pca)
+    
+    ol_df = DataFrame(np.column_stack((y_pred, y_pred2, y_pred3)),
+               index=samples[0].tolist(),
+               columns=["LOF", "EE", "IF"])
+
     keep_samples = []
     drop_samples = []
     drop_indices = []
     # lowsnv_samples = []
 
-    if filtermode == "fold":
-        i=0
-        M_err_d = np.divide(M_f, np.mean(M_f, axis=0))
-        for row in M_err_d:
-            if any(err > threshold for err in row):
-                drop_samples.append(samples.flatten()[i])
-                drop_indices.append(i)
-            else:
-                keep_samples.append(samples.flatten()[i])
-            i += 1
-    elif filtermode == "chisq":
-        i=0
-        mean_spectrum = np.mean(M, axis=0)
-        # n_pass = sum(np.sum(M, axis=1) > minsnvs)
-        for row in M:
-            exp_spectrum = mean_spectrum*sum(row)/sum(mean_spectrum)
-            pval = chisquare(row, f_exp=exp_spectrum)[1]
-            if pval < 0.05/M.shape[0]:
-                drop_samples.append(samples.flatten()[i])
-                drop_indices.append(i)
-            else:
-                keep_samples.append(samples.flatten()[i])
-            i += 1
-    elif filtermode == "sd":
-        i=0
-        mean_spectrum = np.mean(M_f, axis=0)
-        spec_std = np.std(M_f, axis=0, ddof=1)
-        std_threshold = mean_spectrum + threshold*spec_std
-
-        for row in M_f:
-            if np.greater(row, std_threshold).any():
-                drop_samples.append(samples.flatten()[i])
-                drop_indices.append(i)
-            else:
-                keep_samples.append(samples.flatten()[i])
-            i += 1
-    elif filtermode == "pca":
-        # number of components to evaluate
-        ncshow = 5
-        pct_outlier = 0.05
-        
-        # standarize input matrix
-        X_std = StandardScaler().fit_transform(M_f)
-        
-        # run PCA
-        ncomponents = M_f.shape[1]
-        pca = PCA(n_components=ncomponents)
-        X_pca = pca.fit_transform(X_std)
-        
-        
-        # cf.set_config_file(offline=True, world_readable=True, theme='pearl')
-
-        # comp_df = DataFrame(data=X_pca,
-        #                  columns=["component"+str(item) for item in range(1,ncomponents+1)])
-        
-        # comp_df_first = comp_df.iloc[:,:ncshow]
-        
-        # fig = comp_df_first.iplot(kind='histogram', 
-        #     subplots=True, 
-        #     shape=(ncshow, 1), 
-        #     filename=projdir + "/" + "component_hist.html")
-            
-        # # fig = df.iplot(kind='bar', barmode='stack', asFigure=True)
-        # plot(fig, filename=projdir + "/" + "component_hist.html")
-        
-        
-        # outlier detection
-        clf = LocalOutlierFactor(
-            n_neighbors=20, 
-            contamination=pct_outlier)
-        y_pred = clf.fit_predict(X_pca)
-        
-        cee = EllipticEnvelope(
-            contamination=pct_outlier)
-        cee.fit(X_pca)
-        scores_pred = cee.decision_function(X_pca)
-        y_pred2 = cee.predict(X_pca)
-        
-        cif = IsolationForest(
-            contamination=pct_outlier)
-        cif.fit(X_pca)
-        scores_pred = cif.decision_function(X_pca)
-        y_pred3 = cif.predict(X_pca)
-        
-        ol_df = DataFrame(np.column_stack((y_pred, y_pred2, y_pred3)),
-                   index=samples[0].tolist(),
-                   columns=["LOF", "EE", "IF"])
-        
+    if filtermode == "ee":
         drop_samples = ol_df[ol_df["EE"] == -1].index.values.tolist()
         keep_samples = ol_df[ol_df["EE"] == 1].index.values.tolist()
+        
+        drop_bool = np.isin(samples[0], drop_samples)
+        drop_indices = np.where(drop_bool)[0].tolist()
+        
+    elif filtermode == "lof":
+        drop_samples = ol_df[ol_df["LOF"] == -1].index.values.tolist()
+        keep_samples = ol_df[ol_df["LOF"] == 1].index.values.tolist()
+        
+        drop_bool = np.isin(samples[0], drop_samples)
+        drop_indices = np.where(drop_bool)[0].tolist()
+        
+    elif filtermode == "if":
+        drop_samples = ol_df[ol_df["IF"] == -1].index.values.tolist()
+        keep_samples = ol_df[ol_df["IF"] == 1].index.values.tolist()
+        
+        drop_bool = np.isin(samples[0], drop_samples)
+        drop_indices = np.where(drop_bool)[0].tolist()
+
+    elif filtermode == "any2":
+        dft = ol_df.sum(axis=1)
+        dft = DataFrame(dft)
+        drop_samples = dft[dft[0] <= -1].index.values.tolist()
+        keep_samples = dft[dft[0] > -1].index.values.tolist()
+        
+        drop_bool = np.isin(samples[0], drop_samples)
+        drop_indices = np.where(drop_bool)[0].tolist()
+        
+    elif filtermode == "all":
+        dft = ol_df.sum(axis=1)
+        dft = DataFrame(dft)
+        drop_samples = dft[dft[0] == -3].index.values.tolist()
+        keep_samples = dft[dft[0] != -3].index.values.tolist()
         
         drop_bool = np.isin(samples[0], drop_samples)
         drop_indices = np.where(drop_bool)[0].tolist()

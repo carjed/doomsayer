@@ -9,6 +9,7 @@ sys.path.append(os.getcwd())
 import shutil
 import textwrap
 import argparse
+
 import itertools
 import timeit
 import time
@@ -28,7 +29,9 @@ num_cores = multiprocessing.cpu_count()
 
 parser = argparse.ArgumentParser()
 
+#-----------------------------------------------------------------------------
 # Input options
+#-----------------------------------------------------------------------------
 mode_opts = ["vcf", "agg", "txt"]
 parser.add_argument("-M", "--mode",
                     help="Mode for parsing input. Must be one of \
@@ -69,7 +72,9 @@ parser.add_argument("-g", "--groupfile",
                     metavar='',
                     type=str)
 
-# Filtering options
+#-----------------------------------------------------------------------------
+# Pre-filtering options
+#-----------------------------------------------------------------------------
 parser.add_argument("-s", "--samplefile",
                     help="file with sample IDs to include (one per line)",
                     nargs='?',
@@ -92,7 +97,9 @@ parser.add_argument("-X", "--maxac",
                     metavar='',
                     default=1)
 
+#-----------------------------------------------------------------------------
 # Output options
+#-----------------------------------------------------------------------------
 parser.add_argument("-p", "--projectdir",
                     help="directory to store output files \
                         (do NOT include a trailing '/')",
@@ -102,11 +109,11 @@ parser.add_argument("-p", "--projectdir",
                     default="doomsayer_output")
 
 parser.add_argument("-m", "--matrixname",
-                    help="custom filename for M matrix [without extension]",
+                    help="filename prefix for M matrix [without extension]",
                     nargs='?',
                     type=str,
                     metavar='',
-                    default="NMF_M_spectra")
+                    default="subtype_count_matrix")
 
 parser.add_argument("-o", "--filterout",
                     help="in VCF or plain text modes, re-reads input \
@@ -116,9 +123,21 @@ parser.add_argument("-o", "--filterout",
                         the doomsayer.py command",
                     action="store_true")
 
+#-----------------------------------------------------------------------------
 # Outlier detection options
-filtermode_opts = ["fold", "sd", "chisq", "nmf", "pca", "none"]
+#-----------------------------------------------------------------------------
+decomp_opts = ["nmf", "pca"]
+parser.add_argument("-d", "--decomp", 
+                    help="mode for matrix decomposition. Must be one of \
+                        {"+", ".join(decomp_opts)+"}",
+                    nargs='?',
+                    type=str,
+                    choices=decomp_opts,
+                    metavar='',
+                    default="pca")
 
+# filtermode_opts = ["fold", "sd", "chisq", "nmf", "pca", "none"]
+filtermode_opts = ["ee", "lof", "if", "any2", "all", "none"]
 parser.add_argument("-F", "--filtermode",
                     help="Method for detecting outliers. Must be one of \
                         {"+", ".join(filtermode_opts)+"}",
@@ -126,7 +145,7 @@ parser.add_argument("-F", "--filtermode",
                     type=str,
                     choices=filtermode_opts,
                     metavar='',
-                    default="pca")
+                    default="ee")
 
 parser.add_argument("-t", "--threshold",
                     help="threshold for fold-difference RMSE cutoff, used to \
@@ -160,7 +179,9 @@ parser.add_argument("-l", "--length",
                     metavar='',
                     default=3)
 
+#-----------------------------------------------------------------------------
 # Report options
+#-----------------------------------------------------------------------------
 parser.add_argument("-R", "--report",
                     help="automatically generates an HTML-formatted report in \
                         R.",
@@ -177,7 +198,9 @@ parser.add_argument("-T", "--template",
                     metavar='',
                     default="diagnostics")
 
-# Miscellaneous options
+#-----------------------------------------------------------------------------
+# Runtime control
+#-----------------------------------------------------------------------------
 parser.add_argument("-c", "--cpus",
                     help="number of CPUs. Must be integer value between 1 \
                         and "+str(num_cores),
@@ -191,36 +214,31 @@ parser.add_argument("-v", "--verbose",
                     help="Enable verbose logging",
                     action="store_true")
 
+#-----------------------------------------------------------------------------
+# parse args and configure logs
+#-----------------------------------------------------------------------------
 args = parser.parse_args()
+
+loglev = 'DEBUG' if args.verbose else 'WARNING'
+log = getLogger('doomsayer_log', level=loglev)
 
 ###############################################################################
 # Initialize project directory
 ###############################################################################
 projdir = os.path.realpath(args.projectdir)
 
-if args.verbose:
-    eprint("----------------------------------")
-    eprint("PREPARING OUTPUT DIRECTORY")
-    eprint("----------------------------------")
-    eprint("All output files will be located in:")
-    eprint("\t", projdir)
-
 if not os.path.exists(args.projectdir):
-    if args.verbose:
-        eprint("\t", projdir, "does not exist--creating now")
+    log.warn(projdir + "does not exist--creating now")
     os.makedirs(args.projectdir)
+else:
+    log.debug("All output files will be located in: " + projdir)
 
 ###############################################################################
 # index subtypes
 ###############################################################################
-if args.verbose:
-    eprint("----------------------------------")
-    eprint("INDEXING SUBTYPES")
-    eprint("----------------------------------")
 subtypes_dict = indexSubtypes(args.length)
-
-if args.verbose:
-    eprint("DONE")
+log.debug("subtypes indexed:")
+log.debug(subtypes_dict)
 
 ###############################################################################
 # Build M matrix from inputs
@@ -263,17 +281,16 @@ elif args.mode == "txt":
 ###############################################################################
 # Write out M matrix if preparing for aggregation mode
 ###############################################################################
-if args.matrixname != "NMF_M_spectra":
-    eprint(textwrap.dedent("""\
+if args.matrixname != "subtype_count_matrix":
+    log.warning(textwrap.dedent("""\
             You are running with the --matrixname option. Doomsayer will only
             build the input matrix. Keep and drop lists will not be generated.
             """))
-    if args.verbose:
-        eprint("----------------------------------")
-        eprint("Saving M matrix (spectra counts) to:", args.matrixname)
 
     M_path = projdir + "/" + args.matrixname + ".txt"
     writeM(M, M_path, subtypes_dict, samples)
+    
+    log.debug("M matrix (spectra counts) saved to: " + M_path)
 
 else:
     # First drop any samples that do not contain enough SNVs
@@ -299,50 +316,40 @@ else:
                 lowsnv_fh.write("%s\n" % sample)
             lowsnv_fh.close()
 
-
     M_path = projdir + "/" + args.matrixname + ".txt"
 
     # M_f is the relative contribution of each subtype per sample
     M_f = M/(M.sum(axis=1)+1e-8)[:,None]
-    M_path_rates = projdir + "/NMF_M_spectra_rates.txt"
+    M_f_path = projdir + "/" + args.matrixname + "_spectra.txt"
 
-    if args.verbose:
-        eprint("----------------------------------")
-        eprint("RUNNING NMF MODEL")
-        eprint("----------------------------------")
-        eprint("Writing subtype count matrix M to:")
-        eprint("\t", M_path)
     writeM(M, M_path, subtypes_dict, samples)
-
-    if args.verbose:
-        eprint("Writing normalized matrix M to:")
-        eprint("\t", M_path_rates)
-    writeM(M_f, M_path_rates, subtypes_dict, samples)
+    writeM(M_f, M_f_path, subtypes_dict, samples)
+    log.debug("M matrix (spectra counts) saved to: " + M_path)
+    log.debug("M_f matrix (scaled spectra counts) saved to: " + M_f_path)
 
     # M_err is N x K matrix of residual error profiles, used for RMSE calc
     M_err = np.subtract(M_f, np.mean(M_f, axis=0))
     M_rmse = np.sqrt(np.sum(np.square(M_err), axis=1)/M_err.shape[1])
     rmse_path = projdir + "/doomsayer_rmse.txt"
 
-    if args.verbose:
-        eprint("Writing RMSE per sample to:")
-        eprint("\t", M_path_rates)
     writeRMSE(M_rmse, rmse_path, samples)
+    log.debug("RMSE per sample saved to: " + rmse_path)
 
     NMFdata = NMFRun(M_f, args, projdir, samples, subtypes_dict)
 
     # W matrix (contributions)
     W_path = projdir + "/NMF_W_sig_contribs.txt"
     writeW(NMFdata.W, W_path, samples)
+    log.debug("W matrix saved to: " + W_path)
 
     # H matrix (loadings)
     H_path = projdir + "/NMF_H_sig_loads.txt"
     writeH(NMFdata.H, H_path, subtypes_dict)
+    log.debug("H matrix saved to: " + H_path)
 
     if args.filtermode == "none":
-        eprint("No outlier detection will be performed")
+        log.warning("No outlier detection will be performed")
     else:
-        eprint("generating keep and drop lists...") if args.verbose else None
         if args.filtermode == "nmf":
             colmeans = np.mean(NMFdata.W, axis=0)
             colstd = np.std(NMFdata.W, axis=0)
@@ -372,78 +379,64 @@ else:
         for sample in keep_samples:
             keep_fh.write("%s\n" % sample)
         keep_fh.close()
+        log.debug("Kept samples saved to: " + keep_path)
+        
 
         drop_path = projdir + "/doomsayer_drop.txt"
         drop_fh = open(drop_path, 'wt')
         for sample in drop_samples:
             drop_fh.write("%s\n" % sample)
         drop_fh.close()
+        
+        log.debug("Outlier samples saved to: " + drop_path)
 
         if len(drop_samples) > 0:
-            if args.verbose:
-                eprint(len(drop_samples), "potential outliers found.")
+            log.info(str(len(drop_samples)) + " potential outliers found")
 
-    yaml = open(projdir + "/config.yaml","w+")
+    yaml_path = projdir + "/config.yaml"
+    yaml = open(yaml_path, "w+")
     print("# Config file for doomsayer_diagnostics.r", file=yaml)
     print("keep_path: " + projdir + "/doomsayer_keep.txt", file=yaml)
     print("drop_path: " + projdir + "/doomsayer_drop.txt", file=yaml)
     print("M_path: " + M_path, file=yaml)
-    print("M_path_rates: " + M_path_rates, file=yaml)
+    print("M_path_rates: " + M_f_path, file=yaml)
     print("W_path: " + W_path, file=yaml)
     print("H_path: " + H_path, file=yaml)
     print("RMSE_path: " + rmse_path, file=yaml)
     yaml.close()
+    log.debug("Diagnostics config file written to: " + yaml_path)
 
 ###############################################################################
 # write output in same format as input, with bad samples removed
 ###############################################################################
 if args.filterout:
     if(args.mode == "vcf" and not(args.input.lower().endswith(('.txt')))):
-        if args.verbose:
-            eprint("----------------------------------")
-            eprint("Filtering input by drop list...")
-            eprint("----------------------------------")
+        log.debug("Filtering input VCF using sample file " + keep_samples)
         filterVCF(args.input, keep_samples)
-        if args.verbose:
-            eprint("DONE")
 
     elif args.mode =="txt":
-        if args.verbose:
-            eprint("----------------------------------")
-            eprint("Filtering input by drop list...")
-            eprint("----------------------------------")
+        log.debug("Filtering input data using sample file " + keep_samples)
         filterTXT(args.input, keep_samples)
-        if args.verbose:
-            eprint("DONE")
 
     else:
-        eprint("Input not compatible with auto-filtering function")
+        log.error("Input not compatible with auto-filtering function")
 
 ###############################################################################
 # auto-generate diagnostic report in R
 ###############################################################################
-if(args.report and args.matrixname == "NMF_M_spectra"):
-
-    if args.verbose:
-        eprint("----------------------------------")
-        eprint("GENERATING REPORT")
-        eprint("----------------------------------")
+if(args.report and args.matrixname == "subtype_count_matrix"):
 
     template_src = sys.path[0] + "/report_templates/" + args.template + ".Rmd"
     template_dest = projdir + "/report.Rmd"
     shutil.copy(template_src, template_dest)
     copy_tree(sys.path[0] + "/report_templates/R", projdir + "/R")
+    log.debug("Template copied from " + template_src + " to " + template_dest)
 
     cmd = "Rscript --vanilla generate_report.r " + projdir + "/config.yaml"
-    if args.verbose:
-        eprint("Rscript will run the following command:")
-        eprint("\t", cmd)
+    log.debug("Diagnostic report will be generated with the following command: " + cmd)
     call(cmd, shell=True)
 
 stop = timeit.default_timer()
 tottime = round(stop - start, 2)
+log.debug("Total runtime: " + str(tottime) + " seconds")
 
-if args.verbose:
-    eprint("----------------------------------")
-    eprint("Total runtime:", tottime, "seconds")
-    eprint("----------------------------------")
