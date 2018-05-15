@@ -45,8 +45,6 @@ Describes how each mutation subtype is loaded into the r signatures
 ```{r child="R/sigloads.Rmd"}
 ```
 
-```{r child="R/sigloads_radial.Rmd"}
-```
 
 ```{r child="R/sigloads_bar.Rmd"}
 ```

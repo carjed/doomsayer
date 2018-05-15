@@ -16,20 +16,14 @@ import time
 import multiprocessing
 import numpy as np
 from joblib import Parallel, delayed
-# from subprocess import call
 import subprocess
 from distutils.dir_util import copy_tree
 from util import *
 
 ###############################################################################
 # Parse arguments
-###############################################################################
+##############################################################################
 start = timeit.default_timer()
-
-# ignore sklearn warnings about covariance matrix when performing outlier
-# detection using elliptic envelope
-# see https://github.com/scikit-learn/scikit-learn/issues/8811
-warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 # get latest version from github tags
 version = subprocess.check_output(["git", "describe"]).strip().decode('utf-8')
@@ -38,6 +32,26 @@ version = subprocess.check_output(["git", "describe"]).strip().decode('utf-8')
 num_cores = multiprocessing.cpu_count()
 
 parser = argparse.ArgumentParser()
+
+#-----------------------------------------------------------------------------
+# Runtime control
+#-----------------------------------------------------------------------------
+parser.add_argument("-c", "--cpus",
+                    help="number of CPUs. Must be integer value between 1 \
+                        and "+str(num_cores),
+                    nargs='?',
+                    type=int,
+                    choices=range(1,num_cores+1),
+                    metavar='INT',
+                    default=1)
+
+parser.add_argument("-v", "--verbose",
+                    help="Enable verbose logging",
+                    action="store_true")
+
+parser.add_argument("-V", "--version",
+                    action="version",
+                    version='%(prog)s ' + version)
 
 #-----------------------------------------------------------------------------
 # Input options
@@ -115,7 +129,7 @@ parser.add_argument("-X", "--maxac",
 parser.add_argument("-p", "--projectdir",
                     help="directory to store output files \
                         (do NOT include a trailing '/'). \
-                        Defaults to ./doomsayer_output",
+                        Defaults to " + os.getcwd() + "/doomsayer_output",
                     nargs='?',
                     type=str,
                     metavar='/path/to/project_directory',
@@ -213,31 +227,24 @@ parser.add_argument("-T", "--template",
                     default="diagnostics")
 
 #-----------------------------------------------------------------------------
-# Runtime control
-#-----------------------------------------------------------------------------
-parser.add_argument("-c", "--cpus",
-                    help="number of CPUs. Must be integer value between 1 \
-                        and "+str(num_cores),
-                    nargs='?',
-                    type=int,
-                    choices=range(1,num_cores+1),
-                    metavar='INT',
-                    default=1)
-
-parser.add_argument("-v", "--verbose",
-                    help="Enable verbose logging",
-                    action="store_true")
-
-parser.add_argument("-V", "--version",
-                    action="version",
-                    version='%(prog)s ' + version)
-
-#-----------------------------------------------------------------------------
 # parse args and configure logs
 #-----------------------------------------------------------------------------
 args = parser.parse_args()
 
-loglev = 'DEBUG' if args.verbose else 'WARNING'
+
+if args.verbose:
+    loglev = 'DEBUG' 
+else:
+    loglev = 'INFO'
+    # ignore sklearn warnings about covariance matrix when performing outlier
+    # detection using elliptic envelope
+    # see https://github.com/scikit-learn/scikit-learn/issues/8811
+    # https://stackoverflow.com/questions/32612180
+    warnings.filterwarnings("ignore", category=RuntimeWarning)
+    
+    # ignore warning about covariance matrix not being full rank
+    warnings.filterwarnings("ignore", category=UserWarning)    
+    
 log = getLogger('doomsayer_log', level=loglev)
 
 log.info("----------------------------------")
@@ -331,38 +338,32 @@ if args.minsnvs > 0:
             lowsnv_fh.write("%s\n" % sample)
         lowsnv_fh.close()
 
-
 #-----------------------------------------------------------------------------
 # Write M and M_f matrices
 #-----------------------------------------------------------------------------
-M_path = projdir + "/" + args.matrixname + ".txt"
+paths = {}
+paths['M_path'] = projdir + "/" + args.matrixname + ".txt"
 
 # M_f is the relative contribution of each subtype per sample
 # adds 1e-4 to each count for error correction
 # M_f = (M+1e-4)/(M.sum(axis=1))[:,None]
 M_f = M/(M.sum(axis=1)+1e-8)[:,None]
-M_f_path = projdir + "/" + args.matrixname + "_spectra.txt"
+paths['M_path_rates'] = projdir + "/" + args.matrixname + "_spectra.txt"
 
-writeM(M, M_path, subtypes_dict, samples)
-writeM(M_f, M_f_path, subtypes_dict, samples)
-log.debug("M matrix (spectra counts) saved to: " + M_path)
-log.debug("M_f matrix (scaled spectra counts) saved to: " + M_f_path)
-
-# M_err is N x K matrix of residual error profiles, used for RMSE calc
-M_err = np.subtract(M_f, np.mean(M_f, axis=0))
-M_rmse = np.sqrt(np.sum(np.square(M_err), axis=1)/M_err.shape[1])
-rmse_path = projdir + "/doomsayer_rmse.txt"
-
-writeRMSE(M_rmse, rmse_path, samples)
-log.debug("RMSE per sample saved to: " + rmse_path)
+writeM(M, paths['M_path'], subtypes_dict, samples)
+writeM(M_f, paths['M_path_rates'], subtypes_dict, samples)
+log.debug("M matrix (spectra counts) saved to: " + paths['M_path'])
+log.debug("M_f matrix (scaled spectra counts) saved to: " + paths['M_path_rates'])
 
 ###############################################################################
 # Get matrix decomposition
 ###############################################################################
-
 if args.decomp == "nmf":
     decomp_data = NMFRun(M_f, args)
-    log.info("Explained variance for rank " + str(decomp_data.rank) + " NMF decomposition: " + str(decomp_data.evar))
+    log.info("Explained variance for rank " + 
+        str(decomp_data.rank) + " NMF decomposition: " + 
+        str(decomp_data.evar)
+    )
         
 elif args.decomp == "pca":
     decomp_data = PCARun(M_f, args)
@@ -370,14 +371,14 @@ elif args.decomp == "pca":
 M_d = decomp_data.W
 
 # W matrix (contributions)
-W_path = projdir + "/NMF_W_sig_contribs.txt"
-writeW(decomp_data.W, W_path, samples)
-log.debug("W matrix saved to: " + W_path)
+paths['W_path'] = projdir + "/NMF_W_sig_contribs.txt"
+writeW(decomp_data.W, paths['W_path'], samples)
+log.debug("W matrix saved to: " + paths['W_path'])
 
 # H matrix (loadings)
-H_path = projdir + "/NMF_H_sig_loads.txt"
-writeH(decomp_data.H, H_path, subtypes_dict)
-log.debug("H matrix saved to: " + H_path)
+paths['H_path'] = projdir + "/NMF_H_sig_loads.txt"
+writeH(decomp_data.H, paths['H_path'], subtypes_dict)
+log.debug("H matrix saved to: " + paths['H_path'])
 
 ###############################################################################
 # Perform outlier detection
@@ -392,20 +393,20 @@ else:
     drop_samples = kd_lists.drop_samples
     drop_indices = kd_lists.drop_indices
 
-    keep_path = projdir + "/doomsayer_keep.txt"
-    keep_fh = open(keep_path, 'wt')
+    paths['keep_path'] = projdir + "/doomsayer_keep.txt"
+    keep_fh = open(paths['keep_path'], 'wt')
     for sample in keep_samples:
         keep_fh.write("%s\n" % sample)
     keep_fh.close()
-    log.debug("Kept samples saved to: " + keep_path)
+    log.debug("Kept samples saved to: " + paths['keep_path'])
     
-    drop_path = projdir + "/doomsayer_drop.txt"
-    drop_fh = open(drop_path, 'wt')
+    paths['drop_path'] = projdir + "/doomsayer_drop.txt"
+    drop_fh = open(paths['drop_path'], 'wt')
     for sample in drop_samples:
         drop_fh.write("%s\n" % sample)
     drop_fh.close()
     
-    log.debug("Outlier samples saved to: " + drop_path)
+    log.debug("Outlier samples saved to: " + paths['drop_path'])
 
     if len(drop_samples) > 0:
         log.info(str(len(drop_samples)) + " potential outliers found")
@@ -415,18 +416,8 @@ else:
 ###############################################################################
 if(args.report and args.matrixname == "subtype_count_matrix"):
 
-    yaml_path = projdir + "/config.yaml"
-    yaml = open(yaml_path, "w+")
-    print("# Config file for doomsayer_diagnostics.r", file=yaml)
-    print("keep_path: " + keep_path, file=yaml)
-    print("drop_path: " + drop_path, file=yaml)
-    print("M_path: " + M_path, file=yaml)
-    print("M_path_rates: " + M_f_path, file=yaml)
-    print("W_path: " + W_path, file=yaml)
-    print("H_path: " + H_path, file=yaml)
-    print("RMSE_path: " + rmse_path, file=yaml)
-    yaml.close()
-    log.debug("Diagnostics config file written to: " + yaml_path)
+    writeReportConfig(paths, projdir)
+    log.debug("Diagnostics config file written to: " + projdir + "/config.yaml")
 
     template_src = sys.path[0] + "/report_templates/" + args.template + ".Rmd"
     template_dest = projdir + "/report.Rmd"

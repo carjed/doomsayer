@@ -42,5 +42,5 @@ spectra <- read.table(M_path, header=T, stringsAsFactors=F)
 spectra_rates <- read.table(M_path_rates, header=T, stringsAsFactors=F)
 sig_contribs <- read.table(W_path, header=T, stringsAsFactors=F)
 sig_loads <- read.table(H_path, header=T, stringsAsFactors=F)
-rmse <- read.table(RMSE_path, header=F, stringsAsFactors=F)
+# rmse <- read.table(RMSE_path, header=F, stringsAsFactors=F)
 ```

@@ -1,24 +1,28 @@
 #!/usr/bin/python
 
+# system packages
 from __future__ import print_function
 import os
 import sys
-
-sys.path.append(os.getcwd())
-
+from logging import StreamHandler, DEBUG, getLogger as realGetLogger, Formatter
+from colorama import Fore, Back, init, Style
 import textwrap
 import itertools
 import timeit
 import collections
 import csv
-import nimfa
 import re
+
+sys.path.append(os.getcwd())
+
+
+# matrix+stats processing
 from pandas import *
 import numpy as np
+from scipy.stats import chisquare
 
-from logging import StreamHandler, DEBUG, getLogger as realGetLogger, Formatter
-from colorama import Fore, Back, init, Style
-
+# decomposition algorithms
+import nimfa
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
@@ -27,9 +31,9 @@ from sklearn.neighbors import LocalOutlierFactor
 from sklearn.covariance import EllipticEnvelope
 from sklearn.ensemble import IsolationForest
 
+# vcf/fasta parsing
 import cyvcf2 as vcf
 from cyvcf2 import VCF
-from scipy.stats import chisquare
 from pyfaidx import Fasta
 from Bio.Seq import Seq
 from Bio.Alphabet import IUPAC
@@ -57,7 +61,6 @@ def restricted_float(x):
 
 ###############################################################################
 # Configure color stream handler
-# http://uran198.github.io/en/python/2016/07/12/colorful-python-logging.html
 # https://gist.github.com/jonaprieto/a61d9cade3ba19487f98
 ###############################################################################
 
@@ -94,7 +97,7 @@ class ColourStreamHandler(StreamHandler):
 ###############################################################################
 # configure logger
 ###############################################################################
-def getLogger(name=None, fmt='%(levelname)s : %(message)s', level='INFO'):
+def getLogger(name=None, fmt='%(levelname)s: %(message)s', level='INFO'):
     """ Get and initialize a colourised logging instance if the system supports
     it as defined by the log.has_colour
     :param name: Name of the logger
@@ -664,13 +667,15 @@ def writeH(H, H_path, subtypes_dict):
     np.savetxt(H_path, H_fmt, delimiter='\t', fmt="%s")
 
 ###############################################################################
-# write RMSE per sample
+# write yaml config for diagnostic reports
 ###############################################################################
-def writeRMSE(M_rmse, rmse_path, samples):
-	sample_col = samples.T
-	rmse_col = np.array([M_rmse]).T
-	rmse_arr = np.column_stack((sample_col, rmse_col))
-	np.savetxt(rmse_path, rmse_arr, delimiter='\t', fmt="%s")
+def writeReportConfig(paths, projdir):
+    yaml_path = projdir + "/config.yaml"
+    yaml = open(yaml_path, "w+")
+    print("# Config file for doomsayer_diagnostics.r", file=yaml)
+    
+    for key in paths.keys():
+        print(key + ": " + paths[key], file=yaml)
 
 ###############################################################################
 # filter VCF input by kept samples
