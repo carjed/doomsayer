@@ -483,70 +483,33 @@ def aggregateM(inputM, subtypes_dict):
 # Generate keep/drop lists
 ###############################################################################
 def detectOutliers(M, samples, filtermode, threshold, projdir):
-    # M_f = M/(M.sum(axis=1)+1e-8)[:,None]
-    M_f = (M+1e-4)/(M.sum(axis=1))[:,None]
-
-    # number of components to evaluate
-    ncshow = 5
-    pct_outlier = 0.05
-    
-    # standarize input matrix
-    X_std = StandardScaler().fit_transform(M_f)
-    
-    # run PCA
-    ncomponents = M_f.shape[1]
-    pca = PCA(n_components=ncomponents)
-    X_pca = pca.fit_transform(X_std)
 
     # outlier detection
     clf = LocalOutlierFactor(
         n_neighbors=20, 
-        contamination=pct_outlier)
-    y_pred = clf.fit_predict(X_pca)
+        contamination=threshold)
+    y_pred = clf.fit_predict(M)
     
     cee = EllipticEnvelope(
-        contamination=pct_outlier)
-    cee.fit(X_pca)
-    scores_pred = cee.decision_function(X_pca)
-    y_pred2 = cee.predict(X_pca)
+        contamination=threshold)
+    cee.fit(M)
+    scores_pred = cee.decision_function(M)
+    y_pred2 = cee.predict(M)
     
     cif = IsolationForest(
-        contamination=pct_outlier)
-    cif.fit(X_pca)
-    scores_pred = cif.decision_function(X_pca)
-    y_pred3 = cif.predict(X_pca)
+        contamination=threshold)
+    cif.fit(M)
+    scores_pred = cif.decision_function(M)
+    y_pred3 = cif.predict(M)
     
+    outlier_methods = ["lof", "ee", "if"]
     ol_df = DataFrame(np.column_stack((y_pred, y_pred2, y_pred3)),
                index=samples[0].tolist(),
-               columns=["LOF", "EE", "IF"])
+               columns=outlier_methods)
 
-    keep_samples = []
-    drop_samples = []
-    drop_indices = []
-    # lowsnv_samples = []
+    keep_samples, drop_samples, drop_indices = ([] for i in range(3))
 
-    if filtermode == "ee":
-        drop_samples = ol_df[ol_df["EE"] == -1].index.values.tolist()
-        keep_samples = ol_df[ol_df["EE"] == 1].index.values.tolist()
-        
-        drop_bool = np.isin(samples[0], drop_samples)
-        drop_indices = np.where(drop_bool)[0].tolist()
-        
-    elif filtermode == "lof":
-        drop_samples = ol_df[ol_df["LOF"] == -1].index.values.tolist()
-        keep_samples = ol_df[ol_df["LOF"] == 1].index.values.tolist()
-        
-        drop_bool = np.isin(samples[0], drop_samples)
-        drop_indices = np.where(drop_bool)[0].tolist()
-        
-    elif filtermode == "if":
-        drop_samples = ol_df[ol_df["IF"] == -1].index.values.tolist()
-        keep_samples = ol_df[ol_df["IF"] == 1].index.values.tolist()
-        
-        drop_bool = np.isin(samples[0], drop_samples)
-        drop_indices = np.where(drop_bool)[0].tolist()
-
-    elif filtermode == "any2":
+    if filtermode == "any2":
         dft = ol_df.sum(axis=1)
         dft = DataFrame(dft)
         drop_samples = dft[dft[0] <= -1].index.values.tolist()
@@ -564,6 +527,13 @@ def detectOutliers(M, samples, filtermode, threshold, projdir):
         drop_bool = np.isin(samples[0], drop_samples)
         drop_indices = np.where(drop_bool)[0].tolist()
         
+    elif filtermode in outlier_methods:
+        drop_samples = ol_df[ol_df[filtermode] == -1].index.values.tolist()
+        keep_samples = ol_df[ol_df[filtermode] == 1].index.values.tolist()
+        
+        drop_bool = np.isin(samples[0], drop_samples)
+        drop_indices = np.where(drop_bool)[0].tolist()
+        
     out_handles = ['keep_samples',
         'drop_samples',
         'drop_indices']
@@ -573,9 +543,31 @@ def detectOutliers(M, samples, filtermode, threshold, projdir):
     return out
 
 ###############################################################################
+# run PCA on input matrix
+###############################################################################
+def PCARun(M_run, args):
+    
+    # standarize input matrix
+    X_std = StandardScaler().fit_transform(M_run)
+    
+    # run PCA
+    ncomponents = M_run.shape[1]
+    pca = PCA(n_components=ncomponents)
+    W = pca.fit_transform(X_std)
+    H = pca.components_.T * np.sqrt(pca.explained_variance_)
+    # df_loadings = pd.DataFrame(data=pca.components_.T * np.sqrt(pca.explained_variance_),
+    #              index=subtypes_dict.keys(),
+    #              columns=["component"+str(item) for item in range(1,ncomponents+1)])
+    # df_loadings = df_loadings.iloc[:,:10]
+    # print(df_loadings)
+
+    out = collections.namedtuple('Out', ['W', 'H'])(W, H)
+    return out
+
+###############################################################################
 # run NMF on input matrix
 ###############################################################################
-def NMFRun(M_run, args, projdir, samples, subtypes_dict):
+def NMFRun(M_run, args):
     if args.rank > 0:
         if args.verbose:
             eprint("Running NMF with rank =", args.rank)

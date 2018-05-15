@@ -148,14 +148,11 @@ parser.add_argument("-F", "--filtermode",
                     default="ee")
 
 parser.add_argument("-t", "--threshold",
-                    help="threshold for fold-difference RMSE cutoff, used to \
-                        determine which samples are outliers. Must be a \
-                        real-valued number > 1. The default is 2. \
-                        higher values are more stringent",
+                    help="threshold for fraction of potential outliers",
                     nargs='?',
                     type=restricted_float,
                     metavar='',
-                    default=2)
+                    default=0.05)
 
 rank_opts = range(2,11)
 ro_str = str(min(rank_opts)) + " and " + str(max(rank_opts))
@@ -278,126 +275,119 @@ elif args.mode == "txt":
     M = data.M
     samples = np.array([data.samples], dtype=str)
 
-###############################################################################
-# Write out M matrix if preparing for aggregation mode
-###############################################################################
-if args.matrixname != "subtype_count_matrix":
-    log.warning(textwrap.dedent("""\
-            You are running with the --matrixname option. Doomsayer will only
-            build the input matrix. Keep and drop lists will not be generated.
-            """))
+#-----------------------------------------------------------------------------
+# Drop samples from M matrix with too few SNVs
+#-----------------------------------------------------------------------------
+if args.minsnvs > 0:
 
-    M_path = projdir + "/" + args.matrixname + ".txt"
-    writeM(M, M_path, subtypes_dict, samples)
-    
-    log.debug("M matrix (spectra counts) saved to: " + M_path)
-
-else:
-    # First drop any samples that do not contain enough SNVs
-    if args.minsnvs > 0:
-
-        lowsnv_samples = []
-        highsnv_samples = []
-        i = 0
-        for row in M:
-            if sum(M[i]) < args.minsnvs:
-                lowsnv_samples.append(samples.flatten()[i])
-            else:
-                highsnv_samples.append(samples.flatten()[i])
-            i += 1
-
-        if len(lowsnv_samples) > 0:
-            M = M[np.sum(M, axis=1)>=args.minsnvs,]
-            samples = np.array([highsnv_samples])
-            lowsnv_path = projdir + \
-                "/doomsayer_snvs_lt" + str(args.minsnvs) + ".txt"
-            lowsnv_fh = open(lowsnv_path, "w")
-            for sample in lowsnv_samples:
-                lowsnv_fh.write("%s\n" % sample)
-            lowsnv_fh.close()
-
-    M_path = projdir + "/" + args.matrixname + ".txt"
-
-    # M_f is the relative contribution of each subtype per sample
-    M_f = M/(M.sum(axis=1)+1e-8)[:,None]
-    M_f_path = projdir + "/" + args.matrixname + "_spectra.txt"
-
-    writeM(M, M_path, subtypes_dict, samples)
-    writeM(M_f, M_f_path, subtypes_dict, samples)
-    log.debug("M matrix (spectra counts) saved to: " + M_path)
-    log.debug("M_f matrix (scaled spectra counts) saved to: " + M_f_path)
-
-    # M_err is N x K matrix of residual error profiles, used for RMSE calc
-    M_err = np.subtract(M_f, np.mean(M_f, axis=0))
-    M_rmse = np.sqrt(np.sum(np.square(M_err), axis=1)/M_err.shape[1])
-    rmse_path = projdir + "/doomsayer_rmse.txt"
-
-    writeRMSE(M_rmse, rmse_path, samples)
-    log.debug("RMSE per sample saved to: " + rmse_path)
-
-    NMFdata = NMFRun(M_f, args, projdir, samples, subtypes_dict)
-
-    # W matrix (contributions)
-    W_path = projdir + "/NMF_W_sig_contribs.txt"
-    writeW(NMFdata.W, W_path, samples)
-    log.debug("W matrix saved to: " + W_path)
-
-    # H matrix (loadings)
-    H_path = projdir + "/NMF_H_sig_loads.txt"
-    writeH(NMFdata.H, H_path, subtypes_dict)
-    log.debug("H matrix saved to: " + H_path)
-
-    if args.filtermode == "none":
-        log.warning("No outlier detection will be performed")
-    else:
-        if args.filtermode == "nmf":
-            colmeans = np.mean(NMFdata.W, axis=0)
-            colstd = np.std(NMFdata.W, axis=0)
-            upper = colmeans+args.threshold*colstd
-            lower = colmeans-args.threshold*colstd
-
-            keep_samples = []
-            drop_samples = []
-            i=0
-            for n in NMFdata.W:
-                if(np.greater(n, upper).any() or np.less(n, lower).any()):
-                    drop_samples.append(samples.flatten()[i])
-                else:
-                    keep_samples.append(samples.flatten()[i])
-                i += 1
-
+    lowsnv_samples = []
+    highsnv_samples = []
+    i = 0
+    for row in M:
+        if sum(M[i]) < args.minsnvs:
+            lowsnv_samples.append(samples.flatten()[i])
         else:
-            kd_lists = detectOutliers(M, samples,
-                args.filtermode, args.threshold, projdir)
+            highsnv_samples.append(samples.flatten()[i])
+        i += 1
 
-            keep_samples = kd_lists.keep_samples
-            drop_samples = kd_lists.drop_samples
-            drop_indices = kd_lists.drop_indices
+    if len(lowsnv_samples) > 0:
+        M = M[np.sum(M, axis=1)>=args.minsnvs,]
+        samples = np.array([highsnv_samples])
+        lowsnv_path = projdir + \
+            "/doomsayer_snvs_lt" + str(args.minsnvs) + ".txt"
+        lowsnv_fh = open(lowsnv_path, "w")
+        for sample in lowsnv_samples:
+            lowsnv_fh.write("%s\n" % sample)
+        lowsnv_fh.close()
 
-        keep_path = projdir + "/doomsayer_keep.txt"
-        keep_fh = open(keep_path, 'wt')
-        for sample in keep_samples:
-            keep_fh.write("%s\n" % sample)
-        keep_fh.close()
-        log.debug("Kept samples saved to: " + keep_path)
-        
 
-        drop_path = projdir + "/doomsayer_drop.txt"
-        drop_fh = open(drop_path, 'wt')
-        for sample in drop_samples:
-            drop_fh.write("%s\n" % sample)
-        drop_fh.close()
-        
-        log.debug("Outlier samples saved to: " + drop_path)
+#-----------------------------------------------------------------------------
+# Write M and M_f matrices
+#-----------------------------------------------------------------------------
+M_path = projdir + "/" + args.matrixname + ".txt"
 
-        if len(drop_samples) > 0:
-            log.info(str(len(drop_samples)) + " potential outliers found")
+# M_f is the relative contribution of each subtype per sample
+# adds 1e-4 to each count for error correction
+# M_f = (M+1e-4)/(M.sum(axis=1))[:,None]
+M_f = M/(M.sum(axis=1)+1e-8)[:,None]
+M_f_path = projdir + "/" + args.matrixname + "_spectra.txt"
+
+writeM(M, M_path, subtypes_dict, samples)
+writeM(M_f, M_f_path, subtypes_dict, samples)
+log.debug("M matrix (spectra counts) saved to: " + M_path)
+log.debug("M_f matrix (scaled spectra counts) saved to: " + M_f_path)
+
+# M_err is N x K matrix of residual error profiles, used for RMSE calc
+M_err = np.subtract(M_f, np.mean(M_f, axis=0))
+M_rmse = np.sqrt(np.sum(np.square(M_err), axis=1)/M_err.shape[1])
+rmse_path = projdir + "/doomsayer_rmse.txt"
+
+writeRMSE(M_rmse, rmse_path, samples)
+log.debug("RMSE per sample saved to: " + rmse_path)
+
+###############################################################################
+# Get matrix decomposition
+###############################################################################
+
+if args.decomp == "nmf":
+    decomp_data = NMFRun(M_f, args)
+    # M_d = NMFdata.W
+elif args.decomp == "pca":
+    decomp_data = PCARun(M_f, args)
+
+M_d = decomp_data.W
+
+# W matrix (contributions)
+W_path = projdir + "/NMF_W_sig_contribs.txt"
+writeW(decomp_data.W, W_path, samples)
+log.debug("W matrix saved to: " + W_path)
+
+# H matrix (loadings)
+H_path = projdir + "/NMF_H_sig_loads.txt"
+writeH(decomp_data.H, H_path, subtypes_dict)
+log.debug("H matrix saved to: " + H_path)
+
+###############################################################################
+# Perform outlier detection
+###############################################################################
+if args.filtermode == "none":
+    log.warning("No outlier detection will be performed")
+else:
+    kd_lists = detectOutliers(M_d, samples,
+        args.filtermode, args.threshold, projdir)
+
+    keep_samples = kd_lists.keep_samples
+    drop_samples = kd_lists.drop_samples
+    drop_indices = kd_lists.drop_indices
+
+    keep_path = projdir + "/doomsayer_keep.txt"
+    keep_fh = open(keep_path, 'wt')
+    for sample in keep_samples:
+        keep_fh.write("%s\n" % sample)
+    keep_fh.close()
+    log.debug("Kept samples saved to: " + keep_path)
+    
+    drop_path = projdir + "/doomsayer_drop.txt"
+    drop_fh = open(drop_path, 'wt')
+    for sample in drop_samples:
+        drop_fh.write("%s\n" % sample)
+    drop_fh.close()
+    
+    log.debug("Outlier samples saved to: " + drop_path)
+
+    if len(drop_samples) > 0:
+        log.info(str(len(drop_samples)) + " potential outliers found")
+
+###############################################################################
+# auto-generate diagnostic report in R
+###############################################################################
+if(args.report and args.matrixname == "subtype_count_matrix"):
 
     yaml_path = projdir + "/config.yaml"
     yaml = open(yaml_path, "w+")
     print("# Config file for doomsayer_diagnostics.r", file=yaml)
-    print("keep_path: " + projdir + "/doomsayer_keep.txt", file=yaml)
-    print("drop_path: " + projdir + "/doomsayer_drop.txt", file=yaml)
+    print("keep_path: " + keep_path, file=yaml)
+    print("drop_path: " + drop_path, file=yaml)
     print("M_path: " + M_path, file=yaml)
     print("M_path_rates: " + M_f_path, file=yaml)
     print("W_path: " + W_path, file=yaml)
@@ -405,6 +395,16 @@ else:
     print("RMSE_path: " + rmse_path, file=yaml)
     yaml.close()
     log.debug("Diagnostics config file written to: " + yaml_path)
+
+    template_src = sys.path[0] + "/report_templates/" + args.template + ".Rmd"
+    template_dest = projdir + "/report.Rmd"
+    shutil.copy(template_src, template_dest)
+    copy_tree(sys.path[0] + "/report_templates/R", projdir + "/R")
+    log.debug("Template copied from " + template_src + " to " + template_dest)
+
+    cmd = "Rscript --vanilla generate_report.r " + projdir + "/config.yaml"
+    log.debug("Diagnostic report will be generated with the following command: " + cmd)
+    call(cmd, shell=True)
 
 ###############################################################################
 # write output in same format as input, with bad samples removed
@@ -422,21 +422,8 @@ if args.filterout:
         log.error("Input not compatible with auto-filtering function")
 
 ###############################################################################
-# auto-generate diagnostic report in R
+# Finish
 ###############################################################################
-if(args.report and args.matrixname == "subtype_count_matrix"):
-
-    template_src = sys.path[0] + "/report_templates/" + args.template + ".Rmd"
-    template_dest = projdir + "/report.Rmd"
-    shutil.copy(template_src, template_dest)
-    copy_tree(sys.path[0] + "/report_templates/R", projdir + "/R")
-    log.debug("Template copied from " + template_src + " to " + template_dest)
-
-    cmd = "Rscript --vanilla generate_report.r " + projdir + "/config.yaml"
-    log.debug("Diagnostic report will be generated with the following command: " + cmd)
-    call(cmd, shell=True)
-
 stop = timeit.default_timer()
 tottime = round(stop - start, 2)
 log.debug("Total runtime: " + str(tottime) + " seconds")
-
