@@ -117,7 +117,7 @@ parser.add_argument("-o", "--filterout",
                     action="store_true")
 
 # Outlier detection options
-filtermode_opts = ["fold", "sd", "chisq", "nmf", "none"]
+filtermode_opts = ["fold", "sd", "chisq", "nmf", "pca", "none"]
 
 parser.add_argument("-F", "--filtermode",
                     help="Method for detecting outliers. Must be one of \
@@ -126,7 +126,7 @@ parser.add_argument("-F", "--filtermode",
                     type=str,
                     choices=filtermode_opts,
                     metavar='',
-                    default="nmf")
+                    default="pca")
 
 parser.add_argument("-t", "--threshold",
                     help="threshold for fold-difference RMSE cutoff, used to \
@@ -361,7 +361,7 @@ else:
 
         else:
             kd_lists = detectOutliers(M, samples,
-                args.filtermode, args.threshold)
+                args.filtermode, args.threshold, projdir)
 
             keep_samples = kd_lists.keep_samples
             drop_samples = kd_lists.drop_samples

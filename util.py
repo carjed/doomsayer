@@ -15,12 +15,27 @@ import nimfa
 import re
 from pandas import *
 import numpy as np
+
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
+
+# outlier detection algorithms
+from sklearn.neighbors import LocalOutlierFactor
+from sklearn.covariance import EllipticEnvelope
+from sklearn.ensemble import IsolationForest
+
 import cyvcf2 as vcf
 from cyvcf2 import VCF
 from scipy.stats import chisquare
 from pyfaidx import Fasta
 from Bio.Seq import Seq
 from Bio.Alphabet import IUPAC
+
+# from plotly.offline import download_plotlyjs, init_notebook_mode, plot, iplot
+# plotly.offline.init_notebook_mode(connected=True)
+# from plotly.graph_objs import *
+# import cufflinks as cf
+# cf.go_offline()
 
 ###############################################################################
 # print to stderr
@@ -409,8 +424,9 @@ def aggregateM(inputM, subtypes_dict):
 ###############################################################################
 # Generate keep/drop lists
 ###############################################################################
-def detectOutliers(M, samples, filtermode, threshold):
-    M_f = M/(M.sum(axis=1)+1e-8)[:,None]
+def detectOutliers(M, samples, filtermode, threshold, projdir):
+    # M_f = M/(M.sum(axis=1)+1e-8)[:,None]
+    M_f = (M+1e-4)/(M.sum(axis=1))[:,None]
 
     keep_samples = []
     drop_samples = []
@@ -453,7 +469,64 @@ def detectOutliers(M, samples, filtermode, threshold):
             else:
                 keep_samples.append(samples.flatten()[i])
             i += 1
+    elif filtermode == "pca":
+        # number of components to evaluate
+        ncshow = 5
+        pct_outlier = 0.05
+        
+        # standarize input matrix
+        X_std = StandardScaler().fit_transform(M_f)
+        
+        # run PCA
+        ncomponents = M_f.shape[1]
+        pca = PCA(n_components=ncomponents)
+        X_pca = pca.fit_transform(X_std)
+        
+        
+        # cf.set_config_file(offline=True, world_readable=True, theme='pearl')
 
+        # comp_df = DataFrame(data=X_pca,
+        #                  columns=["component"+str(item) for item in range(1,ncomponents+1)])
+        
+        # comp_df_first = comp_df.iloc[:,:ncshow]
+        
+        # fig = comp_df_first.iplot(kind='histogram', 
+        #     subplots=True, 
+        #     shape=(ncshow, 1), 
+        #     filename=projdir + "/" + "component_hist.html")
+            
+        # # fig = df.iplot(kind='bar', barmode='stack', asFigure=True)
+        # plot(fig, filename=projdir + "/" + "component_hist.html")
+        
+        
+        # outlier detection
+        clf = LocalOutlierFactor(
+            n_neighbors=20, 
+            contamination=pct_outlier)
+        y_pred = clf.fit_predict(X_pca)
+        
+        cee = EllipticEnvelope(
+            contamination=pct_outlier)
+        cee.fit(X_pca)
+        scores_pred = cee.decision_function(X_pca)
+        y_pred2 = cee.predict(X_pca)
+        
+        cif = IsolationForest(
+            contamination=pct_outlier)
+        cif.fit(X_pca)
+        scores_pred = cif.decision_function(X_pca)
+        y_pred3 = cif.predict(X_pca)
+        
+        ol_df = DataFrame(np.column_stack((y_pred, y_pred2, y_pred3)),
+                   index=samples[0].tolist(),
+                   columns=["LOF", "EE", "IF"])
+        
+        drop_samples = ol_df[ol_df["EE"] == -1].index.values.tolist()
+        keep_samples = ol_df[ol_df["EE"] == 1].index.values.tolist()
+        
+        drop_bool = np.isin(samples[0], drop_samples)
+        drop_indices = np.where(drop_bool)[0].tolist()
+        
     out_handles = ['keep_samples',
         'drop_samples',
         'drop_indices']
