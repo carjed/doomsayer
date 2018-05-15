@@ -9,14 +9,15 @@ sys.path.append(os.getcwd())
 import shutil
 import textwrap
 import argparse
-
+import warnings
 import itertools
 import timeit
 import time
 import multiprocessing
 import numpy as np
 from joblib import Parallel, delayed
-from subprocess import call
+# from subprocess import call
+import subprocess
 from distutils.dir_util import copy_tree
 from util import *
 
@@ -25,6 +26,15 @@ from util import *
 ###############################################################################
 start = timeit.default_timer()
 
+# ignore sklearn warnings about covariance matrix when performing outlier
+# detection using elliptic envelope
+# see https://github.com/scikit-learn/scikit-learn/issues/8811
+warnings.filterwarnings("ignore", category=RuntimeWarning)
+
+# get latest version from github tags
+version = subprocess.check_output(["git", "describe"]).strip().decode('utf-8')
+
+# get number of cpus on system
 num_cores = multiprocessing.cpu_count()
 
 parser = argparse.ArgumentParser()
@@ -35,7 +45,8 @@ parser = argparse.ArgumentParser()
 mode_opts = ["vcf", "agg", "txt"]
 parser.add_argument("-M", "--mode",
                     help="Mode for parsing input. Must be one of \
-                        {"+", ".join(mode_opts)+ "}",
+                        {"+", ".join(mode_opts)+ "}. \
+                        Defaults to VCF mode.",
                     nargs='?',
                     type=str,
                     choices=mode_opts,
@@ -45,7 +56,7 @@ parser.add_argument("-M", "--mode",
 parser.add_argument("-i", "--input",
                     help="In VCF mode (default) input file is a VCF \
                         or text file containing paths of multiple VCFs. \
-                        Can accept input from STDIN  with \"--input -\". \
+                        Defaults to accept input from STDIN with \"--input -\". \
                         In aggregation mode, input file is a text file \
                         containing mutation subtype count matrices, \
                         or paths of multiple such matrices. \
@@ -54,14 +65,14 @@ parser.add_argument("-i", "--input",
                     required=True,
                     nargs='?',
                     type=str,
-                    # metavar='',
+                    metavar='/path/to/input.vcf',
                     default=sys.stdin)
 
 parser.add_argument("-f", "--fastafile",
                     help="reference fasta file",
                     nargs='?',
                     type=str,
-                    metavar='',
+                    metavar='/path/to/genome.fa',
                     default="chr20.fasta.gz")
 
 parser.add_argument("-g", "--groupfile",
@@ -69,7 +80,7 @@ parser.add_argument("-g", "--groupfile",
                         (column 1) and group membership (column 2) for pooled \
                         analysis",
                     nargs='?',
-                    metavar='',
+                    metavar='/path/to/sample_batches.txt',
                     type=str)
 
 #-----------------------------------------------------------------------------
@@ -78,23 +89,24 @@ parser.add_argument("-g", "--groupfile",
 parser.add_argument("-s", "--samplefile",
                     help="file with sample IDs to include (one per line)",
                     nargs='?',
-                    metavar='',
+                    metavar='/path/to/kept_samples.txt',
                     type=str)
 
 parser.add_argument("-C", "--minsnvs",
                     help="minimum # of SNVs per individual to be included \
-                        in analysis",
+                        in analysis. Default is 0.",
                     nargs='?',
                     type=int,
-                    metavar='',
+                    metavar='INT',
                     default=0)
 
 parser.add_argument("-X", "--maxac",
                     help="maximum allele count for SNVs to keep in analysis. \
+                        Defaults to 1 (singletons) \
                         Set to 0 to include all variants.",
                     nargs='?',
                     type=int,
-                    metavar='',
+                    metavar='INT',
                     default=1)
 
 #-----------------------------------------------------------------------------
@@ -102,17 +114,18 @@ parser.add_argument("-X", "--maxac",
 #-----------------------------------------------------------------------------
 parser.add_argument("-p", "--projectdir",
                     help="directory to store output files \
-                        (do NOT include a trailing '/')",
+                        (do NOT include a trailing '/'). \
+                        Defaults to ./doomsayer_output",
                     nargs='?',
                     type=str,
-                    metavar='',
+                    metavar='/path/to/project_directory',
                     default="doomsayer_output")
 
 parser.add_argument("-m", "--matrixname",
                     help="filename prefix for M matrix [without extension]",
                     nargs='?',
                     type=str,
-                    metavar='',
+                    metavar='STR',
                     default="subtype_count_matrix")
 
 parser.add_argument("-o", "--filterout",
@@ -129,40 +142,44 @@ parser.add_argument("-o", "--filterout",
 decomp_opts = ["nmf", "pca"]
 parser.add_argument("-d", "--decomp", 
                     help="mode for matrix decomposition. Must be one of \
-                        {"+", ".join(decomp_opts)+"}",
+                        {"+", ".join(decomp_opts)+"}. \
+                        Defaults to pca.",
                     nargs='?',
                     type=str,
                     choices=decomp_opts,
-                    metavar='',
+                    metavar='STR',
                     default="pca")
 
 # filtermode_opts = ["fold", "sd", "chisq", "nmf", "pca", "none"]
 filtermode_opts = ["ee", "lof", "if", "any2", "all", "none"]
 parser.add_argument("-F", "--filtermode",
                     help="Method for detecting outliers. Must be one of \
-                        {"+", ".join(filtermode_opts)+"}",
+                        {"+", ".join(filtermode_opts)+"}. \
+                        Defaults to ee.",
                     nargs='?',
                     type=str,
                     choices=filtermode_opts,
-                    metavar='',
+                    metavar='STR',
                     default="ee")
 
 parser.add_argument("-t", "--threshold",
                     help="threshold for fraction of potential outliers",
                     nargs='?',
                     type=restricted_float,
-                    metavar='',
+                    metavar='FLOAT',
                     default=0.05)
 
 rank_opts = range(2,11)
 ro_str = str(min(rank_opts)) + " and " + str(max(rank_opts))
 parser.add_argument("-r", "--rank",
                     help="Rank for NMF decomposition. Must be an integer \
-                        between " + ro_str,
+                        between " + ro_str + ". \
+                        Default [0] will force Doomsayer to iterate through \
+                        multiple ranks to find an optimal choice.",
                     nargs='?',
                     type=int,
                     choices=rank_opts,
-                    metavar='',
+                    metavar='INT',
                     default=0)
 
 motif_length_opts = [1,3,5,7]
@@ -173,7 +190,7 @@ parser.add_argument("-l", "--length",
                     nargs='?',
                     type=int,
                     choices=motif_length_opts,
-                    metavar='',
+                    metavar='INT',
                     default=3)
 
 #-----------------------------------------------------------------------------
@@ -185,14 +202,14 @@ parser.add_argument("-R", "--report",
                     action="store_true")
 
 template_opts = ["diagnostics", "msa"]
-
 parser.add_argument("-T", "--template",
                     help="Template for diagnostic report. Must be one of \
-                        {"+", ".join(template_opts)+"}",
+                        {"+", ".join(template_opts)+"}. \
+                        Defaults to diagnostics.",
                     nargs='?',
                     type=str,
                     choices=template_opts,
-                    metavar='',
+                    metavar='STR',
                     default="diagnostics")
 
 #-----------------------------------------------------------------------------
@@ -204,12 +221,16 @@ parser.add_argument("-c", "--cpus",
                     nargs='?',
                     type=int,
                     choices=range(1,num_cores+1),
-                    metavar='',
+                    metavar='INT',
                     default=1)
 
 parser.add_argument("-v", "--verbose",
                     help="Enable verbose logging",
                     action="store_true")
+
+parser.add_argument("-V", "--version",
+                    action="version",
+                    version='%(prog)s ' + version)
 
 #-----------------------------------------------------------------------------
 # parse args and configure logs
@@ -218,6 +239,16 @@ args = parser.parse_args()
 
 loglev = 'DEBUG' if args.verbose else 'WARNING'
 log = getLogger('doomsayer_log', level=loglev)
+
+log.info("----------------------------------")
+log.info(sys.argv[0] + " " + str(version))
+log.info("----------------------------------")
+log.info("Running with the following options:")
+for arg in vars(args):
+    log.info(arg + ": " + str(getattr(args, arg)))
+
+# log.info("\n".join(vars(args)))
+log.info("----------------------------------")
 
 ###############################################################################
 # Initialize project directory
@@ -331,7 +362,8 @@ log.debug("RMSE per sample saved to: " + rmse_path)
 
 if args.decomp == "nmf":
     decomp_data = NMFRun(M_f, args)
-    # M_d = NMFdata.W
+    log.info("Explained variance for rank " + str(decomp_data.rank) + " NMF decomposition: " + str(decomp_data.evar))
+        
 elif args.decomp == "pca":
     decomp_data = PCARun(M_f, args)
 
@@ -404,7 +436,7 @@ if(args.report and args.matrixname == "subtype_count_matrix"):
 
     cmd = "Rscript --vanilla generate_report.r " + projdir + "/config.yaml"
     log.debug("Diagnostic report will be generated with the following command: " + cmd)
-    call(cmd, shell=True)
+    subprocess.call(cmd, shell=True)
 
 ###############################################################################
 # write output in same format as input, with bad samples removed

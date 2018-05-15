@@ -79,7 +79,11 @@ class ColourStreamHandler(StreamHandler):
     def emit(self, record):
         try:
             message = self.format(record)
-            self.stream.write(self.colours[record.levelname] + message + Style.RESET_ALL)
+            self.stream.write(
+                self.colours[record.levelname] + 
+                message + 
+                Style.RESET_ALL
+            )
             self.stream.write(getattr(self, 'terminator', '\n'))
             self.flush()
         except (KeyboardInterrupt, SystemExit):
@@ -90,7 +94,7 @@ class ColourStreamHandler(StreamHandler):
 ###############################################################################
 # configure logger
 ###############################################################################
-def getLogger(name=None, fmt='%(levelname)s : %(message)s', level='DEBUG'):
+def getLogger(name=None, fmt='%(levelname)s : %(message)s', level='INFO'):
     """ Get and initialize a colourised logging instance if the system supports
     it as defined by the log.has_colour
     :param name: Name of the logger
@@ -551,73 +555,62 @@ def PCARun(M_run, args):
     X_std = StandardScaler().fit_transform(M_run)
     
     # run PCA
-    ncomponents = M_run.shape[1]
-    pca = PCA(n_components=ncomponents)
+    pca = PCA(n_components = M_run.shape[1])
     W = pca.fit_transform(X_std)
     H = pca.components_.T * np.sqrt(pca.explained_variance_)
-    # df_loadings = pd.DataFrame(data=pca.components_.T * np.sqrt(pca.explained_variance_),
-    #              index=subtypes_dict.keys(),
-    #              columns=["component"+str(item) for item in range(1,ncomponents+1)])
-    # df_loadings = df_loadings.iloc[:,:10]
-    # print(df_loadings)
 
     out = collections.namedtuple('Out', ['W', 'H'])(W, H)
     return out
 
 ###############################################################################
+# Specify NMF model
+# options can be added/modified per 
+# http://nimfa.biolab.si/nimfa.methods.factorization.nmf.html
+###############################################################################
+def NMFmodel(M_run, rank):
+    model = nimfa.Nmf(M_run,
+        rank=rank,
+        update="divergence",
+        objective='div',
+        n_run=1,
+        max_iter=200)
+    return model
+
+###############################################################################
 # run NMF on input matrix
 ###############################################################################
 def NMFRun(M_run, args):
-    if args.rank > 0:
-        if args.verbose:
-            eprint("Running NMF with rank =", args.rank)
 
-        model = nimfa.Nmf(M_run,
-            rank=args.rank,
-            update="divergence",
-            objective='div',
-            n_run=1,
-            max_iter=200)
-        model_fit = model()
-        evar = model_fit.fit.evar()
-        maxind = args.rank
+    evar_list = []
+
+    if args.rank > 0:
+        model = NMFmodel(M_run, args.rank)
+        rankout = args.rank
 
     elif args.rank == 0:
-        if args.verbose:
-            eprint("Finding optimal rank for NMF...")
         evarprev = 0
+        
         for i in range(1,6):
-            model = nimfa.Nmf(M_run,
-                rank=i,
-                update="divergence",
-                objective='div',
-                n_run=1,
-                max_iter=200)
+            model = NMFmodel(M_run, i)
             model_fit = model()
             evar = model_fit.fit.evar()
-            if args.verbose:
-                eprint("Explained variance for rank " + str(i) + ":", evar)
-            # if evar > 0.8:
+            evar_list.append(evar)
+    
             if(i > 2 and evar - evarprev < 0.001):
-                if args.verbose:
-                    eprint(textwrap.dedent("""\
-                            Stopping condition met: <0.1 percent difference
-                            in explained variation between ranks
-                            """))
-                    model = nimfa.Nmf(M_run,
-                        rank=i-1,
-                        update="divergence",
-                        objective='div',
-                        n_run=1,
-                        max_iter=200)
-                    model_fit = model()
+                model = NMFmodel(M_run, i-1)
+                rankout = i-1
                 break
+            
             evarprev = evar
+    
+    model_fit = model()
+    evar = model_fit.fit.evar()
 
     W = model_fit.basis()
     H = model_fit.coef()
 
-    out = collections.namedtuple('Out', ['W', 'H'])(W, H)
+    out = collections.namedtuple('Out', 
+        ['W', 'H', 'evar', 'rank'])(W, H, evar, rankout)
     return out
 
 ###############################################################################
