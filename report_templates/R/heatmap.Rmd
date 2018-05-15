@@ -4,6 +4,15 @@ cutoff <- ifelse(ncol(spectra_rates)-1==6, 0.05, 0.005)
 nind <- 100
 # names(rmse) <- c("ID", "RMSE")
 
+p<-sig_contribs %>% 
+  gather(signature, value, -ID) %>% 
+  ggplot(aes(x=value))+
+    geom_histogram(bins=500)+
+    facet_grid(signature~.)+
+    theme_bw()
+
+ggplotly(p)
+
 sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
   # mutate(sumVar = rowSums(.[2:ncol(sig_contribs)])) %>%
   mutate(sumVar = rowSums(.[2:ncol(sig_contribs)])) %>%
@@ -34,8 +43,11 @@ rownames(outlier_r_m) <- outlier_r_m$ID
 outlier_r_m <- outlier_r_m %>%
   dplyr::select(-ID)
 
+ncl = length(unique(sig_contribs2$signature))
+# ncl = nrow(combinations(length(unique(sig_contribs2$signature)), 2, replace=T))
+
 hrm <- heatmapr(outlier_r_m,
-    k_row=3,
+    k_row=ncl,
     Colv=TRUE,
     label_names = c("ID", "subtype", "error"),
     hclust_method="ward.D2")
@@ -43,7 +55,7 @@ hrm <- heatmapr(outlier_r_m,
 # get_leaves_branches_col(hrm$rows)
 
 hm <- heatmaply(outlier_r_m,
-    k_row=3,
+    k_row=ncl,
     Colv=TRUE,
     return_ppxpy=TRUE,
     hclust_method="ward.D2",

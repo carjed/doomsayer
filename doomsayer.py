@@ -164,6 +164,19 @@ parser.add_argument("-d", "--decomp",
                     metavar='STR',
                     default="pca")
 
+# rank_opts = range(2,11)
+# ro_str = str(min(rank_opts)) + " and " + str(max(rank_opts))
+parser.add_argument("-r", "--rank",
+                    help="Rank for Matrix decomposition. \
+                        If --decomp pca, will select first r components. \
+                        Default [0] will force Doomsayer to iterate through \
+                        multiple ranks to find an optimal choice.",
+                    nargs='?',
+                    type=int,
+                    # choices=rank_opts,
+                    metavar='INT',
+                    default=0)
+
 # filtermode_opts = ["fold", "sd", "chisq", "nmf", "pca", "none"]
 filtermode_opts = ["ee", "lof", "if", "any2", "all", "none"]
 parser.add_argument("-F", "--filtermode",
@@ -182,19 +195,6 @@ parser.add_argument("-t", "--threshold",
                     type=restricted_float,
                     metavar='FLOAT',
                     default=0.05)
-
-rank_opts = range(2,11)
-ro_str = str(min(rank_opts)) + " and " + str(max(rank_opts))
-parser.add_argument("-r", "--rank",
-                    help="Rank for NMF decomposition. Must be an integer \
-                        between " + ro_str + ". \
-                        Default [0] will force Doomsayer to iterate through \
-                        multiple ranks to find an optimal choice.",
-                    nargs='?',
-                    type=int,
-                    choices=rank_opts,
-                    metavar='INT',
-                    default=0)
 
 motif_length_opts = [1,3,5,7]
 mlo_str = ",".join(str(x) for x in motif_length_opts)
@@ -230,7 +230,6 @@ parser.add_argument("-T", "--template",
 # parse args and configure logs
 #-----------------------------------------------------------------------------
 args = parser.parse_args()
-
 
 if args.verbose:
     loglev = 'DEBUG' 
@@ -353,21 +352,21 @@ paths['M_path_rates'] = projdir + "/" + args.matrixname + "_spectra.txt"
 writeM(M, paths['M_path'], subtypes_dict, samples)
 writeM(M_f, paths['M_path_rates'], subtypes_dict, samples)
 log.debug("M matrix (spectra counts) saved to: " + paths['M_path'])
-log.debug("M_f matrix (scaled spectra counts) saved to: " + paths['M_path_rates'])
+log.debug("M_f matrix (mutation spectra) saved to: " + paths['M_path_rates'])
 
 ###############################################################################
 # Get matrix decomposition
 ###############################################################################
 if args.decomp == "nmf":
-    decomp_data = NMFRun(M_f, args)
-    log.info("Explained variance for rank " + 
-        str(decomp_data.rank) + " NMF decomposition: " + 
-        str(decomp_data.evar)
-    )
+    decomp_data = NMFRun(M_f, args.rank)
         
 elif args.decomp == "pca":
-    decomp_data = PCARun(M_f, args)
+    decomp_data = PCARun(M_f, args.rank)
 
+log.info("Explained variance for first " + 
+    str(decomp_data.rank) + " " + args.decomp.upper() + " components: " + 
+    str(decomp_data.evar))
+    
 M_d = decomp_data.W
 
 # W matrix (contributions)
@@ -389,27 +388,23 @@ else:
     kd_lists = detectOutliers(M_d, samples,
         args.filtermode, args.threshold, projdir)
 
-    keep_samples = kd_lists.keep_samples
-    drop_samples = kd_lists.drop_samples
-    drop_indices = kd_lists.drop_indices
-
     paths['keep_path'] = projdir + "/doomsayer_keep.txt"
     keep_fh = open(paths['keep_path'], 'wt')
-    for sample in keep_samples:
+    for sample in kd_lists.keep_samples:
         keep_fh.write("%s\n" % sample)
     keep_fh.close()
     log.debug("Kept samples saved to: " + paths['keep_path'])
     
     paths['drop_path'] = projdir + "/doomsayer_drop.txt"
     drop_fh = open(paths['drop_path'], 'wt')
-    for sample in drop_samples:
+    for sample in kd_lists.drop_samples:
         drop_fh.write("%s\n" % sample)
     drop_fh.close()
     
     log.debug("Outlier samples saved to: " + paths['drop_path'])
 
-    if len(drop_samples) > 0:
-        log.info(str(len(drop_samples)) + " potential outliers found")
+    if len(kd_lists.drop_samples) > 0:
+        log.info(str(len(kd_lists.drop_samples)) + " potential outliers found")
 
 ###############################################################################
 # auto-generate diagnostic report in R
@@ -426,7 +421,7 @@ if(args.report and args.matrixname == "subtype_count_matrix"):
     log.debug("Template copied from " + template_src + " to " + template_dest)
 
     cmd = "Rscript --vanilla generate_report.r " + projdir + "/config.yaml"
-    log.debug("Diagnostic report will be generated with the following command: " + cmd)
+    log.debug("Report will be generated with the following command: " + cmd)
     subprocess.call(cmd, shell=True)
 
 ###############################################################################

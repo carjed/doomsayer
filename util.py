@@ -552,7 +552,7 @@ def detectOutliers(M, samples, filtermode, threshold, projdir):
 ###############################################################################
 # run PCA on input matrix
 ###############################################################################
-def PCARun(M_run, args):
+def PCARun(M_run, rank):
     
     # standarize input matrix
     X_std = StandardScaler().fit_transform(M_run)
@@ -562,7 +562,30 @@ def PCARun(M_run, args):
     W = pca.fit_transform(X_std)
     H = pca.components_.T * np.sqrt(pca.explained_variance_)
 
-    out = collections.namedtuple('Out', ['W', 'H'])(W, H)
+    if rank > 0:
+        # print(np.sum(pca.explained_variance_ratio_))
+        evar = np.cumsum(pca.explained_variance_ratio_)[rank-1]
+        rankout = rank
+        
+        W = W[:,:rank]
+        H = H[:rank,:]
+    else:
+        evar_prev = 0
+        i = 1
+        for evar in np.cumsum(pca.explained_variance_ratio_):
+            if evar - evar_prev < 0.05:
+                rankout = i-1
+                evar = evar_prev
+                # print(i-1, evar_prev)
+                break
+            evar_prev = evar
+            i += 1
+        
+        W = W[:,:rankout]
+        H = H[:rankout,:]
+
+    out = collections.namedtuple('Out', 
+        ['W', 'H', 'evar', 'rank'])(W, H, evar, rankout)
     return out
 
 ###############################################################################
@@ -582,13 +605,13 @@ def NMFmodel(M_run, rank):
 ###############################################################################
 # run NMF on input matrix
 ###############################################################################
-def NMFRun(M_run, args):
+def NMFRun(M_run, rank):
 
     evar_list = []
 
-    if args.rank > 0:
-        model = NMFmodel(M_run, args.rank)
-        rankout = args.rank
+    if rank > 0:
+        model = NMFmodel(M_run, rank)
+        rankout = rank
 
     elif args.rank == 0:
         evarprev = 0
@@ -620,51 +643,36 @@ def NMFRun(M_run, args):
 # write M matrix
 ###############################################################################
 def writeM(M, M_path, subtypes_dict, samples):
-    colnames = ["ID"]
-    M_colnames = colnames + list(sorted(subtypes_dict.keys()))
 
-    # add ID as first column
-    #M_fmt = np.concatenate((np.array([samples]).T, M.astype('|S20')), axis=1)
-    M_fmt = np.concatenate((samples.T, M.astype('|S20')), axis=1)
+    M_out = DataFrame(data=M,
+                index=samples[0],
+                columns=list(sorted(subtypes_dict.keys())))
 
-    # add header
-    M_fmt = np.concatenate((np.array([M_colnames]), M_fmt), axis=0)
-
-    # write out
-    np.savetxt(M_path, M_fmt, delimiter='\t', fmt="%s")
+    M_out.to_csv(M_path, index_label="ID", sep="\t")
 
 ###############################################################################
 # write W matrix
 ###############################################################################
 def writeW(W, W_path, samples):
-    colnames = ["ID"]
-
-    # add ID as first column
-    W_fmt = np.concatenate((samples.T, W.astype('|S20')), axis=1)
+    
     num_samples, num_sigs = W.shape
-
-    # add header
-    W_colnames = colnames + ["S" + str(i) for i in range(1,num_sigs+1)]
-    W_fmt = np.concatenate((np.array([W_colnames]), W_fmt), axis=0)
-
-    # write out
-    np.savetxt(W_path, W_fmt, delimiter='\t', fmt="%s")
+    W_out = DataFrame(data=W,
+                index=samples[0],
+                columns=["S" + str(i) for i in range(1,num_sigs+1)])
+    
+    W_out.to_csv(W_path, index_label="ID", sep="\t")
 
 ###############################################################################
 # write H matrix
 ###############################################################################
 def writeH(H, H_path, subtypes_dict):
+    
     num_sigs, num_subtypes = H.shape
+    H_out = DataFrame(data=H,
+                index=["S" + str(i) for i in range(1,num_sigs+1)],
+                columns=list(sorted(subtypes_dict.keys())))
 
-    # add signature ID as first column
-    H_rownames = ["S" + str(i) for i in range(1,num_sigs+1)]
-    H_fmt = np.concatenate((np.array([H_rownames]).T, H.astype('|S20')), axis=1)
-
-    H_colnames = ["Sig"] + list(sorted(subtypes_dict.keys()))
-    H_fmt = np.concatenate((np.array([H_colnames]), H_fmt), axis=0)
-
-    # write out
-    np.savetxt(H_path, H_fmt, delimiter='\t', fmt="%s")
+    H_out.to_csv(H_path, index_label="Sig", sep="\t")
 
 ###############################################################################
 # write yaml config for diagnostic reports
