@@ -25,8 +25,18 @@ from util import *
 ##############################################################################
 start = timeit.default_timer()
 
+init_log = getLogger('init_log', level=DEBUG)
+
 # get latest version from github tags
-version = subprocess.check_output(["git", "describe"]).strip().decode('utf-8')
+# via https://stackoverflow.com/questions/14989858
+try:
+    version = subprocess.check_output(["git", "describe"]).strip().decode('utf-8')
+    # init_log.debug("version: " + version)
+    init_log.debug("----------------------------------")
+    init_log.debug(sys.argv[0] + " " + str(version))
+except:
+    version = "[version not found]"
+    init_log.warning("Version not found")
 
 # get number of cpus on system
 num_cores = multiprocessing.cpu_count()
@@ -246,15 +256,13 @@ else:
     
 log = getLogger('doomsayer_log', level=loglev)
 
-log.info("----------------------------------")
-log.info(sys.argv[0] + " " + str(version))
-log.info("----------------------------------")
-log.info("Running with the following options:")
+log.debug("----------------------------------")
+log.debug("Running with the following options:")
 for arg in vars(args):
-    log.info(arg + ": " + str(getattr(args, arg)))
+    log.debug(arg + ": " + str(getattr(args, arg)))
 
 # log.info("\n".join(vars(args)))
-log.info("----------------------------------")
+log.debug("----------------------------------")
 
 ###############################################################################
 # Initialize project directory
