@@ -1,4 +1,4 @@
-```{r heatmap, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 18, fig.width = 14}
+```{r heatmap, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 12, fig.width = 10, dpi=100,  fig.align="center"}
 
 cutoff <- ifelse(ncol(spectra_rates)-1==6, 0.05, 0.005)
 nind <- 100
@@ -34,6 +34,8 @@ rownames(outlier_r_m) <- outlier_r_m$ID
 outlier_r_m <- outlier_r_m %>%
   dplyr::select(-ID)
 
+# print(rownames(outlier_r_m))
+
 ncl = length(unique(sig_contribs2$signature))
 # ncl = nrow(combinations(length(unique(sig_contribs2$signature)), 2, replace=T))
 
@@ -54,13 +56,42 @@ hm <- suppressMessages(heatmaply(outlier_r_m,
     label_names = c("ID", "subtype", "error"),
     column_text_angle = 90,
     subplot_widths=c(0.95,0.05),
-    plot_method="ggplot"))
+    plot_method="ggplot"#,
+    # file = "heatmaply_static.png"
+    ))
 
-suppressMessages(subplot(hm$p, hm$px,
+hm2 <- suppressMessages(subplot(hm$p, hm$px,
     margin=0, titleX=TRUE, shareY=TRUE, widths=c(0.9, 0.1)) %>%
   layout(autosize=F,
-    width = 1400,
-    height = 1400,
+    width = 1200,
+    height = 1200,
     margin = list(l = 130, b = 100)))
+
+if(staticplots){
+  suppressMessages(devtools::install_github("raivokolde/pheatmap"))
+  suppressWarnings(suppressMessages(require(pheatmap)))
+
+  pheatmap(outlier_r_m, 
+         color=viridis::plasma(20),
+         clustering_method='ward.D2',
+         treeheight_col=0
+         )
+
+  # superheat(outlier_r_m, 
+  #           pretty.order.rows = TRUE,
+  #           pretty.order.cols = TRUE, 
+  #           clustering.method = 'hierarchical',
+  #           linkage.method = 'ward.D2',
+  #           row.dendrogram = TRUE,
+  #           heat.pal.values = seq(0,1,0.05),
+  #           heat.pal=viridis::plasma(21), 
+  #           yr.plot.size = 0.1,
+  #           left.label.col = "white", 
+  #           bottom.label.col = "white",
+  #           bottom.label.text.angle = 90)
+} else {
+  hm2
+}
+
 
 ```

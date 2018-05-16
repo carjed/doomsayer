@@ -1,4 +1,4 @@
-```{r dist, echo=FALSE, fig.height = 12, fig.width = 24}
+```{r dist, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 5, fig.width = 10}
 
 # get_leaves_branches_col(hrm$rows)
 
@@ -8,24 +8,29 @@ spectra2 <- spectra %>%
   group_by(group) %>%
   gather(subtype, count, 2:ncol(spectra)) %>%
   separate(subtype, c("category", "motif"), sep = "[.]") %>%
+  # mutate(subtype=gsub("_", ">", subtype)) %>%
+  mutate(category=gsub("_", ">", category)) %>%
+  mutate(category=factor(category, levels=orderedcatsnc_short)) %>%
   group_by(category, motif, group) %>%
   summarise(count=sum(count)) %>%
   group_by(group) %>%
   mutate(prop=count/sum(count)) %>%
   ungroup()
 
-ggplot(spectra2, aes(x=motif, y=prop, fill=group, group=group))+
+p <- ggplot(spectra2, aes(x=motif, y=prop, fill=group, group=group))+
   geom_bar(stat="identity", position="dodge")+
   facet_wrap(~category, ncol=6, scales="free_x")+
   ylab("Contribution")+
   scale_fill_brewer(palette = "Set1")+
   theme_bw()+
-  theme(axis.text.x=element_text(angle=90, vjust=0, size=20),
-        axis.text.y=element_text(size=20),
-        axis.title.x=element_text(size=24),
-        axis.title.y=element_text(size=24),
+  theme(axis.text.x=element_text(angle=90, vjust=0, size=10),
+        # axis.text.y=element_text(size=20),
+        # axis.title.x=element_text(size=24),
+        # axis.title.y=element_text(size=24),
+        # legend.text=element_text(size=20),
+        # strip.text=element_text(size=24),
         legend.title=element_blank(),
-        legend.text=element_text(size=20),
-        strip.text=element_text(size=24))
-        # legend.position="none")
+        legend.position="bottom")
+        
+sggplotly(p)
 ```

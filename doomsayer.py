@@ -225,6 +225,11 @@ parser.add_argument("-R", "--report",
                         R.",
                     action="store_true")
 
+parser.add_argument("-G", "--staticplots",
+                    help="use static ggplot figures instead of interactive \
+                        plotly figures",
+                    action="store_true")
+
 template_opts = ["diagnostics", "msa"]
 parser.add_argument("-T", "--template",
                     help="Template for diagnostic report. Must be one of \
@@ -417,7 +422,7 @@ else:
 ###############################################################################
 if(args.report and args.matrixname == "subtype_count_matrix"):
 
-    writeReportConfig(paths, projdir)
+    writeReportConfig(paths, projdir, args)
     log.debug("Diagnostics config file written to: " + projdir + "/config.yaml")
 
     template_src = sys.path[0] + "/report_templates/" + args.template + ".Rmd"

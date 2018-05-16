@@ -22,27 +22,28 @@ body {
 ```{r child="R/setup.Rmd"}
 ```
 
+```{r child="R/sigloads.Rmd"}
+```
+
 ### Component value distributions
 
 This plot shows the distribution of scores for each principal component (if using PCA) or NMF component (if using NMF) across the N individuals in your sample.
 
-If any component shows clear evidence of multimodality, consider changing the default outlier detection from `--f ee` (elliptic envelope) to either `--f lof` (local outlier factor) or `--f if` (isolation forest)
+If any component shows clear evidence of multimodality, consider changing the default outlier detection from `--filtermode ee` (elliptic envelope) to either `--filtermode lof` (local outlier factor) or `--filtermode if` (isolation forest)
 
 ```{r child="R/contribs_hist.Rmd"}
 ```
 
 ### Error profile heatmap
 
-Fold-difference in contribution per subtype for each outlier. Fold-differences are calculated relative to the mean contribution of that subtype across all samples. Scale is truncated to +/-3-fold difference
+Fold-difference in contribution per subtype for each outlier. Fold-differences are calculated relative to the mean contribution of that subtype across all samples. Scale is truncated to +/-5-fold difference
 
 ```{r child="R/heatmap.Rmd"}
 ```
 
-### Combined mutation spectrum
+### Compare mutation spectra of retained samples and outliers
 
-These plots shows the total number of observations in each subtype, combined across all samples
-
-#### All samples
+Each bar represents the fraction of observations contained within each K-mer subtype among the kept samples (blue) versus the flagged outliers (red)
 
 ```{r child="R/spectra.Rmd"}
 ```
@@ -50,10 +51,6 @@ These plots shows the total number of observations in each subtype, combined acr
 ### Signature loadings (H matrix)
 
 Describes how each mutation subtype is loaded into the r signatures
-
-```{r child="R/sigloads.Rmd"}
-```
-
 
 ```{r child="R/sigloads_bar.Rmd"}
 ```
