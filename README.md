@@ -18,21 +18,46 @@ If you use DOOMSAYER in your research, please cite our [paper](#) (citation pend
 
 <!-- - [Introduction](#introduction)
 - [Setup](#setup)
-  * [System requirements](#system-requirements)
-  * [Download and installation](#download-and-installation)
-  * [Dependencies](#dependencies)
-- [Usage](#usage)
+  * [Using Conda (recommended)](#using-conda--recommended-)
+  * [Local install](#local-install)
+  * [Docker](#docker)
+    + [Binder](#binder)
 - [Tutorial](#tutorial)
+- [Usage](#usage)
+  * [Program options](#program-options)
+    + [Version number](#version-number)
+    + [number of CPUs](#number-of-cpus)
+    + [Verbose logging](#verbose-logging)
   * [Input options](#input-options)
+    + [Input data file](#input-data-file)
+    + [Fasta reference file](#fasta-reference-file)
+  * [Input modes](#input-modes)
+    + [VCF mode (default)](#vcf-mode--default-)
+      - [Single VCF file](#single-vcf-file)
+      - [Multiple VCF files](#multiple-vcf-files)
+    + [plain text mode](#plain-text-mode)
+    + [Aggregation mode](#aggregation-mode)
+  * [Filtering options](#filtering-options)
+    + [Analyze specific samples](#analyze-specific-samples)
+    + [Sample grouping file](#sample-grouping-file)
+    + [Exclude samples with too few observations](#exclude-samples-with-too-few-observations)
+    + [Set maximum allele count of SNVs to include](#set-maximum-allele-count-of-snvs-to-include)
   * [Output options](#output-options)
-  * [Control options](#control-options)
+    + [Custom project directory](#custom-project-directory)
+    + [Write only M matrix with custom name](#write-only-m-matrix-with-custom-name)
+    + [Auto-filtered VCF or plain-text output](#auto-filtered-vcf-or-plain-text-output)
+  * [Matrix decomposition and outlier detection options](#matrix-decomposition-and-outlier-detection-options)
+    + [Specify decomposition algorithm and number of components](#specify-decomposition-algorithm-and-number-of-components)
+    + [Choose outlier detection mode](#choose-outlier-detection-mode)
+    + [Stringency threshold for outlier check](#stringency-threshold-for-outlier-check)
+    + [Set motif length](#set-motif-length)
   * [Generate a diagnostic report](#generate-a-diagnostic-report)
 - [FAQ](#faq)
   * [What are Doomsayer's hardware requirements?](#what-are-doomsayer-s-hardware-requirements-)
   * [What type of sequencing data can Doomsayer analyze?](#what-type-of-sequencing-data-can-doomsayer-analyze-)
   * [Doomsayer is not reading my input VCF](#doomsayer-is-not-reading-my-input-vcf)
-  * [Reference file incompatibilities](#reference-file-incompatibilities)
-  * [RMarkdown reports are not rendering](#rmarkdown-reports-are-not-rendering)
+  * [Why am I getting errors about the reference genome?](#why-am-i-getting-errors-about-the-reference-genome-)
+  * [Why are my RMarkdown reports not rendering?](#why-are-my-rmarkdown-reports-not-rendering-)
 - [Contact](#contact) -->
 
 ------------------------------------
@@ -135,66 +160,108 @@ Doomsayer provides several options for performing outlier detection and mutation
 ## Usage
 
 ```
-usage: doomsayer.py [-h] [-M ] -i [INPUT] [-f ] [-g ] [-s ] [-C ] [-X ] [-p ]
-                    [-m ] [-o] [-F ] [-t ] [-r ] [-l ] [-R] [-T ] [-c ] [-v]
+usage: doomsayer.py [-h] [-c [INT]] [-v] [-V] [-M ] -i [/path/to/input.vcf]
+                    [-f [/path/to/genome.fa]]
+                    [-g [/path/to/sample_batches.txt]]
+                    [-s [/path/to/kept_samples.txt]] [-C [INT]] [-X [INT]]
+                    [-p [/path/to/project_directory]] [-m [STR]] [-o]
+                    [-d [STR]] [-r [INT]] [-F [STR]] [-t [FLOAT]] [-l [INT]]
+                    [-R] [-G] [-T [STR]]
 
 optional arguments:
   -h, --help            show this help message and exit
-  -M [], --mode []      Mode for parsing input. Must be one of {vcf, agg, txt}
-  -i [INPUT], --input [INPUT]
+  -c [INT], --cpus [INT]
+                        number of CPUs. Must be integer value between 1 and 
+                        [maxcpus]
+  -v, --verbose         Enable verbose logging
+  -V, --version         show program's version number and exit
+  -M [STR], --mode [STR]
+                        Mode for parsing input. Must be one of {vcf, agg,
+                        txt}. Defaults to VCF mode.
+  -i [/path/to/input.vcf], --input [/path/to/input.vcf]
                         In VCF mode (default) input file is a VCF or text file
-                        containing paths of multiple VCFs. Can accept input
-                        from STDIN with "--input -". In aggregation mode,
-                        input file is a text file containing mutation subtype
-                        count matrices, or paths of multiple such matrices. In
-                        plain text mode, input file is tab-delimited text file
-                        containing 5 columns: CHR, POS, REF, ALT, ID
-  -f [], --fastafile []
+                        containing paths of multiple VCFs. Defaults to accept
+                        input from STDIN with "--input -". In aggregation
+                        mode, input file is a text file containing mutation
+                        subtype count matrices, or paths of multiple such
+                        matrices. In plain text mode, input file is tab-
+                        delimited text file containing 5 columns: CHR, POS,
+                        REF, ALT, ID
+  -f [/path/to/genome.fa], --fastafile [/path/to/genome.fa]
                         reference fasta file
-  -g [], --groupfile []
+  -g [/path/to/sample_batches.txt], --groupfile [/path/to/sample_batches.txt]
                         two-column tab-delimited file containing sample IDs
                         (column 1) and group membership (column 2) for pooled
                         analysis
-  -s [], --samplefile []
+  -s [/path/to/kept_samples.txt], --samplefile [/path/to/kept_samples.txt]
                         file with sample IDs to include (one per line)
-  -C [], --minsnvs []   minimum # of SNVs per individual to be included in
-                        analysis
-  -X [], --maxac []     maximum allele count for SNVs to keep in analysis. Set
-                        to 0 to include all variants.
-  -p [], --projectdir []
+  -C [INT], --minsnvs [INT]
+                        minimum # of SNVs per individual to be included in
+                        analysis. Default is 0.
+  -X [INT], --maxac [INT]
+                        maximum allele count for SNVs to keep in analysis.
+                        Defaults to 1 (singletons) Set to 0 to include all
+                        variants.
+  -p [/path/to/project_directory], --projectdir [/path/to/project_directory]
                         directory to store output files (do NOT include a
-                        trailing '/')
-  -m [], --matrixname []
-                        custom filename for M matrix [without extension]
+                        trailing '/'). Defaults to ./doomsayer_output
+  -m [STR], --matrixname [STR]
+                        filename prefix for M matrix [without extension]
   -o, --filterout       in VCF or plain text modes, re-reads input file and
                         writes to STDOUT, omitting records that occur in the
                         detected outliers. To write to a new file, use
                         standard output redirection [ > out.vcf] at the end of
                         the doomsayer.py command
-  -F [], --filtermode []
-                        Method for detecting outliers. Must be one of {fold,
-                        sd, chisq, nmf, none}
-  -t [], --threshold []
-                        threshold for fold-difference RMSE cutoff, used to
-                        determine which samples are outliers. Must be a real-
-                        valued number > 1. The default is 2. higher values are
-                        more stringent
-  -r [], --rank []      Rank for NMF decomposition. Must be an integer between
-                        2 and 10
-  -l [], --length []    motif length. Allowed values are 1,3,5,7
+  -d [STR], --decomp [STR]
+                        mode for matrix decomposition. Must be one of {nmf,
+                        pca}. Defaults to pca.
+  -r [INT], --rank [INT]
+                        Rank for Matrix decomposition. If --decomp pca, will
+                        select first r components. Default [0] will force
+                        Doomsayer to iterate through multiple ranks to find an
+                        optimal choice.
+  -F [STR], --filtermode [STR]
+                        Method for detecting outliers. Must be one of {ee,
+                        lof, if, any, any2, all, none}. Defaults to ee.
+  -t [FLOAT], --threshold [FLOAT]
+                        threshold for fraction of potential outliers
+  -l [INT], --length [INT]
+                        motif length. Allowed values are 1,3,5,7
   -R, --report          automatically generates an HTML-formatted report in R.
-  -T [], --template []  Template for diagnostic report. Must be one of
-                        {diagnostics, msa}
-  -c [], --cpus []      number of CPUs. Must be integer value between 1 and 6
-  -v, --verbose         Enable verbose logging
+  -G, --staticplots     use static ggplot figures instead of interactive
+                        plotly figures
+  -T [STR], --template [STR]
+                        Template for diagnostic report. Must be one of
+                        {diagnostics, msa}. Defaults to diagnostics.
 ```
+
+### Program options
+
+#### Version number
+
+`--version`
+
+Show program's version number and exit.
+
+#### number of CPUs
+
+`--cpus [INT]`
+
+Set the number of CPUs to use if input is a list of files.
+
+#### Verbose logging
+
+`--verbose`
+
+This flag enables debug logging for troubleshooting.
 
 ### Input options
 
-These options together specify the data to be processed by Doomsayer. Each mode and the possible inputs it can accept are described below.
+These options together specify the data to be processed by Doomsayer. Each mode and the possible inputs it can accept are described in the [input modes](#input-modes) section.
 
 #### Input data file
-`-i INPUTFILE, --input INPUTFILE`
+
+`--input [/path/to/input.vcf]`
 
 Doomsayer can accept multiple types of input:
 - a single VCF file (either uncompressed or [bgzip](http://www.htslib.org/doc/tabix.html)-compressed)
@@ -205,18 +272,10 @@ Doomsayer can accept multiple types of input:
 By default, Doomsayer assumes input is a VCF file or text file containing file paths of multiple VCF files. To parse tab-delimited text files or aggregate data from multiple previous runs, use the `--mode txt` or `--mode agg` options, respectively.
 
 #### Fasta reference file
-`-f FASTAFILE, --fastafile FASTAFILE`
+
+`--fastafile [/path/to/genome.fa]`
 
 In VCF mode and plain text mode, you **must** specify the fasta-formatted reference genome to be used to look up the local sequence context for each SNV. This file must corresponding to the same reference genome build used to call the variants contained in the input VCF file, with [consistently-formatted records](#reference-file-incompatibilities). The fasta file may be either uncompressed or bgzip-compressed.
-
-#### Sample grouping file
-`-g [GROUPFILE], --groupfile [GROUPFILE]`
-
-*Currently only applies to VCF mode*
-
-This parameter forces Doomsayer to evaluate mutation spectra across pooled groups of samples. The GROUPFILE should be a tab-delimited text file containing sample IDs in the first column and a grouping variable (e.g., plate number, sequencing date, sub-study) in the second column. This option is particularly useful if you wish to explicitly filter for batch effects in your data, e.g., by setting the grouping variable to be the sequencing date, study of origin, sequencing plate, etc.
-
-Note that this option will assume the GROUPFILE contains all samples in the input VCF. If your GROUPFILE contains only a subset of samples, other samples will not be evaluated.
 
 ### Input modes
 
@@ -263,22 +322,39 @@ If you plan on generating subtype count matrices via Doomsayer to aggregate at a
 
 ### Filtering options
 
-If you wish to apply sample-level or variant-level filters to your input data prior to running Doomsayer, we advise pre-filtering your data (e.g., using bcftools) for greater flexibility and efficiency. However, we have included options that enable the user to perform a few common filtering tasks directly in Doomsayer.
+Doomsayer is designed to integrate in existing VCF processing workflows, so if you wish to apply sample-level or variant-level filters to your input data prior to running Doomsayer, we advise pre-filtering your data (e.g., using bcftools) for greater flexibility and efficiency. However, we have included options that enable the user to perform a few common filtering tasks directly in Doomsayer.
 
 #### Analyze specific samples
 
-`--samplefile [SAMPLEFILE]`
+`--samplefile [/path/to/kept_samples.txt]`
 
 *Currently only applies to VCF mode*
 
 To run Doomsayer on a subset of samples present in the input VCF, this parameter will read a list of sample IDs to keep (one per line) and skip all other samples in the VCF.
 
+#### Sample grouping file
+
+`--groupfile [/path/to/sample_batches.txt]`
+
+*Currently only applies to VCF mode*
+
+This parameter forces Doomsayer to evaluate mutation spectra across pooled groups of samples. The GROUPFILE should be a tab-delimited text file containing sample IDs in the first column and a grouping variable (e.g., plate number, sequencing date, sub-study) in the second column. This option is particularly useful if you wish to explicitly filter for batch effects in your data, e.g., by setting the grouping variable to be the sequencing date, study of origin, sequencing plate, or some other batch variable.
+
+Note that this option will assume the GROUPFILE contains all samples in the input VCF. If your GROUPFILE contains only a subset of samples, other samples will not be evaluated.
+
 #### Exclude samples with too few observations
+
 `--minsnvs [INT]`
 
 In some cases, samples may appear as outliers simply because they have very few observed SNVs. The `--minsnvs` parameter forces Doomsayer to only evaluate individuals with at least X observed SNVs. By default, `minsnvs=0`, and all samples are retained. If this option is enabled, the low-SNV outliers will be written to a separate file named `doomsayer_snvs_lt{X}.txt` in the output directory, and the keep/drop lists will be derived from the remaining subset of samples.
 
 Note that the `chisq` outlier detection mode is generally more robust to low-SNV outliers.
+
+#### Set maximum allele count of SNVs to include
+
+`--maxac [INT]`
+
+By default, Doomsayer will evaluate only singleton SNVs (`--maxac 1`). To include more common SNVs, increase the value of this parameter. To include all SNVs, use `--maxac 0`. This is not recommended when using Doomsayer for QC functionality, but may be useful for more general mutation signature analysis.
 
 ### Output options
 The default output consists of two plain-text files: `doomsayer_keep.txt`, containing the IDs of samples that passed the filter, and `doomsayer_drop.txt`, containing the IDs of samples that failed the filter. These lists can be easily integrated into bcftools, vcftools, PLINK, and other tools to exclude outlier samples from your downstream analyses.
@@ -289,21 +365,21 @@ By default, Doomsayer will also write three data files from the NMF decompositio
 3. the W matrix containing the contributions of each signature within each sample's mutation spectrum
 
 #### Custom project directory
-`--projectdir [PROJECTDIR]`
+`--projectdir [/path/to/project_directory]`
 
 By default, output files are stored in a subfolder named `/doomsayer_output/` in your current directory. The `--projectdir` parameter will specify a custom name/location for the Doomsayer output directory.
 
 #### Write only M matrix with custom name
-`--matrixname [matrixname]`
+`--matrixname [STR]`
 
-This parameter allows you to specify a custom name for the mutation spectra matrix file. This option was included for cases where large datasets are spread across several files and we wish to take advantage of the [aggregation](#aggregation-mode) functionality of Doomsayer. Note that using this option will force Doomsayer to skip the generation of keep/drop lists and NMF decomposition.
+This parameter allows you to specify a custom name for the mutation spectra matrix file. The default is `--matrixname subtype_count_matrix`. This is particularly useful if you wish to generate an initial count matrix then play around with the outlier detection parameters.
 
 #### Auto-filtered VCF or plain-text output
-`-o, --filterout`
+`--filterout`
 
 If the input is a single VCF or text file of sites, this flag will force Doomsayer to re-read the input file and write a new file of the same format, removing any samples specified in the `doomsayer_drop.txt` list that has been generated.
 
-This command will print the VCF header and records to STDOUT, which can then be piped to compatible programs, or redirected to a file using standard UNIX redirection (adding `> /path/to/output.vcf` at the end of the above example), allowing Doomsayer to be used as an intermediate step of more complex VCF processing pipelines.
+This command will print the VCF header and records to STDOUT, which can then be piped to compatible programs, or redirected to a file using standard UNIX redirection (i.e., adding `> /path/to/output.vcf` at the end of the command), allowing Doomsayer to be used as an intermediate step of more complex VCF processing pipelines.
 
 As far as possible, all records present in the original input will be preserved in the output, with three notable exceptions:
 1. All samples in the drop list (and their genotypes) will be omitted
@@ -314,26 +390,40 @@ As far as possible, all records present in the original input will be preserved 
     3. number of samples (NS)
     4. combined depth (DP)
 
-### Outlier detection options
+### Matrix decomposition and outlier detection options
 
-#### Choose outlier detection mode
-`--filtermode []`
+#### Specify decomposition algorithm and number of components
+`--decomp [STR]`
 
-Specify the method Doomsayer uses for detecting outliers. Must be one of the following:
+Doomsayer will decompose the subtype count matrix using either Principal Components Analysis (PCA), or Nonnegative Matrix Factorization (NMF).
 
-- `-F fold`: Outliers are considered to be any individual where the contribution of at least one subtype differs from the sample-wide mean more than X-fold. (Default X is 2; adjust with the  [`--threshold`](#stringency-threshold-for-outlier-check) option)
-- `-F sd`: Outliers are considered to be any individual where the contribution of at least one subtype is more than X standard deviations away from the sample-wide mean. (Default X is 2; adjust with the  [`--threshold`](#stringency-threshold-for-outlier-check) option)
-- `-F chisq`: For each sample, Doomsayer performs a Chi-squared test with the null hypothesis being that the observed mutation spectrum is equal to the expected mutation spectrum. Outliers are considered to be any individual where the p-value of the test is < 0.05/N, where N is the number of samples tested (i.e., statistically significant after Bonferroni multiple testing correction).
-
-#### Stringency threshold for outlier check
-`--threshold []`
-
-This parameter specifies the stringency for identifying outliers when using the `fold` or `sd` [outlier filter modes](#choose-outlier-detection-mode). Must be a real number >=1. Higher values correspond to a more stringent threshold (i.e., fewer outliers identified).
-
-#### Specify NMF rank
 `--rank [INT]`
 
-This parameter allows you to choose the rank of the NMF decomposition (up to 10). By default, Doomsayer will automatically choose an optimal rank for the NMF decomposition.
+Set the rank of the NMF decomposition to R components if using `--decomp nmf`, or select the first R principal components if using `--decomp pca`
+
+#### Choose outlier detection mode
+`--filtermode [STR]`
+
+Once we have reduced the input matrix to R components, we want to identify which individuals are outliers in that R-dimensional space. Doomsayer can apply three different outlier detection algorithms: elliptic envelopes, local outlier factors, and isolation forests.
+
+- `--filtermode ee`: Outliers are determined by assuming components follow a multivariate Gaussian distribution, and computing an elliptic envelope.
+- `--filtermode lof`: Outliers are determined using local outlier factors. 
+- `--filtermode if`: Outliers are determined using isolation forests.
+
+In addition, Doomsayer can perform omnibus filtering using two or more of the above methods:
+- `--filtermode any2`: Outliers must be called by at least two of the above methods
+- `--filtermode all`: Outliers must be called by all three of the above methods (will call the fewest outliers)
+
+To disable outlier detection, use `--filtermode none`
+
+For a detailed overview of these methods, see the [scikit-learn outlier detection tutorial](http://scikit-learn.org/stable/modules/outlier_detection.html).
+
+#### Stringency threshold for outlier check
+`--threshold [FLOAT]`
+
+This parameter specifies the fraction of the sample to flag as potential outliers by a given algorithm. If we set `--threshold 0.05` (the default) and use either the ee, lof, or if filter modes, Doomsayer will always flag ~5% of the sample as outliers.
+
+When using the omnibus filtering modes, 
 
 #### Set motif length
 `--length {1,3,5,7}`
@@ -345,22 +435,11 @@ This parameter specifies the (symmetric) motif length to be considered in determ
 
 The `--report` option will tell Doomsayer to execute the `generate_report.r` script. This script will copy an [RMarkdown template](report_templates) (specified with the `-T, --template` parameter) into `~/doomsayer_output/` (or the user-specified project directory) and render an HTML-formatted report detailing the results of your Doomsayer run.
 
-All static plots shown in this report will be available as standalone .png images, located in `~/doomsayer_output/report_files/figure-html/`. Interactive plots can be downloaded as .png images by mousing over the upper right corner of the figure and clicking the camera icon.
+By default, plots are fully interactive using the Plotly engine. If you want to download static .png images, just mouse over the upper right corner of the figure and click the camera icon.
+
+Alternatively, you can set the `--staticplots` option in your command, which will generate a report without any interactive elements. The standalone .png images will be saved to `~/doomsayer_output/report_files/figure-html/`. 
 
 An example of a final report is available [here](sample_output/report.md). See the [sample_output](./sample_output) directory for further documentation and usage examples.
-
-### Miscellaneous options
-
-#### number of CPUs
-
-`--cpus [1-max_cpus]`
-
-Set the number of CPUs to use if input is a list of files.
-
-#### Verbose logging
-`--verbose`
-
-This flag enables detailed program logging to the STDERR stream
 
 ------------------------------------
 
@@ -370,23 +449,23 @@ This flag enables detailed program logging to the STDERR stream
 Doomsayer has no specific hardware dependencies. We recommend ~2GB of free disk space if storing the demo data.
 
 ### What type of sequencing data can Doomsayer analyze?
-Doomsayer's core functionality, the NMF-based mutation signature analysis, can be used to rapidly evaluate mutation patterns present in any collection of sequencing data, and offers an extremely efficient and almost entirely automated (albeit slightly less flexible) alternative to the functions provided by the [SomaticSignatures](http://bioconductor.org/packages/release/bioc/html/SomaticSignatures.html) R package:
+Doomsayer's core functionality, the NMF-based or PCA-based mutation signature analysis, can be used to rapidly evaluate mutation patterns present in any collection of sequencing data, and offers an extremely efficient and almost entirely automated (albeit slightly less flexible) alternative to the functions provided by the [SomaticSignatures](http://bioconductor.org/packages/release/bioc/html/SomaticSignatures.html) R package:
 
 >Gehring JS, Fischer B, Lawrence M, Huber W. SomaticSignatures: inferring mutational signatures from single-nucleotide variants. Bioinformatics. 2015;31(22):3673-3675. doi:10.1093/bioinformatics/btv408.
 
 Although we have only tested Doomsayer with human data, it should be fully capable of analyzing NGS data from any other organism.
 
-Note that the outlier analysis function of Doomsayer is exclusively designed for analyzing **population** variants in **unrelated** individuals. In its current state, this filtering is **not** appropriate for quality control in somatic sequencing data or *de novo* mutation analysis, because genuine biological variability in these data may be inferred as errors.
-
-Also, Doomsayer does not currently include multiallelic variants in its analysis. This feature is under development.
+Note that the outlier analysis function of Doomsayer is exclusively designed for analyzing **population** variants in **unrelated** individuals. In its current state, this filtering is **not** appropriate for quality control in somatic sequencing data or *de novo* mutation analysis, because genuine biological variability in these data will almost certainly be inferred as errors.
 
 ### Doomsayer is not reading my input VCF
 Doomsayer uses the cyvcf2 wrapper for htslib libraries for parsing VCFs. If the input VCF is not formatted properly, htslib will often throw an error/warning or stop completely. If you encounter any issues with reading in a VCF file, first confirm that it is properly formatted. [vcf-validator](https://github.com/EBIvariation/vcf-validator) is a useful utility for this. You can also try indexing the VCF with `tabix -p input.vcf.gz` and running a simple bcftools command, such as `bcftools view input.vcf.gz`. Also check that your VCF contains singleton SNVs, individual genotypes are included, and that the FILTER column contains "PASS" values.
 
-### Reference file incompatibilities
-Errors may occur if the chromosome records in your fasta reference file are formatted differently than the CHROM field of your VCF (e.g., if the fasta header is formatted as `>chrN` but the VCF CHROM field is just `N`). You will need to modify the records in one or the other to be consistent.
+### Why am I getting errors about the reference genome?
+To build the input matrix of subtype counts, Doomsayer must annotate each site with the surrounding sequence context, using a user-specified reference genome file.
 
-### RMarkdown reports are not rendering
+The libraries for parsing fasta files require that the chromosome records in your fasta reference file are formatted identically to the CHROM field of your VCF (e.g., if the fasta header is formatted as `>chrN` but the VCF CHROM field is just `N`). If you encounter any errors, try modifying the the fasta file to either strip or add "chr" to each record.
+
+### Why are my RMarkdown reports not rendering?
 If any errors occur when trying to generate a report, it is likely because the pandoc binaries cannot be found on your system. Try installing RStudio; otherwise, you can install precompiled binaries into `doomsayer/pandoc/bin`
 
 Alternatively, you can transfer the contents of the `doomsayer_output` directory to a computer that has RStudio installed and run `knit_with_parameters("report.Rmd")`. In the prompt window, enter `/path/to/doomsayer_output/config.yaml` in the `yaml_cfg` field.
@@ -396,4 +475,4 @@ Alternatively, you can transfer the contents of the `doomsayer_output` directory
 ## Contact
 If you need any further help, come across a bug, or have a feature request, feel free to [open an issue](https://github.com/carjed/doomsayer/issues/new) or [contact me directly](mailto:jed.e.carlson@gmail.com). If you are reporting a bug or unexpected output, please run Doomsayer with the `--verbose` option and include this output in your inquiry.
 
-<small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
+<!--<small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>-->

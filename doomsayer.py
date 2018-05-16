@@ -74,7 +74,7 @@ parser.add_argument("-M", "--mode",
                     nargs='?',
                     type=str,
                     choices=mode_opts,
-                    metavar='',
+                    metavar='STR',
                     default="vcf")
 
 parser.add_argument("-i", "--input",
