@@ -18,9 +18,9 @@ spectra_r <- spectra_rates %>%
   mutate_at(vars(-1), funs(./mean(.))) %>%
   gather(subtype, err, 2:ncol(spectra_rates)) %>%
   separate(subtype, c("category", "motif"), sep = "[.]") %>%
-  mutate(err=ifelse(err>3, 3, err))
-
-outlier_IDs <- drop_ids$V1
+  mutate(err=ifelse(err<1, -1/(err+1e-4), err)) %>%
+  mutate(err=ifelse(err > 5, 5, err)) %>%
+  mutate(err=ifelse(err < -5, -5, err))
 
 outlier_r_m <- spectra_r %>%
   dplyr::filter(ID %in% outlier_IDs) %>%
@@ -50,7 +50,7 @@ hm <- suppressMessages(heatmaply(outlier_r_m,
     Colv=TRUE,
     return_ppxpy=TRUE,
     hclust_method="ward.D2",
-    colors=magma(20),
+    colors=plasma(20),
     label_names = c("ID", "subtype", "error"),
     column_text_angle = 90,
     subplot_widths=c(0.95,0.05),
