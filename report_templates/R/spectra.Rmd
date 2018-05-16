@@ -1,4 +1,4 @@
-```{r dist, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 5, fig.width = 10, dpi=100}
+```{r dist, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 10, fig.width = 10, dpi=100}
 
 # get_leaves_branches_col(hrm$rows)
 
@@ -19,7 +19,8 @@ spectra2 <- left_join(spectra, cluster_mems, by="ID") %>%
 
 p <- ggplot(spectra2, aes(x=motif, y=prop, fill=group, group=group))+
   geom_bar(stat="identity", position="dodge")+
-  facet_wrap(~category, ncol=6, scales="free_x")+
+  facet_wrap(~category, ncol=1, scales="free")+
+  # facet_grid(category~.)+
   ylab("Contribution")+
   # scale_fill_brewer(palette = "Set1")+
   scale_fill_manual(values=c("#D3D3D3", group_col_vals))+
@@ -32,7 +33,7 @@ p <- ggplot(spectra2, aes(x=motif, y=prop, fill=group, group=group))+
         # strip.text=element_text(size=24),
         legend.title=element_blank(),
         legend.position="bottom")
-        
+   
 sggplotly(p)
 
 ```

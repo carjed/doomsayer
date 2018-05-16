@@ -1,4 +1,4 @@
-```{r sigloads_bar, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 8, fig.width = 10}
+```{r sigloads_bar, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 8, fig.width = 10, dpi=100}
 
 p <- ggplot(sig_loads_long, aes(x=motif, y=loading, fill=Sig))+
   geom_bar(stat="identity")+

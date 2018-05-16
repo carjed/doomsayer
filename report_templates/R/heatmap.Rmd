@@ -53,7 +53,9 @@ hrm <- heatmapr(outlier_r_m,
 cluster_mems <- data.frame(ID=labels(hrm$rows), 
   group=get_leaves_branches_col(hrm$rows))
 
-group_col_vals <- unique(cluster_mems$group)
+group_col_vals <- as.vector(unique(cluster_mems$group))
+
+# group_col_vals
 
 cluster_mems$group <- gsub("#", "c", cluster_mems$group)
 groups <- unique(cluster_mems$group)
@@ -63,6 +65,17 @@ cl_ids <- as.list(cl_ids)
 
 cluster_mems$group <- recode(cluster_mems$group, !!!cl_ids)
 
+# cluster_mems
+
+mat_row <- data.frame(group = cluster_mems$group)
+rownames(mat_row) <- cluster_mems$ID
+
+mat_colors <- list(group=group_col_vals)
+names(mat_colors$group) <- unique(mat_row$group)
+
+# library(dendsort)
+# sort_hclust <- function(...) as.hclust(dendsort(...))
+
 # switch between static plots using pheatmap and interactive plots using 
 # heatmaply (heatmaply's built-in static function using webshot is buggy)
 if(staticplots){
@@ -70,15 +83,21 @@ if(staticplots){
   suppressWarnings(suppressMessages(require(pheatmap)))
 
   pheatmap(outlier_r_m, 
-         color=viridis::plasma(20),
-         clustering_method='ward.D2',
-         treeheight_col=0)
+        color=viridis::plasma(20),
+        border_color=NA,
+        annotation_row    = mat_row,
+        annotation_colors = mat_colors,
+        clustering_method='ward.D2',
+        cluster_rows=as.hclust(hrm$rows),
+        # cluster_rows=sort_hclust(hrm$rows),
+        treeheight_col=0)
 } else {
   # 
   hm <- suppressMessages(
           heatmaply(outlier_r_m,
             k_row=ncl,
             Colv=TRUE,
+            Rowv=hrm$rows,
             return_ppxpy=TRUE,
             hclust_method="ward.D2",
             colors=plasma(20),

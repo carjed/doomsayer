@@ -1,4 +1,4 @@
-```{r whist, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 8, fig.width = 10}
+```{r whist, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 8, fig.width = 10, dpi=100}
 # p<-sig_contribs %>% 
 #   gather(signature, value, -ID) %>% 
 #   ggplot(aes(x=value, fill=signature))+
