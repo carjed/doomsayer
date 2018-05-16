@@ -439,7 +439,7 @@ By default, plots are fully interactive using the Plotly engine. If you want to 
 
 Alternatively, you can set the `--staticplots` option in your command, which will generate a report without any interactive elements. The standalone .png images will be saved to `~/doomsayer_output/report_files/figure-html/`. 
 
-An example of a final report is available [here](sample_output/report.md). See the [sample_output](./sample_output) directory for further documentation and usage examples.
+<!--An example of a final report is available [here](sample_output/report.md). See the [sample_output](./sample_output) directory for further documentation and usage examples.-->
 
 ------------------------------------
 
