@@ -45,6 +45,16 @@ sig_loads <- read.table(H_path, header=T, stringsAsFactors=F)
 # rmse <- read.table(RMSE_path, header=F, stringsAsFactors=F)
 
 # function to ignore nuisance messages from ggplotly
-sggplotly <- function(p){suppressMessages(ggplotly(p))}
+sggplotly <- function(p){
+  if(staticplots){
+    p
+  } else {
+    suppressMessages(ggplotly(p)) %>%
+      layout(legend = list(
+          orientation = "h"
+        )
+      )
+  }
+}
 
 ```

@@ -672,13 +672,15 @@ def detectOutliers(M, samples, filtermode, threshold, projdir):
 ###############################################################################
 # write yaml config for diagnostic reports
 ###############################################################################
-def writeReportConfig(paths, projdir):
+def writeReportConfig(paths, projdir, args):
     yaml_path = projdir + "/config.yaml"
     yaml = open(yaml_path, "w+")
     print("# Config file for doomsayer_diagnostics.r", file=yaml)
     
     for key in paths.keys():
         print(key + ": " + paths[key], file=yaml)
+
+    print("staticplots: " + str(args.staticplots).lower(), file=yaml)
 
 ###############################################################################
 # filter VCF input by kept samples

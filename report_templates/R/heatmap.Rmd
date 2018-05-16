@@ -1,19 +1,20 @@
-```{r heatmap, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 18, fig.width = 14}
+```{r heatmap, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 12, fig.width = 10, dpi=100,  fig.align="center"}
 
+# not sure why these are here....
 cutoff <- ifelse(ncol(spectra_rates)-1==6, 0.05, 0.005)
 nind <- 100
-# names(rmse) <- c("ID", "RMSE")
 
+# get signature contributions in long form
+# (not used in this code--possibly move)
 sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
-  # mutate(sumVar = rowSums(.[2:ncol(sig_contribs)])) %>%
   mutate(sumVar = rowSums(.[2:ncol(sig_contribs)])) %>%
-  # dplyr::filter(sumVar>=500) %>%
   mutate_at(vars(starts_with("S")), funs(./sumVar)) %>%
   mutate(maxgp = apply(.[,2:ncol(sig_contribs)], 1, function(x)
     names(x)[which.max(x)])) %>%
   dplyr::select(-sumVar) %>%
   gather(signature, contribution, -c(ID,maxgp))
 
+# for each subtype in each individual, get fold-difference from mean contribution
 spectra_r <- spectra_rates %>%
   mutate_at(vars(-1), funs(./mean(.))) %>%
   gather(subtype, err, 2:ncol(spectra_rates)) %>%
@@ -22,45 +23,69 @@ spectra_r <- spectra_rates %>%
   mutate(err=ifelse(err > 5, 5, err)) %>%
   mutate(err=ifelse(err < -5, -5, err))
 
+# subset to outliers
+# --possibly update subtype string formatting
 outlier_r_m <- spectra_r %>%
   dplyr::filter(ID %in% outlier_IDs) %>%
-  # mutate(ID=factor(ID, levels=levels(outlier_IDs))) %>%
   mutate(subtype=paste0(category, "_", motif)) %>%
   dplyr::select(ID, subtype, err) %>%
   spread(subtype, err)
 
+# set rownames for heatmaps
 rownames(outlier_r_m) <- outlier_r_m$ID
 
+# drop ID column now that we have rownames
 outlier_r_m <- outlier_r_m %>%
   dplyr::select(-ID)
 
+# set desired number of clusters
 ncl = length(unique(sig_contribs2$signature))
 # ncl = nrow(combinations(length(unique(sig_contribs2$signature)), 2, replace=T))
 
+# get basic dendrogram object (possibly modify color scheme)
 hrm <- heatmapr(outlier_r_m,
     k_row=ncl,
     Colv=TRUE,
     label_names = c("ID", "subtype", "error"),
     hclust_method="ward.D2")
 
-# get_leaves_branches_col(hrm$rows)
+# get dataframe of cluster membership (i.e., leaf color) for each outlier
+cluster_mems <- data.frame(ID=labels(hrm$rows), 
+  col=get_leaves_branches_col(hrm$rows))
 
-hm <- suppressMessages(heatmaply(outlier_r_m,
-    k_row=ncl,
-    Colv=TRUE,
-    return_ppxpy=TRUE,
-    hclust_method="ward.D2",
-    colors=plasma(20),
-    label_names = c("ID", "subtype", "error"),
-    column_text_angle = 90,
-    subplot_widths=c(0.95,0.05),
-    plot_method="ggplot"))
+# switch between static plots using pheatmap and interactive plots using 
+# heatmaply (heatmaply's built-in static function using webshot is buggy)
+if(staticplots){
+  suppressMessages(devtools::install_github("raivokolde/pheatmap"))
+  suppressWarnings(suppressMessages(require(pheatmap)))
 
-suppressMessages(subplot(hm$p, hm$px,
-    margin=0, titleX=TRUE, shareY=TRUE, widths=c(0.9, 0.1)) %>%
-  layout(autosize=F,
-    width = 1400,
-    height = 1400,
-    margin = list(l = 130, b = 100)))
+  pheatmap(outlier_r_m, 
+         color=viridis::plasma(20),
+         clustering_method='ward.D2',
+         treeheight_col=0)
+} else {
+  # 
+  hm <- suppressMessages(
+          heatmaply(outlier_r_m,
+            k_row=ncl,
+            Colv=TRUE,
+            return_ppxpy=TRUE,
+            hclust_method="ward.D2",
+            colors=plasma(20),
+            label_names = c("ID", "subtype", "error"),
+            column_text_angle = 90,
+            subplot_widths=c(0.95,0.05),
+            plot_method="ggplot"))
+  
+  hm2 <- suppressMessages(subplot(hm$p, hm$px,
+      margin=0, titleX=TRUE, shareY=TRUE, widths=c(0.9, 0.1)) %>%
+    layout(autosize=F,
+      width = 1200,
+      height = 1200,
+      margin = list(l = 130, b = 100)))
+  
+  hm2
+}
+
 
 ```
