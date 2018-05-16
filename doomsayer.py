@@ -273,7 +273,7 @@ log.debug("----------------------------------")
 projdir = os.path.realpath(args.projectdir)
 
 if not os.path.exists(args.projectdir):
-    log.warn(projdir + "does not exist--creating now")
+    log.warn(projdir + " does not exist--creating now")
     os.makedirs(args.projectdir)
 else:
     log.debug("All output files will be located in: " + projdir)
