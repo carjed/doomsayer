@@ -36,7 +36,7 @@ try:
     init_log.debug(sys.argv[0] + " " + str(version))
 except:
     version = "[version not found]"
-    init_log.warning("Version not found")
+    init_log.warning(version)
 
 # get number of cpus on system
 num_cores = multiprocessing.cpu_count()
@@ -273,7 +273,7 @@ log.debug("----------------------------------")
 projdir = os.path.realpath(args.projectdir)
 
 if not os.path.exists(args.projectdir):
-    log.warn(projdir + "does not exist--creating now")
+    log.warn(projdir + " does not exist--creating now")
     os.makedirs(args.projectdir)
 else:
     log.debug("All output files will be located in: " + projdir)
@@ -381,12 +381,12 @@ log.info("Explained variance for first " +
 M_d = decomp_data.W
 
 # W matrix (contributions)
-paths['W_path'] = projdir + "/NMF_W_sig_contribs.txt"
+paths['W_path'] = projdir + "/W_components.txt"
 writeW(decomp_data.W, paths['W_path'], samples)
 log.debug("W matrix saved to: " + paths['W_path'])
 
 # H matrix (loadings)
-paths['H_path'] = projdir + "/NMF_H_sig_loads.txt"
+paths['H_path'] = projdir + "/H_loadings.txt"
 writeH(decomp_data.H, paths['H_path'], subtypes_dict)
 log.debug("H matrix saved to: " + paths['H_path'])
 
