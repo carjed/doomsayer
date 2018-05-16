@@ -202,7 +202,7 @@ parser.add_argument("-F", "--filtermode",
 parser.add_argument("-t", "--threshold",
                     help="threshold for fraction of potential outliers",
                     nargs='?',
-                    type=restricted_float,
+                    type=float,
                     metavar='FLOAT',
                     default=0.05)
 
@@ -260,8 +260,6 @@ log.debug("----------------------------------")
 log.debug("Running with the following options:")
 for arg in vars(args):
     log.debug(arg + ": " + str(getattr(args, arg)))
-
-# log.info("\n".join(vars(args)))
 log.debug("----------------------------------")
 
 ###############################################################################
