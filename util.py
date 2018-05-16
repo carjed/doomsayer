@@ -1,26 +1,48 @@
 #!/usr/bin/python
 
+# system packages
 from __future__ import print_function
 import os
 import sys
-
-sys.path.append(os.getcwd())
-
+from logging import StreamHandler, DEBUG, getLogger as realGetLogger, Formatter
+from colorama import Fore, Back, init, Style
 import textwrap
 import itertools
 import timeit
 import collections
 import csv
-import nimfa
 import re
+
+sys.path.append(os.getcwd())
+
+
+# matrix+stats processing
 from pandas import *
 import numpy as np
+from scipy.stats import chisquare
+
+# decomposition algorithms
+import nimfa
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
+
+# outlier detection algorithms
+from sklearn.neighbors import LocalOutlierFactor
+from sklearn.covariance import EllipticEnvelope
+from sklearn.ensemble import IsolationForest
+
+# vcf/fasta parsing
 import cyvcf2 as vcf
 from cyvcf2 import VCF
-from scipy.stats import chisquare
 from pyfaidx import Fasta
 from Bio.Seq import Seq
 from Bio.Alphabet import IUPAC
+
+# from plotly.offline import download_plotlyjs, init_notebook_mode, plot, iplot
+# plotly.offline.init_notebook_mode(connected=True)
+# from plotly.graph_objs import *
+# import cufflinks as cf
+# cf.go_offline()
 
 ###############################################################################
 # print to stderr
@@ -36,6 +58,64 @@ def restricted_float(x):
     if x < 1.0:
         raise argparse.ArgumentTypeError("%r must be greater than 1"%(x,))
     return x
+
+###############################################################################
+# Configure color stream handler
+# https://gist.github.com/jonaprieto/a61d9cade3ba19487f98
+###############################################################################
+
+class ColourStreamHandler(StreamHandler):
+
+    """ A colorized output SteamHandler """
+
+    # Some basic colour scheme defaults
+    colours = {
+        'DEBUG': Fore.CYAN,
+        'INFO': Fore.GREEN,
+        'WARN': Fore.YELLOW,
+        'WARNING': Fore.YELLOW,
+        'ERROR': Fore.RED,
+        'CRIT': Back.RED + Fore.WHITE,
+        'CRITICAL': Back.RED + Fore.WHITE
+    }
+
+    def emit(self, record):
+        try:
+            message = self.format(record)
+            self.stream.write(
+                self.colours[record.levelname] + 
+                message + 
+                Style.RESET_ALL
+            )
+            self.stream.write(getattr(self, 'terminator', '\n'))
+            self.flush()
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except:
+            self.handleError(record)
+
+###############################################################################
+# configure logger
+###############################################################################
+def getLogger(name=None, fmt='%(levelname)s: %(message)s', level='INFO'):
+    """ Get and initialize a colourised logging instance if the system supports
+    it as defined by the log.has_colour
+    :param name: Name of the logger
+    :type name: str
+    :param fmt: Message format to use
+    :type fmt: str
+    :return: Logger instance
+    :rtype: Logger
+    """
+    log = realGetLogger(name)
+    # Only enable colour if support was loaded properly
+    handler = ColourStreamHandler() 
+    handler.setLevel(level)
+    handler.setFormatter(Formatter(fmt))
+    log.addHandler(handler)
+    log.setLevel(level)
+    log.propagate = 0  # Don't bubble up to the root logger
+    return log
 
 ###############################################################################
 # collapse mutation types per strand symmetry
@@ -407,53 +487,180 @@ def aggregateM(inputM, subtypes_dict):
     return out
 
 ###############################################################################
+# run PCA on input matrix
+###############################################################################
+def PCARun(M_run, rank):
+    
+    # standarize input matrix
+    X_std = StandardScaler().fit_transform(M_run)
+    
+    # run PCA
+    pca = PCA(n_components = M_run.shape[1])
+    W = pca.fit_transform(X_std)
+    H = pca.components_.T * np.sqrt(pca.explained_variance_)
+
+    if rank > 0:
+        # print(np.sum(pca.explained_variance_ratio_))
+        evar = np.cumsum(pca.explained_variance_ratio_)[rank-1]
+        rankout = rank
+        
+        W = W[:,:rank]
+        H = H[:rank,:]
+    else:
+        evar_prev = 0
+        i = 1
+        for evar in np.cumsum(pca.explained_variance_ratio_):
+            if evar - evar_prev < 0.05:
+                rankout = i-1
+                evar = evar_prev
+                break
+            evar_prev = evar
+            i += 1
+        
+        W = W[:,:rankout]
+        H = H[:rankout,:]
+
+    out = collections.namedtuple('Out', 
+        ['W', 'H', 'evar', 'rank'])(W, H, evar, rankout)
+    return out
+
+###############################################################################
+# Specify NMF model
+# options can be added/modified per 
+# http://nimfa.biolab.si/nimfa.methods.factorization.nmf.html
+###############################################################################
+def NMFmodel(M_run, rank):
+    model = nimfa.Nmf(M_run,
+        rank=rank,
+        update="divergence",
+        objective='div',
+        n_run=1,
+        max_iter=200)
+    return model
+
+###############################################################################
+# run NMF on input matrix
+###############################################################################
+def NMFRun(M_run, rank):
+
+    evar_list = []
+
+    if rank > 0:
+        model = NMFmodel(M_run, rank)
+        rankout = rank
+
+    elif args.rank == 0:
+        evarprev = 0
+        
+        for i in range(1,6):
+            model = NMFmodel(M_run, i)
+            model_fit = model()
+            evar = model_fit.fit.evar()
+            evar_list.append(evar)
+    
+            if(i > 2 and evar - evarprev < 0.001):
+                model = NMFmodel(M_run, i-1)
+                rankout = i-1
+                break
+            
+            evarprev = evar
+    
+    model_fit = model()
+    evar = model_fit.fit.evar()
+
+    W = model_fit.basis()
+    H = model_fit.coef()
+
+    out = collections.namedtuple('Out', 
+        ['W', 'H', 'evar', 'rank'])(W, H, evar, rankout)
+    return out
+
+###############################################################################
+# write M matrix
+###############################################################################
+def writeM(M, M_path, subtypes_dict, samples):
+
+    M_out = DataFrame(data=M,
+                index=samples[0],
+                columns=list(sorted(subtypes_dict.keys())))
+
+    M_out.to_csv(M_path, index_label="ID", sep="\t")
+
+###############################################################################
+# write W matrix
+###############################################################################
+def writeW(W, W_path, samples):
+    
+    num_samples, num_sigs = W.shape
+    W_out = DataFrame(data=W,
+                index=samples[0],
+                columns=["S" + str(i) for i in range(1,num_sigs+1)])
+    
+    W_out.to_csv(W_path, index_label="ID", sep="\t")
+
+###############################################################################
+# write H matrix
+###############################################################################
+def writeH(H, H_path, subtypes_dict):
+    
+    num_sigs, num_subtypes = H.shape
+    H_out = DataFrame(data=H,
+                index=["S" + str(i) for i in range(1,num_sigs+1)],
+                columns=list(sorted(subtypes_dict.keys())))
+
+    H_out.to_csv(H_path, index_label="Sig", sep="\t")
+
+###############################################################################
 # Generate keep/drop lists
 ###############################################################################
-def detectOutliers(M, samples, filtermode, threshold):
-    M_f = M/(M.sum(axis=1)+1e-8)[:,None]
+def detectOutliers(M, samples, filtermode, threshold, projdir):
 
-    keep_samples = []
-    drop_samples = []
-    drop_indices = []
-    # lowsnv_samples = []
+    # outlier detection
+    clf = LocalOutlierFactor(
+        n_neighbors=20, 
+        contamination=threshold)
+    y_pred = clf.fit_predict(M)
+    
+    cee = EllipticEnvelope(
+        contamination=threshold)
+    cee.fit(M)
+    scores_pred = cee.decision_function(M)
+    y_pred2 = cee.predict(M)
+    
+    cif = IsolationForest(
+        contamination=threshold)
+    cif.fit(M)
+    scores_pred = cif.decision_function(M)
+    y_pred3 = cif.predict(M)
+    
+    outlier_methods = ["lof", "ee", "if"]
+    ol_df = DataFrame(np.column_stack((y_pred, y_pred2, y_pred3)),
+               index=samples[0].tolist(),
+               columns=outlier_methods)
 
-    if filtermode == "fold":
-        i=0
-        M_err_d = np.divide(M_f, np.mean(M_f, axis=0))
-        for row in M_err_d:
-            if any(err > threshold for err in row):
-                drop_samples.append(samples.flatten()[i])
-                drop_indices.append(i)
-            else:
-                keep_samples.append(samples.flatten()[i])
-            i += 1
-    elif filtermode == "chisq":
-        i=0
-        mean_spectrum = np.mean(M, axis=0)
-        # n_pass = sum(np.sum(M, axis=1) > minsnvs)
-        for row in M:
-            exp_spectrum = mean_spectrum*sum(row)/sum(mean_spectrum)
-            pval = chisquare(row, f_exp=exp_spectrum)[1]
-            if pval < 0.05/M.shape[0]:
-                drop_samples.append(samples.flatten()[i])
-                drop_indices.append(i)
-            else:
-                keep_samples.append(samples.flatten()[i])
-            i += 1
-    elif filtermode == "sd":
-        i=0
-        mean_spectrum = np.mean(M_f, axis=0)
-        spec_std = np.std(M_f, axis=0, ddof=1)
-        std_threshold = mean_spectrum + threshold*spec_std
+    keep_samples, drop_samples, drop_indices = ([] for i in range(3))
 
-        for row in M_f:
-            if np.greater(row, std_threshold).any():
-                drop_samples.append(samples.flatten()[i])
-                drop_indices.append(i)
-            else:
-                keep_samples.append(samples.flatten()[i])
-            i += 1
-
+    omnibus_methods = ["any", "any2", "all"]
+    if filtermode in omnibus_methods:
+        dft = ol_df.sum(axis=1)
+        dft = DataFrame(dft)
+        if filtermode == "any":
+            drop_samples = dft[dft[0] != 3].index.values.tolist()
+            keep_samples = dft[dft[0] == 3].index.values.tolist()
+        elif filtermode == "any2":
+            drop_samples = dft[dft[0] <= -1].index.values.tolist()
+            keep_samples = dft[dft[0] > -1].index.values.tolist()
+        elif filtermode == "all":
+            drop_samples = dft[dft[0] == -3].index.values.tolist()
+            keep_samples = dft[dft[0] != -3].index.values.tolist()
+        
+    elif filtermode in outlier_methods:
+        drop_samples = ol_df[ol_df[filtermode] == -1].index.values.tolist()
+        keep_samples = ol_df[ol_df[filtermode] == 1].index.values.tolist()
+        
+    drop_bool = np.isin(samples[0], drop_samples)
+    drop_indices = np.where(drop_bool)[0].tolist()
+        
     out_handles = ['keep_samples',
         'drop_samples',
         'drop_indices']
@@ -463,119 +670,15 @@ def detectOutliers(M, samples, filtermode, threshold):
     return out
 
 ###############################################################################
-# run NMF on input matrix
+# write yaml config for diagnostic reports
 ###############################################################################
-def NMFRun(M_run, args, projdir, samples, subtypes_dict):
-    if args.rank > 0:
-        if args.verbose:
-            eprint("Running NMF with rank =", args.rank)
-
-        model = nimfa.Nmf(M_run,
-            rank=args.rank,
-            update="divergence",
-            objective='div',
-            n_run=1,
-            max_iter=200)
-        model_fit = model()
-        evar = model_fit.fit.evar()
-        maxind = args.rank
-
-    elif args.rank == 0:
-        if args.verbose:
-            eprint("Finding optimal rank for NMF...")
-        evarprev = 0
-        for i in range(1,6):
-            model = nimfa.Nmf(M_run,
-                rank=i,
-                update="divergence",
-                objective='div',
-                n_run=1,
-                max_iter=200)
-            model_fit = model()
-            evar = model_fit.fit.evar()
-            if args.verbose:
-                eprint("Explained variance for rank " + str(i) + ":", evar)
-            # if evar > 0.8:
-            if(i > 2 and evar - evarprev < 0.001):
-                if args.verbose:
-                    eprint(textwrap.dedent("""\
-                            Stopping condition met: <0.1 percent difference
-                            in explained variation between ranks
-                            """))
-                    model = nimfa.Nmf(M_run,
-                        rank=i-1,
-                        update="divergence",
-                        objective='div',
-                        n_run=1,
-                        max_iter=200)
-                    model_fit = model()
-                break
-            evarprev = evar
-
-    W = model_fit.basis()
-    H = model_fit.coef()
-
-    out = collections.namedtuple('Out', ['W', 'H'])(W, H)
-    return out
-
-###############################################################################
-# write M matrix
-###############################################################################
-def writeM(M, M_path, subtypes_dict, samples):
-    colnames = ["ID"]
-    M_colnames = colnames + list(sorted(subtypes_dict.keys()))
-
-    # add ID as first column
-    #M_fmt = np.concatenate((np.array([samples]).T, M.astype('|S20')), axis=1)
-    M_fmt = np.concatenate((samples.T, M.astype('|S20')), axis=1)
-
-    # add header
-    M_fmt = np.concatenate((np.array([M_colnames]), M_fmt), axis=0)
-
-    # write out
-    np.savetxt(M_path, M_fmt, delimiter='\t', fmt="%s")
-
-###############################################################################
-# write W matrix
-###############################################################################
-def writeW(W, W_path, samples):
-    colnames = ["ID"]
-
-    # add ID as first column
-    W_fmt = np.concatenate((samples.T, W.astype('|S20')), axis=1)
-    num_samples, num_sigs = W.shape
-
-    # add header
-    W_colnames = colnames + ["S" + str(i) for i in range(1,num_sigs+1)]
-    W_fmt = np.concatenate((np.array([W_colnames]), W_fmt), axis=0)
-
-    # write out
-    np.savetxt(W_path, W_fmt, delimiter='\t', fmt="%s")
-
-###############################################################################
-# write H matrix
-###############################################################################
-def writeH(H, H_path, subtypes_dict):
-    num_sigs, num_subtypes = H.shape
-
-    # add signature ID as first column
-    H_rownames = ["S" + str(i) for i in range(1,num_sigs+1)]
-    H_fmt = np.concatenate((np.array([H_rownames]).T, H.astype('|S20')), axis=1)
-
-    H_colnames = ["Sig"] + list(sorted(subtypes_dict.keys()))
-    H_fmt = np.concatenate((np.array([H_colnames]), H_fmt), axis=0)
-
-    # write out
-    np.savetxt(H_path, H_fmt, delimiter='\t', fmt="%s")
-
-###############################################################################
-# write RMSE per sample
-###############################################################################
-def writeRMSE(M_rmse, rmse_path, samples):
-	sample_col = samples.T
-	rmse_col = np.array([M_rmse]).T
-	rmse_arr = np.column_stack((sample_col, rmse_col))
-	np.savetxt(rmse_path, rmse_arr, delimiter='\t', fmt="%s")
+def writeReportConfig(paths, projdir):
+    yaml_path = projdir + "/config.yaml"
+    yaml = open(yaml_path, "w+")
+    print("# Config file for doomsayer_diagnostics.r", file=yaml)
+    
+    for key in paths.keys():
+        print(key + ": " + paths[key], file=yaml)
 
 ###############################################################################
 # filter VCF input by kept samples

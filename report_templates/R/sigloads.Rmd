@@ -26,7 +26,8 @@ sig_loads_long <- sig_loads %>%
   mutate(sumVar = rowSums(.[2:ncol(sig_loads)])) %>%
   # dplyr::filter(sumVar>=500) %>%
   rowwise() %>%
-  mutate_each(funs(./sumVar), -Sig) %>%
+  # mutate_each(funs(./sumVar), -Sig) %>%
+  mutate_at(vars(contains("_")), funs(./sumVar)) %>%
   gather(subtype, loading, 2:ncol(sig_loads)) %>%
   separate(subtype, c("category", "motif"), sep = "[.]") %>%
   mutate(subtype=paste0(substr(motif,1,1), "[", category, "]", substr(motif,3,3))) %>%

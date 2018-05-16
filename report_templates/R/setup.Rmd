@@ -4,7 +4,7 @@
 options(warn=-1)
 
 # check and load packages
-packages <- c("dplyr", "tidyr", "ggplot2", "yaml", "devtools", "knitr", "viridis", "RColorBrewer", "heatmaply", "dendextend")
+packages <- c("dplyr", "tidyr", "ggplot2", "yaml", "devtools", "knitr", "viridis", "RColorBrewer", "heatmaply", "dendextend", "GGally")
 
 package.check <- suppressWarnings(suppressMessages(lapply(packages, FUN = function(x) {
     if (!require(x, character.only = TRUE)) {
@@ -42,5 +42,9 @@ spectra <- read.table(M_path, header=T, stringsAsFactors=F)
 spectra_rates <- read.table(M_path_rates, header=T, stringsAsFactors=F)
 sig_contribs <- read.table(W_path, header=T, stringsAsFactors=F)
 sig_loads <- read.table(H_path, header=T, stringsAsFactors=F)
-rmse <- read.table(RMSE_path, header=F, stringsAsFactors=F)
+# rmse <- read.table(RMSE_path, header=F, stringsAsFactors=F)
+
+# function to ignore nuisance messages from ggplotly
+sggplotly <- function(p){suppressMessages(ggplotly(p))}
+
 ```

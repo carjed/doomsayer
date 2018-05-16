@@ -1,0 +1,48 @@
+```{r whist, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 8, fig.width = 10}
+# p<-sig_contribs %>% 
+#   gather(signature, value, -ID) %>% 
+#   ggplot(aes(x=value, fill=signature))+
+#     geom_histogram(bins=500)+
+#     facet_grid(signature~.)+
+#     scale_fill_viridis(discrete=TRUE)+
+#     theme_bw()+
+#     theme(legend.position="none")
+
+# sggplotly(p)
+
+outlier_IDs <- drop_ids$V1
+
+sc2 <- sig_contribs %>%
+    mutate(drop=ifelse(ID %in% outlier_IDs, "drop", "keep"))
+
+# https://stackoverflow.com/questions/34975190
+my_dens <- function(data, mapping, ...) {
+  ggplot(data = data, mapping=mapping) +
+    geom_density(..., alpha = 0.7, color = NA) 
+}
+
+p2 <- ggpairs(
+        sc2,
+        columns = 2:ncol(sig_contribs),
+        mapping = ggplot2::aes(colour = drop, fill = drop),
+        diag = list(continuous = my_dens),
+        # upper = list(continuous = "density"),
+        lower = list(continuous = wrap("points", alpha = 0.3)))+
+    theme_bw()
+
+# http://www.sthda.com/english/articles/32-r-graphics-essentials/130-plot-multivariate-continuous-data/
+for(i in 1:p2$nrow) {
+  for(j in 1:p2$ncol){
+    p2[i,j] <- p2[i,j] + 
+        scale_colour_manual(values=c("red", "black"))+
+        scale_fill_manual(values=c("red", "black"))
+        # scale_fill_manual(values=c("#00AFBB", "#E7B800", "#FC4E07")) +
+        # scale_color_manual(values=c("#00AFBB", "#E7B800", "#FC4E07"))  
+  }
+}
+
+# p2
+
+sggplotly(p2)
+
+```
