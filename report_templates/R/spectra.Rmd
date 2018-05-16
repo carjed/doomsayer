@@ -1,14 +1,14 @@
-```{r dist, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 5, fig.width = 10}
+```{r dist, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 5, fig.width = 10, dpi=100}
 
 # get_leaves_branches_col(hrm$rows)
 
 # overall distribution
-spectra2 <- spectra %>%
-  mutate(group=ifelse(ID %in% keep_ids$V1, "keep", "drop")) %>%
+spectra2 <- left_join(spectra, cluster_mems, by="ID") %>% 
+  replace_na(list(group="keep")) %>% 
+  # mutate(group=ifelse(ID %in% keep_ids$V1, "keep", "drop")) %>%
   group_by(group) %>%
   gather(subtype, count, 2:ncol(spectra)) %>%
   separate(subtype, c("category", "motif"), sep = "[.]") %>%
-  # mutate(subtype=gsub("_", ">", subtype)) %>%
   mutate(category=gsub("_", ">", category)) %>%
   mutate(category=factor(category, levels=orderedcatsnc_short)) %>%
   group_by(category, motif, group) %>%
@@ -21,7 +21,8 @@ p <- ggplot(spectra2, aes(x=motif, y=prop, fill=group, group=group))+
   geom_bar(stat="identity", position="dodge")+
   facet_wrap(~category, ncol=6, scales="free_x")+
   ylab("Contribution")+
-  scale_fill_brewer(palette = "Set1")+
+  # scale_fill_brewer(palette = "Set1")+
+  scale_fill_manual(values=c("#D3D3D3", group_col_vals))+
   theme_bw()+
   theme(axis.text.x=element_text(angle=90, vjust=0, size=10),
         # axis.text.y=element_text(size=20),
@@ -33,4 +34,5 @@ p <- ggplot(spectra2, aes(x=motif, y=prop, fill=group, group=group))+
         legend.position="bottom")
         
 sggplotly(p)
+
 ```

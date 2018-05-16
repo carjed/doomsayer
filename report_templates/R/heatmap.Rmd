@@ -51,7 +51,17 @@ hrm <- heatmapr(outlier_r_m,
 
 # get dataframe of cluster membership (i.e., leaf color) for each outlier
 cluster_mems <- data.frame(ID=labels(hrm$rows), 
-  col=get_leaves_branches_col(hrm$rows))
+  group=get_leaves_branches_col(hrm$rows))
+
+group_col_vals <- unique(cluster_mems$group)
+
+cluster_mems$group <- gsub("#", "c", cluster_mems$group)
+groups <- unique(cluster_mems$group)
+cl_ids <- paste0("outlier cluster ", 1:length(groups))
+names(cl_ids) <- groups
+cl_ids <- as.list(cl_ids)
+
+cluster_mems$group <- recode(cluster_mems$group, !!!cl_ids)
 
 # switch between static plots using pheatmap and interactive plots using 
 # heatmaply (heatmaply's built-in static function using webshot is buggy)
