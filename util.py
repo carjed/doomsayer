@@ -529,9 +529,17 @@ def PCARun(M_run, rank):
 # options can be added/modified per 
 # http://nimfa.biolab.si/nimfa.methods.factorization.nmf.html
 ###############################################################################
-def NMFmodel(M_run, rank):
+def NMFmodel(M_run, rank, seed):
+    
+    prng = np.random.RandomState(seed)
+    W_init = prng.rand(M_run.shape[0], rank)
+    H_init = prng.rand(rank, M_run.shape[1])
+    
     model = nimfa.Nmf(M_run,
         rank=rank,
+        # seed=None,
+        H=H_init,
+        W=W_init,
         update="divergence",
         objective='div',
         n_run=1,
@@ -541,25 +549,25 @@ def NMFmodel(M_run, rank):
 ###############################################################################
 # run NMF on input matrix
 ###############################################################################
-def NMFRun(M_run, rank):
+def NMFRun(M_run, rank, seed):
 
     evar_list = []
 
     if rank > 0:
-        model = NMFmodel(M_run, rank)
+        model = NMFmodel(M_run, rank, seed)
         rankout = rank
 
     elif args.rank == 0:
         evarprev = 0
         
         for i in range(1,6):
-            model = NMFmodel(M_run, i)
+            model = NMFmodel(M_run, i, seed)
             model_fit = model()
             evar = model_fit.fit.evar()
             evar_list.append(evar)
     
             if(i > 2 and evar - evarprev < 0.001):
-                model = NMFmodel(M_run, i-1)
+                model = NMFmodel(M_run, i-1, seed)
                 rankout = i-1
                 break
             
@@ -613,7 +621,7 @@ def writeH(H, H_path, subtypes_dict):
 ###############################################################################
 # Generate keep/drop lists
 ###############################################################################
-def detectOutliers(M, samples, filtermode, threshold, projdir):
+def detectOutliers(M, samples, filtermode, threshold, projdir, seed):
 
     # outlier detection
     clf = LocalOutlierFactor(
@@ -622,13 +630,15 @@ def detectOutliers(M, samples, filtermode, threshold, projdir):
     y_pred = clf.fit_predict(M)
     
     cee = EllipticEnvelope(
-        contamination=threshold)
+        contamination=threshold,
+        random_state=seed)
     cee.fit(M)
     scores_pred = cee.decision_function(M)
     y_pred2 = cee.predict(M)
     
     cif = IsolationForest(
-        contamination=threshold)
+        contamination=threshold,
+        random_state=seed)
     cif.fit(M)
     scores_pred = cif.decision_function(M)
     y_pred3 = cif.predict(M)

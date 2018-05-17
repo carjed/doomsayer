@@ -55,6 +55,13 @@ parser.add_argument("-c", "--cpus",
                     metavar='INT',
                     default=1)
 
+parser.add_argument("-S", "--seed",
+                    help="random seed for NMF and outlier detection",
+                    nargs='?',
+                    type=int,
+                    metavar='INT',
+                    default=int(start))
+
 parser.add_argument("-v", "--verbose",
                     help="Enable verbose logging",
                     action="store_true")
@@ -267,6 +274,12 @@ for arg in vars(args):
     log.debug(arg + ": " + str(getattr(args, arg)))
 log.debug("----------------------------------")
 
+import random
+
+random.seed(args.seed)
+log.info("random seed: " + str(args.seed))
+# set.seed(start)
+
 ###############################################################################
 # Initialize project directory
 ###############################################################################
@@ -369,7 +382,7 @@ log.debug("M_f matrix (mutation spectra) saved to: " + paths['M_path_rates'])
 # Get matrix decomposition
 ###############################################################################
 if args.decomp == "nmf":
-    decomp_data = NMFRun(M_f, args.rank)
+    decomp_data = NMFRun(M_f, args.rank, args.seed)
         
 elif args.decomp == "pca":
     decomp_data = PCARun(M_f, args.rank)
@@ -397,7 +410,7 @@ if args.filtermode == "none":
     log.warning("No outlier detection will be performed")
 else:
     kd_lists = detectOutliers(M_d, samples,
-        args.filtermode, args.threshold, projdir)
+        args.filtermode, args.threshold, projdir, args.seed)
 
     paths['keep_path'] = projdir + "/doomsayer_keep.txt"
     keep_fh = open(paths['keep_path'], 'wt')
