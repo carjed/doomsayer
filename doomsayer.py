@@ -416,6 +416,7 @@ else:
 
     if len(kd_lists.drop_samples) > 0:
         log.info(str(len(kd_lists.drop_samples)) + " potential outliers found")
+        log.info(str(len(kd_lists.keep_samples)) + " samples OK")
 
 ###############################################################################
 # auto-generate diagnostic report in R

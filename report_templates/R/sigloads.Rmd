@@ -1,4 +1,4 @@
-```{r sigloads, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 14, fig.width = 14}
+```{r sigloads, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 12, fig.width = 12, dpi=100}
 
 # signature loadings
 
