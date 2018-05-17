@@ -160,8 +160,8 @@ Doomsayer provides several options for performing outlier detection and mutation
 ## Usage
 
 ```
-usage: doomsayer.py [-h] [-c [INT]] [-v] [-V] [-M ] -i [/path/to/input.vcf]
-                    [-f [/path/to/genome.fa]]
+usage: doomsayer.py [-h] [-c [INT]] [-S [INT]] [-v] [-V] [-M [STR]] -i
+                    [/path/to/input.vcf] [-f [/path/to/genome.fa]]
                     [-g [/path/to/sample_batches.txt]]
                     [-s [/path/to/kept_samples.txt]] [-C [INT]] [-X [INT]]
                     [-p [/path/to/project_directory]] [-m [STR]] [-o]
@@ -171,8 +171,9 @@ usage: doomsayer.py [-h] [-c [INT]] [-v] [-V] [-M ] -i [/path/to/input.vcf]
 optional arguments:
   -h, --help            show this help message and exit
   -c [INT], --cpus [INT]
-                        number of CPUs. Must be integer value between 1 and 
-                        [maxcpus]
+                        number of CPUs. Must be integer value between 1 and 10
+  -S [INT], --seed [INT]
+                        random seed for NMF and outlier detection
   -v, --verbose         Enable verbose logging
   -V, --version         show program's version number and exit
   -M [STR], --mode [STR]
@@ -237,23 +238,29 @@ optional arguments:
 
 ### Program options
 
-#### Version number
-
-`--version`
-
-Show program's version number and exit.
-
 #### number of CPUs
 
 `--cpus [INT]`
 
 Set the number of CPUs to use if input is a list of files.
 
+#### set seed
+
+`--seed [INT]`
+
+Set the random seed for functions which need it. If not specified, a random seed will be assigned and printed to the output if you need to reproduce results of a particular run.
+
 #### Verbose logging
 
 `--verbose`
 
 This flag enables debug logging for troubleshooting.
+
+#### Version number
+
+`--version`
+
+Show program's version number and exit.
 
 ### Input options
 
