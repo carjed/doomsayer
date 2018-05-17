@@ -18,7 +18,7 @@ sc2 <- sig_contribs %>%
 # https://stackoverflow.com/questions/34975190
 my_dens <- function(data, mapping, ...) {
   ggplot(data = data, mapping=mapping) +
-    geom_density(..., alpha = 0.7, color = NA) 
+    geom_density(..., alpha = 0.7, color = NA, fill="grey30") 
 }
 
 p2 <- ggpairs(
