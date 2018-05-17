@@ -248,7 +248,7 @@ Set the number of CPUs to use if input is a list of files.
 
 `--seed [INT]`
 
-Set the random seed for functions which need it. If not specified, a random seed will be assigned and printed to the output if you need to reproduce results of a particular run.
+Set the random seed to be used for NMF decomposition and outlier detection algorithms. If not specified, a random seed will be assigned and printed to the output if you need to reproduce results of a particular run.
 
 #### Verbose logging
 
