@@ -14,9 +14,13 @@ params:
 ---
 
 <style>
-body {
+  body {
     position: absolute;
-    left: 0px;}
+    left: 0px;
+  }
+  .main-container {
+    max-width: 1800px !important;
+  }
 </style>
 
 ```{r child="R/setup.Rmd"}
