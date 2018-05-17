@@ -31,6 +31,7 @@ p <- ggplot(spectra2, aes(x=motif, y=prop, fill=group, group=group))+
         # axis.title.y=element_text(size=24),
         # legend.text=element_text(size=20),
         # strip.text=element_text(size=24),
+        legend.background = element_rect(fill=NA),
         legend.title=element_blank(),
         legend.position="bottom")
    
