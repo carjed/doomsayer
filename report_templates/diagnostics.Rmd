@@ -26,35 +26,58 @@ params:
 ```{r child="R/setup.Rmd"}
 ```
 
-```{r child="R/sigloads.Rmd"}
-```
+### Compare component distributions
 
-### Component value distributions
+#### Plot description
 
-This plot shows the distribution of scores for each principal component (if using PCA) or NMF component (if using NMF) across the N individuals in your sample.
+The lower panels of this plot show pairwise scatterplots comparing each of the `r I(rank)` principal components (if using PCA) or NMF components (if using NMF) across the `r I(nsamples)` samples.
 
-If any component shows clear evidence of multimodality, consider changing the default outlier detection from `--filtermode ee` (elliptic envelope) to either `--filtermode lof` (local outlier factor) or `--filtermode if` (isolation forest)
+The diagonal panels show the density of each component. 
+
+The upper panels show the correlation between component variables for 1) all `r I(nsamples)` samples, 2) the `r I(nkeep)` non-outlier samples, and 3) the `r I(ndrop)` outlier samples.
+
+#### Interpreting this plot
+
+The scatterplots (lower panels) show where outliers fall relative to the "good" samples in a `r I(rank)`-dimensional space. Increasing the outlier sensitivity threshold (with the `--threshold` option in `doomsayer.py`) will result in more outliers (red points) and tighter similarity of the non-outliers (black points). Conversely, decreasing the sensitivity threshold will result in fewer flagged outliers, but greater variability among the retained samples.
+
+If any component shows clear evidence of multimodality (see diagonal panels), consider changing the default outlier detection from `--filtermode ee` (elliptic envelope) to either `--filtermode lof` (local outlier factor) or `--filtermode if` (isolation forest), as the elliptic envelope method assumes the components follow a unimodal distribution.
+
+If you are using NMF decomposition and two or more components are perfectly correlated (see upper panels), consider running Doomsayer with a lower rank.
 
 ```{r child="R/contribs_hist.Rmd"}
 ```
 
 ### Error profile heatmap
 
-Fold-difference in contribution per subtype for each outlier. Fold-differences are calculated relative to the mean contribution of that subtype across all samples. Scale is truncated to +/-5-fold difference
+#### Plot description
+
+This plot shows the fold-difference in contribution per subtype for each outlier. Fold-differences are calculated relative to the mean contribution of that subtype across all samples. Scale is truncated to +/-5-fold difference. Both rows and columns are clustered using Ward's algorithm (`ward.D2` in R). Each outlier is assigned into one of `r I(rank)` groups according to their similarity. Outlier groups are indicated by the color of the branches (if using interactive mode) or by a colorbar under the dendrogram (if using static mode).
+
+#### Interpreting this plot
+
+This heatmap shows patterns of similarity in the mutation spectra of flagged outliers. If there are batch effects that have affected the mutation spectra of certain samples, those rows should cluster together.
+
+Clustering of the columns indicates that, among the flagged outliers, multiple subtypes tend to be enriched or depleted together.
+
+Note that a lack of obvious clustering patterns does not necessarily mean the flagged outliers are free from error and were flagged due to random variation in the mutation spectra.
 
 ```{r child="R/heatmap.Rmd"}
 ```
 
-### Compare mutation spectra of retained samples and outliers
+### Mutation spectra plots
 
-Each bar represents the fraction of observations contained within each K-mer subtype among the kept samples (blue) versus the flagged outliers (red)
+#### Plot description
+
+Each bar represents the fraction of observations contained within that K-mer subtype across all samples of a particular group. 
 
 ```{r child="R/spectra.Rmd"}
 ```
 
 ### Signature loadings (H matrix)
 
-Describes how each mutation subtype is loaded into the r signatures
+#### Plot description
+
+Describes how each mutation subtype is loaded into the `r I(rank)` signatures
 
 ```{r child="R/sigloads_bar.Rmd"}
 ```
