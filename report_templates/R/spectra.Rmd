@@ -17,13 +17,26 @@ spectra2 <- left_join(spectra, cluster_mems, by="ID") %>%
   mutate(prop=count/sum(count)) %>%
   ungroup()
 
-p <- ggplot(spectra2, aes(x=motif, y=prop, fill=group, group=group))+
+s2a <- spectra2 %>% 
+  group_by(group) %>% 
+  mutate(tot=sum(count)) %>% 
+  group_by(category, motif) %>% 
+  mutate(base_prop=max(count)/max(tot)) %>% 
+  rowwise %>% 
+  mutate(pval=prop.test(count, tot, base_prop)$p.value) %>% 
+  arrange(pval) %>%
+  group_by(group) %>% 
+  mutate(qval=p.adjust(pval)) %>% 
+  mutate(sig=ifelse(qval<0.05, TRUE, FALSE))
+
+p <- ggplot(s2a, aes(x=motif, y=prop, fill=group, group=group, alpha=sig))+
   geom_bar(stat="identity", position="dodge")+
   facet_wrap(~category, ncol=1, scales="free", strip.position="right")+
   # facet_grid(category~.)+
   ylab("Contribution")+
   # scale_fill_brewer(palette = "Set1")+
-  scale_fill_manual(values=c("#D3D3D3", group_col_vals))+
+  scale_fill_manual(values=c("gray30", group_col_vals))+
+  scale_alpha_discrete(range = c(0.3, 0.95))+
   theme_bw()+
   theme(axis.text.x=element_text(angle=90, vjust=0, size=10),
         # axis.text.y=element_text(size=20),

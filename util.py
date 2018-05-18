@@ -66,7 +66,7 @@ def restricted_float(x):
 
 class ColourStreamHandler(StreamHandler):
 
-    """ A colorized output SteamHandler """
+    """ A colorized output StreamHandler """
 
     # Some basic colour scheme defaults
     colours = {
