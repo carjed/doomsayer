@@ -409,27 +409,27 @@ log.debug("H matrix saved to: " + paths['H_path'])
 if args.filtermode == "none":
     log.warning("No outlier detection will be performed")
 else:
-    kd_lists = detectOutliers(M_d, samples,
+    kd_lists = DetectOutliers(M_d, samples,
         args.filtermode, args.threshold, projdir, args.seed)
 
     paths['keep_path'] = projdir + "/doomsayer_keep.txt"
     keep_fh = open(paths['keep_path'], 'wt')
-    for sample in kd_lists.keep_samples:
+    for sample in kd_lists.keep:
         keep_fh.write("%s\n" % sample)
     keep_fh.close()
     log.debug("Kept samples saved to: " + paths['keep_path'])
     
     paths['drop_path'] = projdir + "/doomsayer_drop.txt"
     drop_fh = open(paths['drop_path'], 'wt')
-    for sample in kd_lists.drop_samples:
+    for sample in kd_lists.drop:
         drop_fh.write("%s\n" % sample)
     drop_fh.close()
     
     log.debug("Outlier samples saved to: " + paths['drop_path'])
 
-    if len(kd_lists.drop_samples) > 0:
-        log.info(str(len(kd_lists.drop_samples)) + " potential outliers found")
-        log.info(str(len(kd_lists.keep_samples)) + " samples OK")
+    if len(kd_lists.drop) > 0:
+        log.info(str(len(kd_lists.drop)) + " potential outliers found")
+        log.info(str(len(kd_lists.keep)) + " samples OK")
 
 ###############################################################################
 # auto-generate diagnostic report in R
@@ -454,12 +454,12 @@ if(args.report and args.matrixname == "subtype_count_matrix"):
 ###############################################################################
 if args.filterout:
     if(args.mode == "vcf" and not(args.input.lower().endswith(('.txt')))):
-        log.debug("Filtering input VCF using sample file " + keep_samples)
-        filterVCF(args.input, keep_samples)
+        log.debug("Filtering input VCF using sample file " + paths['keep_path'])
+        filterVCF(args.input, kd_lists.keep)
 
     elif args.mode =="txt":
-        log.debug("Filtering input data using sample file " + keep_samples)
-        filterTXT(args.input, keep_samples)
+        log.debug("Filtering input data using sample file " + paths['keep_path'])
+        filterTXT(args.input, kd_lists.keep)
 
     else:
         log.error("Input not compatible with auto-filtering function")

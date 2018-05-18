@@ -508,13 +508,10 @@ class DecompModel:
             H = pca.components_.T * np.sqrt(pca.explained_variance_)
             
             if self.rank > 0:
-                # print(np.sum(pca.explained_variance_ratio_))
                 self.modrank = self.rank
                 evar = np.cumsum(pca.explained_variance_ratio_)[self.rank-1]
                 self.evar_dict[self.modrank] = evar
-                
-                # self.W = W[:,:rank]
-                # self.H = H[:rank,:]
+
             else:
                 evar_prev = 0
                 i = 1
@@ -545,13 +542,13 @@ class DecompModel:
                     model_fit = model()
                     evar = model_fit.fit.evar()
                     self.modrank = i
-                    self.evar_dict[self.modrank] = evar
             
                     if(i > 2 and evar - evarprev < 0.001):
                         model = self.NMFmod(rank=i-1)
                         self.modrank = i-1
                         break
                     
+                    self.evar_dict[self.modrank] = evar
                     evarprev = evar
             
             model_fit = model()
@@ -617,63 +614,60 @@ def writeH(H, H_path, subtypes_dict):
 ###############################################################################
 # Generate keep/drop lists
 ###############################################################################
-def detectOutliers(M, samples, filtermode, threshold, projdir, seed):
+class DetectOutliers:
+    def __init__(self, M, samples, filtermode, threshold, projdir, seed):
 
-    # outlier detection
-    clf = LocalOutlierFactor(
-        n_neighbors=20, 
-        contamination=threshold)
-    y_pred = clf.fit_predict(M)
-    
-    cee = EllipticEnvelope(
-        contamination=threshold,
-        random_state=seed)
-    cee.fit(M)
-    scores_pred = cee.decision_function(M)
-    y_pred2 = cee.predict(M)
-    
-    cif = IsolationForest(
-        contamination=threshold,
-        random_state=seed)
-    cif.fit(M)
-    scores_pred = cif.decision_function(M)
-    y_pred3 = cif.predict(M)
-    
-    outlier_methods = ["lof", "ee", "if"]
-    ol_df = DataFrame(np.column_stack((y_pred, y_pred2, y_pred3)),
-               index=samples[0].tolist(),
-               columns=outlier_methods)
-
-    keep_samples, drop_samples, drop_indices = ([] for i in range(3))
-
-    omnibus_methods = ["any", "any2", "all"]
-    if filtermode in omnibus_methods:
-        dft = ol_df.sum(axis=1)
-        dft = DataFrame(dft)
-        if filtermode == "any":
-            drop_samples = dft[dft[0] != 3].index.values.tolist()
-            keep_samples = dft[dft[0] == 3].index.values.tolist()
-        elif filtermode == "any2":
-            drop_samples = dft[dft[0] <= -1].index.values.tolist()
-            keep_samples = dft[dft[0] > -1].index.values.tolist()
-        elif filtermode == "all":
-            drop_samples = dft[dft[0] == -3].index.values.tolist()
-            keep_samples = dft[dft[0] != -3].index.values.tolist()
+        # outlier detection
+        clf = LocalOutlierFactor(
+            n_neighbors=20, 
+            contamination=threshold)
+        y_pred = clf.fit_predict(M)
         
-    elif filtermode in outlier_methods:
-        drop_samples = ol_df[ol_df[filtermode] == -1].index.values.tolist()
-        keep_samples = ol_df[ol_df[filtermode] == 1].index.values.tolist()
+        cee = EllipticEnvelope(
+            contamination=threshold,
+            random_state=seed)
+        cee.fit(M)
+        scores_pred = cee.decision_function(M)
+        y_pred2 = cee.predict(M)
         
-    drop_bool = np.isin(samples[0], drop_samples)
-    drop_indices = np.where(drop_bool)[0].tolist()
+        cif = IsolationForest(
+            contamination=threshold,
+            random_state=seed)
+        cif.fit(M)
+        scores_pred = cif.decision_function(M)
+        y_pred3 = cif.predict(M)
         
-    out_handles = ['keep_samples',
-        'drop_samples',
-        'drop_indices']
-
-    out = collections.namedtuple('Out', out_handles) \
-        (keep_samples, drop_samples, drop_indices)
-    return out
+        outlier_methods = ["lof", "ee", "if"]
+        ol_df = DataFrame(np.column_stack((y_pred, y_pred2, y_pred3)),
+                   index=samples[0].tolist(),
+                   columns=outlier_methods)
+    
+        keep_samples, drop_samples, drop_indices = ([] for i in range(3))
+    
+        omnibus_methods = ["any", "any2", "all"]
+        if filtermode in omnibus_methods:
+            dft = ol_df.sum(axis=1)
+            dft = DataFrame(dft)
+            if filtermode == "any":
+                drop_samples = dft[dft[0] != 3].index.values.tolist()
+                keep_samples = dft[dft[0] == 3].index.values.tolist()
+            elif filtermode == "any2":
+                drop_samples = dft[dft[0] <= -1].index.values.tolist()
+                keep_samples = dft[dft[0] > -1].index.values.tolist()
+            elif filtermode == "all":
+                drop_samples = dft[dft[0] == -3].index.values.tolist()
+                keep_samples = dft[dft[0] != -3].index.values.tolist()
+            
+        elif filtermode in outlier_methods:
+            drop_samples = ol_df[ol_df[filtermode] == -1].index.values.tolist()
+            keep_samples = ol_df[ol_df[filtermode] == 1].index.values.tolist()
+            
+        drop_bool = np.isin(samples[0], drop_samples)
+        drop_indices = np.where(drop_bool)[0].tolist()
+        
+        self.keep = keep_samples
+        self.drop = drop_samples
+        self.drop_indices = drop_indices
 
 ###############################################################################
 # write yaml config for diagnostic reports
