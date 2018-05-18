@@ -487,101 +487,100 @@ def aggregateM(inputM, subtypes_dict):
     return out
 
 ###############################################################################
-# run PCA on input matrix
+# Class for fitting PCA or NMF models
 ###############################################################################
-def PCARun(M_run, rank):
-    
-    # standarize input matrix
-    X_std = StandardScaler().fit_transform(M_run)
-    
-    # run PCA
-    pca = PCA(n_components = M_run.shape[1])
-    W = pca.fit_transform(X_std)
-    H = pca.components_.T * np.sqrt(pca.explained_variance_)
-
-    if rank > 0:
-        # print(np.sum(pca.explained_variance_ratio_))
-        evar = np.cumsum(pca.explained_variance_ratio_)[rank-1]
-        rankout = rank
+class DecompModel:
+    def __init__(self, M_run, rank, seed, decomp):
+        self.M_run = M_run
+        self.rank = rank
+        self.seed = seed
+        self.decomp = decomp
         
-        W = W[:,:rank]
-        H = H[:rank,:]
-    else:
-        evar_prev = 0
-        i = 1
-        for evar in np.cumsum(pca.explained_variance_ratio_):
-            if evar - evar_prev < 0.05:
-                rankout = i-1
-                evar = evar_prev
-                break
-            evar_prev = evar
-            i += 1
+        self.evar_dict = {}
         
-        W = W[:,:rankout]
-        H = H[:rankout,:]
-
-    out = collections.namedtuple('Out', 
-        ['W', 'H', 'evar', 'rank'])(W, H, evar, rankout)
-    return out
-
-###############################################################################
-# Specify NMF model
-# options can be added/modified per 
-# http://nimfa.biolab.si/nimfa.methods.factorization.nmf.html
-###############################################################################
-def NMFmodel(M_run, rank, seed):
-    
-    prng = np.random.RandomState(seed)
-    W_init = prng.rand(M_run.shape[0], rank)
-    H_init = prng.rand(rank, M_run.shape[1])
-    
-    model = nimfa.Nmf(M_run,
-        rank=rank,
-        # seed=None,
-        H=H_init,
-        W=W_init,
-        update="divergence",
-        objective='div',
-        n_run=1,
-        max_iter=200)
-    return model
-
-###############################################################################
-# run NMF on input matrix
-###############################################################################
-def NMFRun(M_run, rank, seed):
-
-    evar_list = []
-
-    if rank > 0:
-        model = NMFmodel(M_run, rank, seed)
-        rankout = rank
-
-    elif args.rank == 0:
-        evarprev = 0
-        
-        for i in range(1,6):
-            model = NMFmodel(M_run, i, seed)
-            model_fit = model()
-            evar = model_fit.fit.evar()
-            evar_list.append(evar)
-    
-            if(i > 2 and evar - evarprev < 0.001):
-                model = NMFmodel(M_run, i-1, seed)
-                rankout = i-1
-                break
+        if self.decomp == "pca":
+            # standarize input matrix
+            X_std = StandardScaler().fit_transform(self.M_run)
             
-            evarprev = evar
+            # run PCA
+            pca = PCA(n_components = self.M_run.shape[1])
+            W = pca.fit_transform(X_std)
+            H = pca.components_.T * np.sqrt(pca.explained_variance_)
+            
+            if self.rank > 0:
+                # print(np.sum(pca.explained_variance_ratio_))
+                self.modrank = self.rank
+                evar = np.cumsum(pca.explained_variance_ratio_)[self.rank-1]
+                self.evar_dict[self.modrank] = evar
+                
+                # self.W = W[:,:rank]
+                # self.H = H[:rank,:]
+            else:
+                evar_prev = 0
+                i = 1
+                for evar in np.cumsum(pca.explained_variance_ratio_):
+                    self.modrank = i
+                    # self.evar_list.append(evar)
+                    self.evar_dict[self.modrank] = evar
+                    if evar - evar_prev < 0.01:
+                        self.modrank = i-1
+                        evar = evar_prev
+                        break
+                    evar_prev = evar
+                    i += 1
+                
+            self.W = W[:,:self.modrank]
+            self.H = H[:self.modrank,:]
+        elif self.decomp == "nmf":
+        
+            if self.rank > 0:
+                model = self.NMFmod(self.rank)
+                self.modrank = self.rank
+                # self.evar_list.append(model_fit.fit.evar())
+                self.evar_dict[self.modrank] = model_fit.fit.evar()
+        
+            elif self.rank == 0:
+                self.evarprev = 0
+                
+                for i in range(1,6):
+                    model = self.NMFmod(rank=i)
+                    model_fit = model()
+                    evar = model_fit.fit.evar()
+                    self.modrank = i
+                    self.evar_dict[self.modrank] = evar
+            
+                    if(i > 2 and evar - evarprev < 0.001):
+                        model = self.NMFmod(rank=i-1)
+                        self.modrank = i-1
+                        break
+                    
+                    evarprev = evar
+            
+            model_fit = model()
+            # self.evar = model_fit.fit.evar()
+            self.W = model_fit.basis()
+            self.H = model_fit.coef()
+            # self.evar_list = evar_list
+        
+    # Specify NMF model
+    # options can be added/modified per 
+    # http://nimfa.biolab.si/nimfa.methods.factorization.nmf.html  
+    def NMFmod(self, rank):
     
-    model_fit = model()
-    evar = model_fit.fit.evar()
-
-    W = model_fit.basis()
-    H = model_fit.coef()
-
-    out = collections.namedtuple('Out', 
-        ['W', 'H', 'evar', 'rank'])(W, H, evar, rankout)
-    return out
+        prng = np.random.RandomState(self.seed)
+        W_init = prng.rand(self.M_run.shape[0], rank)
+        H_init = prng.rand(rank, self.M_run.shape[1])
+        
+        model = nimfa.Nmf(self.M_run,
+            rank=rank,
+            # seed=None,
+            H=H_init,
+            W=W_init,
+            update="divergence",
+            objective='div',
+            n_run=1,
+            max_iter=200)
+        return model
 
 ###############################################################################
 # write M matrix

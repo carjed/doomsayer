@@ -381,15 +381,15 @@ log.debug("M_f matrix (mutation spectra) saved to: " + paths['M_path_rates'])
 ###############################################################################
 # Get matrix decomposition
 ###############################################################################
-if args.decomp == "nmf":
-    decomp_data = NMFRun(M_f, args.rank, args.seed)
-        
-elif args.decomp == "pca":
-    decomp_data = PCARun(M_f, args.rank)
 
-log.info("Explained variance for first " + 
-    str(decomp_data.rank) + " " + args.decomp.upper() + " components: " + 
-    str(decomp_data.evar))
+decomp_data = DecompModel(M_f, args.rank, args.seed, args.decomp)
+
+if args.rank == 0:
+    log.info("Finding optimal rank for " + args.decomp + " decomposition")
+for key in sorted(decomp_data.evar_dict.keys()):
+    log.info("Explained variance for first " + 
+        str(key) + " " + args.decomp.upper() + " components: " + 
+        str(decomp_data.evar_dict[key]))
     
 M_d = decomp_data.W
 
