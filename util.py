@@ -15,7 +15,6 @@ import re
 
 sys.path.append(os.getcwd())
 
-
 # matrix+stats processing
 from pandas import *
 import numpy as np
@@ -38,17 +37,11 @@ from pyfaidx import Fasta
 from Bio.Seq import Seq
 from Bio.Alphabet import IUPAC
 
-# from plotly.offline import download_plotlyjs, init_notebook_mode, plot, iplot
-# plotly.offline.init_notebook_mode(connected=True)
-# from plotly.graph_objs import *
-# import cufflinks as cf
-# cf.go_offline()
-
 ###############################################################################
 # print to stderr
 ###############################################################################
-def eprint(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
+# def eprint(*args, **kwargs):
+#     print(*args, file=sys.stderr, **kwargs)
 
 ###############################################################################
 # Custom class for args
@@ -232,19 +225,14 @@ def getSamplesVCF(args, inputvcf):
 # Main function for parsing VCF
 ###############################################################################
 def processVCF(args, inputvcf, subtypes_dict, par):
-    if args.verbose:
-        eprint("----------------------------------")
-        eprint("INITIALIZING REFERENCE GENOME")
-        eprint("----------------------------------")
-    fasta_reader = Fasta(args.fastafile, read_ahead=1000000)
-    eprint("\tDONE") if args.verbose else None
-    # record_dict = SeqIO.to_dict(SeqIO.parse(args.fastafile, "fasta"))
 
-    # 'demo/input/keep.txt'
+    # initialize reference genome
+    fasta_reader = Fasta(args.fastafile, read_ahead=1000000)
+
+    # initialize vcf reader
     if args.samplefile:
         with open(args.samplefile) as f:
             keep_samples = f.read().splitlines()
-        eprint(len(keep_samples), "samples kept") if args.verbose else None
 
         vcf_reader = VCF(inputvcf,
             mode='rb', gts012=True, lazy=True, samples=keep_samples)
@@ -256,13 +244,6 @@ def processVCF(args, inputvcf, subtypes_dict, par):
     nbp = (args.length-1)//2
 
     # index samples
-    if args.verbose:
-        eprint("----------------------------------")
-        eprint("INDEXING SAMPLES")
-        eprint("----------------------------------")
-        eprint("Looking for sample IDs in:")
-        eprint("\t", inputvcf)
-
     if args.groupfile:
         all_samples = vcf_reader.samples
         samples = indexGroups(args.groupfile)
@@ -273,14 +254,7 @@ def processVCF(args, inputvcf, subtypes_dict, par):
     for i in range(len(samples)):
         samples_dict[samples[i]] = i
 
-    if args.verbose:
-        eprint("DONE [", len(samples), "samples indexed ]")
-
     # Query records in VCF and build matrix
-    if args.verbose:
-        eprint("----------------------------------")
-        eprint("PARSING VCF RECORDS")
-        eprint("----------------------------------")
     M = np.zeros((len(samples), len(subtypes_dict)))
     numsites_keep = 0
     numsites_skip = 0
@@ -343,19 +317,12 @@ def processVCF(args, inputvcf, subtypes_dict, par):
                 else:
                     numsites_skip += 1
 
-                if args.verbose:
-                    if (numsites_keep%100000==0):
-                        eprint("...", numsites_keep, "sites processed",
-                            "(", numsites_skip, "sites skipped)")
+                # if args.verbose:
+                #     if (numsites_keep%100000==0):
+                #         eprint("...", numsites_keep, "sites processed",
+                #             "(", numsites_skip, "sites skipped)")
             else:
                 numsites_skip += 1
-
-    if args.verbose:
-        eprint("----------------------------------")
-        eprint("VCF PROCESSING COMPLETE")
-        eprint("----------------------------------")
-        eprint(numsites_keep, "sites kept")
-        eprint(numsites_skip, "sites skipped")
 
     out = collections.namedtuple('Out', ['M', 'samples'])(M, samples)
 
@@ -369,9 +336,7 @@ def processVCF(args, inputvcf, subtypes_dict, par):
 # CHR    POS    REF    ALT    SAMPLE_ID
 ###############################################################################
 def processTxt(args, subtypes_dict):
-    if args.verbose:
-        eprint("----------------------------------")
-        eprint("Initializing reference genome...")
+
     fasta_reader = Fasta(args.fastafile, read_ahead=1000000)
 
     nbp = (args.length-1)//2
@@ -393,9 +358,6 @@ def processTxt(args, subtypes_dict):
             sample = row[4]
 
             if chrom != chrseq:
-                if args.verbose:
-                    eprint("Loading chromosome", chrom, "reference...")
-
                 sequence = fasta_reader[chrom]
                 chrseq = chrom
 
@@ -421,9 +383,6 @@ def processTxt(args, subtypes_dict):
 
         M = DataFrame(samples_dict).T.fillna(0).values
         samples = sorted(samples_dict)
-
-    if args.verbose:
-        eprint("...DONE")
 
     out = collections.namedtuple('Out', ['M', 'samples'])(M, samples)
     return out
