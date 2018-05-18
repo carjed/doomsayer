@@ -536,9 +536,7 @@ class DecompModel:
             if self.rank > 0:
                 model = self.NMFmod(self.rank)
                 self.modrank = self.rank
-                # self.evar_list.append(model_fit.fit.evar())
-                self.evar_dict[self.modrank] = model_fit.fit.evar()
-        
+                
             elif self.rank == 0:
                 self.evarprev = 0
                 
@@ -557,10 +555,9 @@ class DecompModel:
                     evarprev = evar
             
             model_fit = model()
-            # self.evar = model_fit.fit.evar()
+            self.evar_dict[self.modrank] = model_fit.fit.evar()
             self.W = model_fit.basis()
             self.H = model_fit.coef()
-            # self.evar_list = evar_list
         
     # Specify NMF model
     # options can be added/modified per 
