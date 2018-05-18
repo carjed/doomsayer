@@ -13,6 +13,7 @@ import warnings
 import itertools
 import timeit
 import time
+import random
 import multiprocessing
 import numpy as np
 from joblib import Parallel, delayed
@@ -21,8 +22,8 @@ from distutils.dir_util import copy_tree
 from util import *
 
 ###############################################################################
-# Parse arguments
-##############################################################################
+# Initialize pre-log, get version, and process args
+###############################################################################
 start = timeit.default_timer()
 
 init_log = getLogger('init_log', level=DEBUG)
@@ -31,21 +32,18 @@ init_log = getLogger('init_log', level=DEBUG)
 # via https://stackoverflow.com/questions/14989858
 try:
     version = subprocess.check_output(["git", "describe"]).strip().decode('utf-8')
-    # init_log.debug("version: " + version)
     init_log.debug("----------------------------------")
     init_log.debug(sys.argv[0] + " " + str(version))
 except:
     version = "[version not found]"
     init_log.warning(version)
 
-# get number of cpus on system
-num_cores = multiprocessing.cpu_count()
-
+#-----------------------------------------------------------------------------
+# Runtime control args
+#-----------------------------------------------------------------------------
 parser = argparse.ArgumentParser()
 
-#-----------------------------------------------------------------------------
-# Runtime control
-#-----------------------------------------------------------------------------
+num_cores = multiprocessing.cpu_count()
 parser.add_argument("-c", "--cpus",
                     help="number of CPUs. Must be integer value between 1 \
                         and "+str(num_cores),
@@ -71,7 +69,7 @@ parser.add_argument("-V", "--version",
                     version='%(prog)s ' + version)
 
 #-----------------------------------------------------------------------------
-# Input options
+# Input args
 #-----------------------------------------------------------------------------
 mode_opts = ["vcf", "agg", "txt"]
 parser.add_argument("-M", "--mode",
@@ -115,7 +113,7 @@ parser.add_argument("-g", "--groupfile",
                     type=str)
 
 #-----------------------------------------------------------------------------
-# Pre-filtering options
+# Pre-filtering args
 #-----------------------------------------------------------------------------
 parser.add_argument("-s", "--samplefile",
                     help="file with sample IDs to include (one per line)",
@@ -141,7 +139,7 @@ parser.add_argument("-X", "--maxac",
                     default=1)
 
 #-----------------------------------------------------------------------------
-# Output options
+# Output args
 #-----------------------------------------------------------------------------
 parser.add_argument("-p", "--projectdir",
                     help="directory to store output files \
@@ -168,7 +166,7 @@ parser.add_argument("-o", "--filterout",
                     action="store_true")
 
 #-----------------------------------------------------------------------------
-# Outlier detection options
+# Decomposition and outlier detection args
 #-----------------------------------------------------------------------------
 decomp_opts = ["nmf", "pca"]
 parser.add_argument("-d", "--decomp", 
@@ -225,7 +223,7 @@ parser.add_argument("-l", "--length",
                     default=3)
 
 #-----------------------------------------------------------------------------
-# Report options
+# Report args
 #-----------------------------------------------------------------------------
 parser.add_argument("-R", "--report",
                     help="automatically generates an HTML-formatted report in \
@@ -249,7 +247,7 @@ parser.add_argument("-T", "--template",
                     default="diagnostics")
 
 #-----------------------------------------------------------------------------
-# parse args and configure logs
+# initialize args and configure runtime logs
 #-----------------------------------------------------------------------------
 args = parser.parse_args()
 
@@ -274,15 +272,12 @@ for arg in vars(args):
     log.debug(arg + ": " + str(getattr(args, arg)))
 log.debug("----------------------------------")
 
-import random
-
 random.seed(args.seed)
 log.info("random seed: " + str(args.seed))
-# set.seed(start)
 
-###############################################################################
+#-----------------------------------------------------------------------------
 # Initialize project directory
-###############################################################################
+#-----------------------------------------------------------------------------
 projdir = os.path.realpath(args.projectdir)
 
 if not os.path.exists(args.projectdir):
@@ -291,9 +286,9 @@ if not os.path.exists(args.projectdir):
 else:
     log.debug("All output files will be located in: " + projdir)
 
-###############################################################################
+#-----------------------------------------------------------------------------
 # index subtypes
-###############################################################################
+#-----------------------------------------------------------------------------
 subtypes_dict = indexSubtypes(args.length)
 log.debug("subtypes indexed:")
 log.debug(subtypes_dict)
@@ -326,13 +321,13 @@ if args.mode == "vcf":
             M = np.add(M, M_sub)
         samples = np.array([getSamplesVCF(args, vcf_list[1])])
 
-elif args.mode == "agg":
-    data = aggregateM(args.input, subtypes_dict)
+elif args.mode == "txt":
+    data = processTxt(args, subtypes_dict)
     M = data.M
     samples = np.array([data.samples], dtype=str)
 
-elif args.mode == "txt":
-    data = processTxt(args, subtypes_dict)
+elif args.mode == "agg":
+    data = aggregateM(args.input, subtypes_dict)
     M = data.M
     samples = np.array([data.samples], dtype=str)
 
