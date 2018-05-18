@@ -355,6 +355,8 @@ if args.minsnvs > 0:
         for sample in lowsnv_samples:
             lowsnv_fh.write("%s\n" % sample)
         lowsnv_fh.close()
+        log.info(str(len(lowsnv_samples)) + " samples have fewer than " + 
+            str(args.minsnvs) + " SNVs and will be dropped")
 
 #-----------------------------------------------------------------------------
 # Write M and M_f matrices
