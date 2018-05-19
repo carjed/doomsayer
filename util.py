@@ -476,7 +476,8 @@ class DecompModel:
                 evar = np.cumsum(pca.explained_variance_ratio_)[self.rank-1]
                 self.evar_dict[self.modrank] = evar
 
-            else:
+            elif self.rank == 0:
+                util_log.debug("Finding optimal rank for " + decomp + " decomposition")
                 evar_prev = 0
                 i = 1
                 for evar in np.cumsum(pca.explained_variance_ratio_):
@@ -488,6 +489,9 @@ class DecompModel:
                         evar = evar_prev
                         break
                     evar_prev = evar
+                    util_log.debug("Explained variance for first " + 
+                        str(i) + " " + decomp.upper() + " components: " + 
+                        str(evar))
                     i += 1
                 
             self.W = W[:,:self.modrank]
@@ -499,8 +503,8 @@ class DecompModel:
                 self.modrank = self.rank
                 
             elif self.rank == 0:
+                util_log.debug("Finding optimal rank for " + decomp + " decomposition")
                 self.evarprev = 0
-                
                 for i in range(1,6):
                     model = self.NMFmod(rank=i)
                     model_fit = model()
@@ -514,6 +518,9 @@ class DecompModel:
                     
                     self.evar_dict[self.modrank] = evar
                     evarprev = evar
+                    util_log.debug("Explained variance for first " + 
+                        str(i) + " " + decomp.upper() + " components: " + 
+                        str(evar))
             
             model_fit = model()
             self.evar_dict[self.modrank] = model_fit.fit.evar()

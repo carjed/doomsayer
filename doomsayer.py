@@ -26,8 +26,6 @@ from util import *
 ###############################################################################
 start = timeit.default_timer()
 
-init_log = getLogger('init_log', level=DEBUG)
-
 # get latest version from github tags
 # via https://stackoverflow.com/questions/14989858
 try:
@@ -260,9 +258,9 @@ else:
     loglev = 'INFO'
     # ignore warning about covariance matrix not being full rank
     warnings.filterwarnings("ignore", category=UserWarning)    
-    
+
+util_log.setLevel(loglev)
 log = getLogger('doomsayer', level=loglev)
-# log = getLogger(__name__, level=loglev)
 
 log.info("----------------------------------")
 try:
@@ -279,8 +277,6 @@ for arg in vars(args):
 
 random.seed(args.seed)
 log.info("random seed: " + str(args.seed))
-
-util_log.setLevel(loglev)
 
 #-----------------------------------------------------------------------------
 # Initialize project directory
@@ -302,7 +298,6 @@ subtypes_dict = indexSubtypes(args.length)
 # Build M matrix from inputs
 ###############################################################################
 if args.mode == "vcf":
-    # fasta_dict = SeqIO.to_dict(SeqIO.parse(args.fastafile, "fasta"))
     if(args.input.lower().endswith(('.vcf', '.vcf.gz', '.bcf')) or
             args.input == "-"):
         par = False
@@ -386,12 +381,10 @@ log.debug("M_f matrix (mutation spectra) saved to: " + paths['M_path_rates'])
 
 decomp_data = DecompModel(M_f, args.rank, args.seed, args.decomp)
 
-if args.rank == 0:
-    log.info("Finding optimal rank for " + args.decomp + " decomposition")
-for key in sorted(decomp_data.evar_dict.keys()):
-    log.info("Explained variance for first " + 
-        str(key) + " " + args.decomp.upper() + " components: " + 
-        str(decomp_data.evar_dict[key]))
+# for key in sorted(decomp_data.evar_dict.keys()):
+#     log.info("Explained variance for first " + 
+#         str(key) + " " + args.decomp.upper() + " components: " + 
+#         str(decomp_data.evar_dict[key]))
     
 M_d = decomp_data.W
 
