@@ -38,25 +38,9 @@ from Bio.Seq import Seq
 from Bio.Alphabet import IUPAC
 
 ###############################################################################
-# print to stderr
-###############################################################################
-# def eprint(*args, **kwargs):
-#     print(*args, file=sys.stderr, **kwargs)
-
-###############################################################################
-# Custom class for args
-###############################################################################
-def restricted_float(x):
-    x = float(x)
-    if x < 1.0:
-        raise argparse.ArgumentTypeError("%r must be greater than 1"%(x,))
-    return x
-
-###############################################################################
 # Configure color stream handler
 # https://gist.github.com/jonaprieto/a61d9cade3ba19487f98
 ###############################################################################
-
 class ColourStreamHandler(StreamHandler):
 
     """ A colorized output StreamHandler """
@@ -90,7 +74,13 @@ class ColourStreamHandler(StreamHandler):
 ###############################################################################
 # configure logger
 ###############################################################################
-def getLogger(name=None, fmt='%(levelname)s: %(message)s', level='INFO'):
+class initLogger:
+    def __init__(level):
+        self.level = level
+
+def getLogger(name=None, 
+    fmt='[%(name)s::%(funcName)s] %(levelname)s %(message)s', 
+    level='INFO'):
     """ Get and initialize a colourised logging instance if the system supports
     it as defined by the log.has_colour
     :param name: Name of the logger
@@ -109,6 +99,8 @@ def getLogger(name=None, fmt='%(levelname)s: %(message)s', level='INFO'):
     log.setLevel(level)
     log.propagate = 0  # Don't bubble up to the root logger
     return log
+
+util_log = getLogger(__name__, level="DEBUG")
 
 ###############################################################################
 # collapse mutation types per strand symmetry
@@ -182,6 +174,8 @@ def indexSubtypes(motiflength):
     for subtype in sorted(subtypes_list):
         subtypes_dict[subtype] = i
         i += 1
+        util_log.debug("subtype " + str(i) + " of " + 
+            str(len(subtypes_dict.keys())) + " indexed: " + subtype)
 
     return subtypes_dict
 
@@ -233,6 +227,9 @@ def processVCF(args, inputvcf, subtypes_dict, par):
     if args.samplefile:
         with open(args.samplefile) as f:
             keep_samples = f.read().splitlines()
+        util_log.debug("VCF will be subset to " +
+            str(len(keep_samples)) + "samples in " +
+            args.samplefile)
 
         vcf_reader = VCF(inputvcf,
             mode='rb', gts012=True, lazy=True, samples=keep_samples)
@@ -317,12 +314,18 @@ def processVCF(args, inputvcf, subtypes_dict, par):
                 else:
                     numsites_skip += 1
 
-                # if args.verbose:
-                #     if (numsites_keep%100000==0):
-                #         eprint("...", numsites_keep, "sites processed",
-                #             "(", numsites_skip, "sites skipped)")
+                if (numsites_keep%1000000 == 0):
+                    util_log.debug(inputvcf + ": " + 
+                        str(numsites_keep) + " sites counted")
+                    # util_log.debug(str(numsites_skip) + " sites skipped")
+
             else:
                 numsites_skip += 1
+
+    util_log.info(inputvcf + ": " + 
+        str(numsites_keep) + " sites counted")
+    util_log.info(inputvcf + ": " + 
+        str(numsites_skip) + " sites skipped")
 
     out = collections.namedtuple('Out', ['M', 'samples'])(M, samples)
 
@@ -396,6 +399,8 @@ def getSamples(fh):
         skiprows=1,
         delimiter='\t',
         usecols=(0,))
+        
+    util_log.debug(fh + " contains " + str(len(samples)) + " samples")
 
     return samples
 
