@@ -32,11 +32,8 @@ init_log = getLogger('init_log', level=DEBUG)
 # via https://stackoverflow.com/questions/14989858
 try:
     version = subprocess.check_output(["git", "describe"]).strip().decode('utf-8')
-    init_log.debug("----------------------------------")
-    init_log.debug(sys.argv[0] + " " + str(version))
 except:
     version = "[version not found]"
-    init_log.warning(version)
 
 #-----------------------------------------------------------------------------
 # Runtime control args
@@ -264,16 +261,26 @@ else:
     # ignore warning about covariance matrix not being full rank
     warnings.filterwarnings("ignore", category=UserWarning)    
     
-log = getLogger('doomsayer_log', level=loglev)
+log = getLogger('doomsayer', level=loglev)
+# log = getLogger(__name__, level=loglev)
 
-log.debug("----------------------------------")
+log.info("----------------------------------")
+try:
+    version = subprocess.check_output(["git", "describe"]).strip().decode('utf-8')
+    log.info(sys.argv[0] + " " + str(version))
+except:
+    version = "[version not found]"
+    log.warning(version)
+log.info("----------------------------------")
+
 log.debug("Running with the following options:")
 for arg in vars(args):
     log.debug(arg + ": " + str(getattr(args, arg)))
-log.debug("----------------------------------")
 
 random.seed(args.seed)
 log.info("random seed: " + str(args.seed))
+
+util_log.setLevel(loglev)
 
 #-----------------------------------------------------------------------------
 # Initialize project directory
@@ -290,8 +297,6 @@ else:
 # index subtypes
 #-----------------------------------------------------------------------------
 subtypes_dict = indexSubtypes(args.length)
-log.debug("subtypes indexed:")
-log.debug(subtypes_dict)
 
 ###############################################################################
 # Build M matrix from inputs
@@ -466,4 +471,4 @@ if args.filterout:
 ###############################################################################
 stop = timeit.default_timer()
 tottime = round(stop - start, 2)
-log.debug("Total runtime: " + str(tottime) + " seconds")
+log.info("Total runtime: " + str(tottime) + " seconds")
