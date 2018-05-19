@@ -1,4 +1,4 @@
-```{r whist, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 8, fig.width = 10}
+```{r whist, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 8, fig.width = 12, dpi=100}
 # p<-sig_contribs %>% 
 #   gather(signature, value, -ID) %>% 
 #   ggplot(aes(x=value, fill=signature))+
@@ -18,7 +18,7 @@ sc2 <- sig_contribs %>%
 # https://stackoverflow.com/questions/34975190
 my_dens <- function(data, mapping, ...) {
   ggplot(data = data, mapping=mapping) +
-    geom_density(..., alpha = 0.7, color = NA) 
+    geom_density(..., alpha = 0.7, color = NA, fill="grey30") 
 }
 
 p2 <- ggpairs(

@@ -13,6 +13,7 @@ import warnings
 import itertools
 import timeit
 import time
+import random
 import multiprocessing
 import numpy as np
 from joblib import Parallel, delayed
@@ -21,8 +22,8 @@ from distutils.dir_util import copy_tree
 from util import *
 
 ###############################################################################
-# Parse arguments
-##############################################################################
+# Initialize pre-log, get version, and process args
+###############################################################################
 start = timeit.default_timer()
 
 init_log = getLogger('init_log', level=DEBUG)
@@ -31,21 +32,15 @@ init_log = getLogger('init_log', level=DEBUG)
 # via https://stackoverflow.com/questions/14989858
 try:
     version = subprocess.check_output(["git", "describe"]).strip().decode('utf-8')
-    # init_log.debug("version: " + version)
-    init_log.debug("----------------------------------")
-    init_log.debug(sys.argv[0] + " " + str(version))
 except:
     version = "[version not found]"
-    init_log.warning(version)
 
-# get number of cpus on system
-num_cores = multiprocessing.cpu_count()
-
+#-----------------------------------------------------------------------------
+# Runtime control args
+#-----------------------------------------------------------------------------
 parser = argparse.ArgumentParser()
 
-#-----------------------------------------------------------------------------
-# Runtime control
-#-----------------------------------------------------------------------------
+num_cores = multiprocessing.cpu_count()
 parser.add_argument("-c", "--cpus",
                     help="number of CPUs. Must be integer value between 1 \
                         and "+str(num_cores),
@@ -54,6 +49,13 @@ parser.add_argument("-c", "--cpus",
                     choices=range(1,num_cores+1),
                     metavar='INT',
                     default=1)
+
+parser.add_argument("-S", "--seed",
+                    help="random seed for NMF and outlier detection",
+                    nargs='?',
+                    type=int,
+                    metavar='INT',
+                    default=int(start))
 
 parser.add_argument("-v", "--verbose",
                     help="Enable verbose logging",
@@ -64,7 +66,7 @@ parser.add_argument("-V", "--version",
                     version='%(prog)s ' + version)
 
 #-----------------------------------------------------------------------------
-# Input options
+# Input args
 #-----------------------------------------------------------------------------
 mode_opts = ["vcf", "agg", "txt"]
 parser.add_argument("-M", "--mode",
@@ -108,7 +110,7 @@ parser.add_argument("-g", "--groupfile",
                     type=str)
 
 #-----------------------------------------------------------------------------
-# Pre-filtering options
+# Pre-filtering args
 #-----------------------------------------------------------------------------
 parser.add_argument("-s", "--samplefile",
                     help="file with sample IDs to include (one per line)",
@@ -134,7 +136,7 @@ parser.add_argument("-X", "--maxac",
                     default=1)
 
 #-----------------------------------------------------------------------------
-# Output options
+# Output args
 #-----------------------------------------------------------------------------
 parser.add_argument("-p", "--projectdir",
                     help="directory to store output files \
@@ -161,7 +163,7 @@ parser.add_argument("-o", "--filterout",
                     action="store_true")
 
 #-----------------------------------------------------------------------------
-# Outlier detection options
+# Decomposition and outlier detection args
 #-----------------------------------------------------------------------------
 decomp_opts = ["nmf", "pca"]
 parser.add_argument("-d", "--decomp", 
@@ -218,7 +220,7 @@ parser.add_argument("-l", "--length",
                     default=3)
 
 #-----------------------------------------------------------------------------
-# Report options
+# Report args
 #-----------------------------------------------------------------------------
 parser.add_argument("-R", "--report",
                     help="automatically generates an HTML-formatted report in \
@@ -242,7 +244,7 @@ parser.add_argument("-T", "--template",
                     default="diagnostics")
 
 #-----------------------------------------------------------------------------
-# parse args and configure logs
+# initialize args and configure runtime logs
 #-----------------------------------------------------------------------------
 args = parser.parse_args()
 
@@ -259,17 +261,30 @@ else:
     # ignore warning about covariance matrix not being full rank
     warnings.filterwarnings("ignore", category=UserWarning)    
     
-log = getLogger('doomsayer_log', level=loglev)
+log = getLogger('doomsayer', level=loglev)
+# log = getLogger(__name__, level=loglev)
 
-log.debug("----------------------------------")
+log.info("----------------------------------")
+try:
+    version = subprocess.check_output(["git", "describe"]).strip().decode('utf-8')
+    log.info(sys.argv[0] + " " + str(version))
+except:
+    version = "[version not found]"
+    log.warning(version)
+log.info("----------------------------------")
+
 log.debug("Running with the following options:")
 for arg in vars(args):
     log.debug(arg + ": " + str(getattr(args, arg)))
-log.debug("----------------------------------")
 
-###############################################################################
+random.seed(args.seed)
+log.info("random seed: " + str(args.seed))
+
+util_log.setLevel(loglev)
+
+#-----------------------------------------------------------------------------
 # Initialize project directory
-###############################################################################
+#-----------------------------------------------------------------------------
 projdir = os.path.realpath(args.projectdir)
 
 if not os.path.exists(args.projectdir):
@@ -278,12 +293,10 @@ if not os.path.exists(args.projectdir):
 else:
     log.debug("All output files will be located in: " + projdir)
 
-###############################################################################
+#-----------------------------------------------------------------------------
 # index subtypes
-###############################################################################
+#-----------------------------------------------------------------------------
 subtypes_dict = indexSubtypes(args.length)
-log.debug("subtypes indexed:")
-log.debug(subtypes_dict)
 
 ###############################################################################
 # Build M matrix from inputs
@@ -313,13 +326,13 @@ if args.mode == "vcf":
             M = np.add(M, M_sub)
         samples = np.array([getSamplesVCF(args, vcf_list[1])])
 
-elif args.mode == "agg":
-    data = aggregateM(args.input, subtypes_dict)
+elif args.mode == "txt":
+    data = processTxt(args, subtypes_dict)
     M = data.M
     samples = np.array([data.samples], dtype=str)
 
-elif args.mode == "txt":
-    data = processTxt(args, subtypes_dict)
+elif args.mode == "agg":
+    data = aggregateM(args.input, subtypes_dict)
     M = data.M
     samples = np.array([data.samples], dtype=str)
 
@@ -347,6 +360,8 @@ if args.minsnvs > 0:
         for sample in lowsnv_samples:
             lowsnv_fh.write("%s\n" % sample)
         lowsnv_fh.close()
+        log.info(str(len(lowsnv_samples)) + " samples have fewer than " + 
+            str(args.minsnvs) + " SNVs and will be dropped")
 
 #-----------------------------------------------------------------------------
 # Write M and M_f matrices
@@ -368,15 +383,15 @@ log.debug("M_f matrix (mutation spectra) saved to: " + paths['M_path_rates'])
 ###############################################################################
 # Get matrix decomposition
 ###############################################################################
-if args.decomp == "nmf":
-    decomp_data = NMFRun(M_f, args.rank)
-        
-elif args.decomp == "pca":
-    decomp_data = PCARun(M_f, args.rank)
 
-log.info("Explained variance for first " + 
-    str(decomp_data.rank) + " " + args.decomp.upper() + " components: " + 
-    str(decomp_data.evar))
+decomp_data = DecompModel(M_f, args.rank, args.seed, args.decomp)
+
+if args.rank == 0:
+    log.info("Finding optimal rank for " + args.decomp + " decomposition")
+for key in sorted(decomp_data.evar_dict.keys()):
+    log.info("Explained variance for first " + 
+        str(key) + " " + args.decomp.upper() + " components: " + 
+        str(decomp_data.evar_dict[key]))
     
 M_d = decomp_data.W
 
@@ -396,26 +411,27 @@ log.debug("H matrix saved to: " + paths['H_path'])
 if args.filtermode == "none":
     log.warning("No outlier detection will be performed")
 else:
-    kd_lists = detectOutliers(M_d, samples,
-        args.filtermode, args.threshold, projdir)
+    kd_lists = DetectOutliers(M_d, samples,
+        args.filtermode, args.threshold, projdir, args.seed)
 
     paths['keep_path'] = projdir + "/doomsayer_keep.txt"
     keep_fh = open(paths['keep_path'], 'wt')
-    for sample in kd_lists.keep_samples:
+    for sample in kd_lists.keep:
         keep_fh.write("%s\n" % sample)
     keep_fh.close()
     log.debug("Kept samples saved to: " + paths['keep_path'])
     
     paths['drop_path'] = projdir + "/doomsayer_drop.txt"
     drop_fh = open(paths['drop_path'], 'wt')
-    for sample in kd_lists.drop_samples:
+    for sample in kd_lists.drop:
         drop_fh.write("%s\n" % sample)
     drop_fh.close()
     
     log.debug("Outlier samples saved to: " + paths['drop_path'])
 
-    if len(kd_lists.drop_samples) > 0:
-        log.info(str(len(kd_lists.drop_samples)) + " potential outliers found")
+    if len(kd_lists.drop) > 0:
+        log.info(str(len(kd_lists.drop)) + " potential outliers found")
+        log.info(str(len(kd_lists.keep)) + " samples OK")
 
 ###############################################################################
 # auto-generate diagnostic report in R
@@ -440,12 +456,12 @@ if(args.report and args.matrixname == "subtype_count_matrix"):
 ###############################################################################
 if args.filterout:
     if(args.mode == "vcf" and not(args.input.lower().endswith(('.txt')))):
-        log.debug("Filtering input VCF using sample file " + keep_samples)
-        filterVCF(args.input, keep_samples)
+        log.debug("Filtering input VCF using sample file " + paths['keep_path'])
+        filterVCF(args.input, kd_lists.keep)
 
     elif args.mode =="txt":
-        log.debug("Filtering input data using sample file " + keep_samples)
-        filterTXT(args.input, keep_samples)
+        log.debug("Filtering input data using sample file " + paths['keep_path'])
+        filterTXT(args.input, kd_lists.keep)
 
     else:
         log.error("Input not compatible with auto-filtering function")
@@ -455,4 +471,4 @@ if args.filterout:
 ###############################################################################
 stop = timeit.default_timer()
 tottime = round(stop - start, 2)
-log.debug("Total runtime: " + str(tottime) + " seconds")
+log.info("Total runtime: " + str(tottime) + " seconds")

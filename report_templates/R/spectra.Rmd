@@ -1,14 +1,14 @@
-```{r dist, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 5, fig.width = 10}
+```{r dist, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 12, fig.width = 12, dpi=100}
 
 # get_leaves_branches_col(hrm$rows)
 
 # overall distribution
-spectra2 <- spectra %>%
-  mutate(group=ifelse(ID %in% keep_ids$V1, "keep", "drop")) %>%
+spectra2 <- left_join(spectra, cluster_mems, by="ID") %>% 
+  replace_na(list(group="keep")) %>% 
+  # mutate(group=ifelse(ID %in% keep_ids$V1, "keep", "drop")) %>%
   group_by(group) %>%
   gather(subtype, count, 2:ncol(spectra)) %>%
   separate(subtype, c("category", "motif"), sep = "[.]") %>%
-  # mutate(subtype=gsub("_", ">", subtype)) %>%
   mutate(category=gsub("_", ">", category)) %>%
   mutate(category=factor(category, levels=orderedcatsnc_short)) %>%
   group_by(category, motif, group) %>%
@@ -17,11 +17,26 @@ spectra2 <- spectra %>%
   mutate(prop=count/sum(count)) %>%
   ungroup()
 
-p <- ggplot(spectra2, aes(x=motif, y=prop, fill=group, group=group))+
+s2a <- spectra2 %>% 
+  group_by(group) %>% 
+  mutate(tot=sum(count)) %>% 
+  group_by(category, motif) %>% 
+  mutate(base_prop=max(count)/max(tot)) %>% 
+  rowwise %>% 
+  mutate(pval=prop.test(count, tot, base_prop)$p.value) %>% 
+  arrange(pval) %>%
+  group_by(group) %>% 
+  mutate(qval=p.adjust(pval)) %>% 
+  mutate(sig=ifelse(qval<0.05, TRUE, FALSE))
+
+p <- ggplot(s2a, aes(x=motif, y=prop, fill=group, group=group, alpha=sig))+
   geom_bar(stat="identity", position="dodge")+
-  facet_wrap(~category, ncol=6, scales="free_x")+
+  facet_wrap(~category, ncol=1, scales="free", strip.position="right")+
+  # facet_grid(category~.)+
   ylab("Contribution")+
-  scale_fill_brewer(palette = "Set1")+
+  # scale_fill_brewer(palette = "Set1")+
+  scale_fill_manual(values=c("gray30", group_col_vals))+
+  scale_alpha_discrete(range = c(0.3, 0.95))+
   theme_bw()+
   theme(axis.text.x=element_text(angle=90, vjust=0, size=10),
         # axis.text.y=element_text(size=20),
@@ -29,8 +44,10 @@ p <- ggplot(spectra2, aes(x=motif, y=prop, fill=group, group=group))+
         # axis.title.y=element_text(size=24),
         # legend.text=element_text(size=20),
         # strip.text=element_text(size=24),
+        legend.background = element_rect(fill=NA),
         legend.title=element_blank(),
         legend.position="bottom")
-        
+   
 sggplotly(p)
+
 ```

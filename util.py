@@ -15,7 +15,6 @@ import re
 
 sys.path.append(os.getcwd())
 
-
 # matrix+stats processing
 from pandas import *
 import numpy as np
@@ -38,35 +37,13 @@ from pyfaidx import Fasta
 from Bio.Seq import Seq
 from Bio.Alphabet import IUPAC
 
-# from plotly.offline import download_plotlyjs, init_notebook_mode, plot, iplot
-# plotly.offline.init_notebook_mode(connected=True)
-# from plotly.graph_objs import *
-# import cufflinks as cf
-# cf.go_offline()
-
-###############################################################################
-# print to stderr
-###############################################################################
-def eprint(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
-
-###############################################################################
-# Custom class for args
-###############################################################################
-def restricted_float(x):
-    x = float(x)
-    if x < 1.0:
-        raise argparse.ArgumentTypeError("%r must be greater than 1"%(x,))
-    return x
-
 ###############################################################################
 # Configure color stream handler
 # https://gist.github.com/jonaprieto/a61d9cade3ba19487f98
 ###############################################################################
-
 class ColourStreamHandler(StreamHandler):
 
-    """ A colorized output SteamHandler """
+    """ A colorized output StreamHandler """
 
     # Some basic colour scheme defaults
     colours = {
@@ -97,7 +74,13 @@ class ColourStreamHandler(StreamHandler):
 ###############################################################################
 # configure logger
 ###############################################################################
-def getLogger(name=None, fmt='%(levelname)s: %(message)s', level='INFO'):
+class initLogger:
+    def __init__(level):
+        self.level = level
+
+def getLogger(name=None, 
+    fmt='[%(name)s::%(funcName)s] %(levelname)s %(message)s', 
+    level='INFO'):
     """ Get and initialize a colourised logging instance if the system supports
     it as defined by the log.has_colour
     :param name: Name of the logger
@@ -116,6 +99,8 @@ def getLogger(name=None, fmt='%(levelname)s: %(message)s', level='INFO'):
     log.setLevel(level)
     log.propagate = 0  # Don't bubble up to the root logger
     return log
+
+util_log = getLogger(__name__, level="DEBUG")
 
 ###############################################################################
 # collapse mutation types per strand symmetry
@@ -189,6 +174,8 @@ def indexSubtypes(motiflength):
     for subtype in sorted(subtypes_list):
         subtypes_dict[subtype] = i
         i += 1
+        util_log.debug("subtype " + str(i) + " of " + 
+            str(len(subtypes_dict.keys())) + " indexed: " + subtype)
 
     return subtypes_dict
 
@@ -232,19 +219,17 @@ def getSamplesVCF(args, inputvcf):
 # Main function for parsing VCF
 ###############################################################################
 def processVCF(args, inputvcf, subtypes_dict, par):
-    if args.verbose:
-        eprint("----------------------------------")
-        eprint("INITIALIZING REFERENCE GENOME")
-        eprint("----------------------------------")
-    fasta_reader = Fasta(args.fastafile, read_ahead=1000000)
-    eprint("\tDONE") if args.verbose else None
-    # record_dict = SeqIO.to_dict(SeqIO.parse(args.fastafile, "fasta"))
 
-    # 'demo/input/keep.txt'
+    # initialize reference genome
+    fasta_reader = Fasta(args.fastafile, read_ahead=1000000)
+
+    # initialize vcf reader
     if args.samplefile:
         with open(args.samplefile) as f:
             keep_samples = f.read().splitlines()
-        eprint(len(keep_samples), "samples kept") if args.verbose else None
+        util_log.debug("VCF will be subset to " +
+            str(len(keep_samples)) + "samples in " +
+            args.samplefile)
 
         vcf_reader = VCF(inputvcf,
             mode='rb', gts012=True, lazy=True, samples=keep_samples)
@@ -256,13 +241,6 @@ def processVCF(args, inputvcf, subtypes_dict, par):
     nbp = (args.length-1)//2
 
     # index samples
-    if args.verbose:
-        eprint("----------------------------------")
-        eprint("INDEXING SAMPLES")
-        eprint("----------------------------------")
-        eprint("Looking for sample IDs in:")
-        eprint("\t", inputvcf)
-
     if args.groupfile:
         all_samples = vcf_reader.samples
         samples = indexGroups(args.groupfile)
@@ -273,14 +251,7 @@ def processVCF(args, inputvcf, subtypes_dict, par):
     for i in range(len(samples)):
         samples_dict[samples[i]] = i
 
-    if args.verbose:
-        eprint("DONE [", len(samples), "samples indexed ]")
-
     # Query records in VCF and build matrix
-    if args.verbose:
-        eprint("----------------------------------")
-        eprint("PARSING VCF RECORDS")
-        eprint("----------------------------------")
     M = np.zeros((len(samples), len(subtypes_dict)))
     numsites_keep = 0
     numsites_skip = 0
@@ -343,19 +314,18 @@ def processVCF(args, inputvcf, subtypes_dict, par):
                 else:
                     numsites_skip += 1
 
-                if args.verbose:
-                    if (numsites_keep%100000==0):
-                        eprint("...", numsites_keep, "sites processed",
-                            "(", numsites_skip, "sites skipped)")
+                if (numsites_keep%1000000 == 0):
+                    util_log.debug(inputvcf + ": " + 
+                        str(numsites_keep) + " sites counted")
+                    # util_log.debug(str(numsites_skip) + " sites skipped")
+
             else:
                 numsites_skip += 1
 
-    if args.verbose:
-        eprint("----------------------------------")
-        eprint("VCF PROCESSING COMPLETE")
-        eprint("----------------------------------")
-        eprint(numsites_keep, "sites kept")
-        eprint(numsites_skip, "sites skipped")
+    util_log.info(inputvcf + ": " + 
+        str(numsites_keep) + " sites counted")
+    util_log.info(inputvcf + ": " + 
+        str(numsites_skip) + " sites skipped")
 
     out = collections.namedtuple('Out', ['M', 'samples'])(M, samples)
 
@@ -369,9 +339,7 @@ def processVCF(args, inputvcf, subtypes_dict, par):
 # CHR    POS    REF    ALT    SAMPLE_ID
 ###############################################################################
 def processTxt(args, subtypes_dict):
-    if args.verbose:
-        eprint("----------------------------------")
-        eprint("Initializing reference genome...")
+
     fasta_reader = Fasta(args.fastafile, read_ahead=1000000)
 
     nbp = (args.length-1)//2
@@ -393,9 +361,6 @@ def processTxt(args, subtypes_dict):
             sample = row[4]
 
             if chrom != chrseq:
-                if args.verbose:
-                    eprint("Loading chromosome", chrom, "reference...")
-
                 sequence = fasta_reader[chrom]
                 chrseq = chrom
 
@@ -422,9 +387,6 @@ def processTxt(args, subtypes_dict):
         M = DataFrame(samples_dict).T.fillna(0).values
         samples = sorted(samples_dict)
 
-    if args.verbose:
-        eprint("...DONE")
-
     out = collections.namedtuple('Out', ['M', 'samples'])(M, samples)
     return out
 
@@ -437,6 +399,8 @@ def getSamples(fh):
         skiprows=1,
         delimiter='\t',
         usecols=(0,))
+        
+    util_log.debug(fh + " contains " + str(len(samples)) + " samples")
 
     return samples
 
@@ -487,93 +451,94 @@ def aggregateM(inputM, subtypes_dict):
     return out
 
 ###############################################################################
-# run PCA on input matrix
+# Class for fitting PCA or NMF models
 ###############################################################################
-def PCARun(M_run, rank):
-    
-    # standarize input matrix
-    X_std = StandardScaler().fit_transform(M_run)
-    
-    # run PCA
-    pca = PCA(n_components = M_run.shape[1])
-    W = pca.fit_transform(X_std)
-    H = pca.components_.T * np.sqrt(pca.explained_variance_)
-
-    if rank > 0:
-        # print(np.sum(pca.explained_variance_ratio_))
-        evar = np.cumsum(pca.explained_variance_ratio_)[rank-1]
-        rankout = rank
+class DecompModel:
+    def __init__(self, M_run, rank, seed, decomp):
+        self.M_run = M_run
+        self.rank = rank
+        self.seed = seed
+        self.decomp = decomp
         
-        W = W[:,:rank]
-        H = H[:rank,:]
-    else:
-        evar_prev = 0
-        i = 1
-        for evar in np.cumsum(pca.explained_variance_ratio_):
-            if evar - evar_prev < 0.05:
-                rankout = i-1
-                evar = evar_prev
-                break
-            evar_prev = evar
-            i += 1
+        self.evar_dict = {}
         
-        W = W[:,:rankout]
-        H = H[:rankout,:]
-
-    out = collections.namedtuple('Out', 
-        ['W', 'H', 'evar', 'rank'])(W, H, evar, rankout)
-    return out
-
-###############################################################################
-# Specify NMF model
-# options can be added/modified per 
-# http://nimfa.biolab.si/nimfa.methods.factorization.nmf.html
-###############################################################################
-def NMFmodel(M_run, rank):
-    model = nimfa.Nmf(M_run,
-        rank=rank,
-        update="divergence",
-        objective='div',
-        n_run=1,
-        max_iter=200)
-    return model
-
-###############################################################################
-# run NMF on input matrix
-###############################################################################
-def NMFRun(M_run, rank):
-
-    evar_list = []
-
-    if rank > 0:
-        model = NMFmodel(M_run, rank)
-        rankout = rank
-
-    elif args.rank == 0:
-        evarprev = 0
-        
-        for i in range(1,6):
-            model = NMFmodel(M_run, i)
-            model_fit = model()
-            evar = model_fit.fit.evar()
-            evar_list.append(evar)
-    
-            if(i > 2 and evar - evarprev < 0.001):
-                model = NMFmodel(M_run, i-1)
-                rankout = i-1
-                break
+        if self.decomp == "pca":
+            # standarize input matrix
+            X_std = StandardScaler().fit_transform(self.M_run)
             
-            evarprev = evar
+            # run PCA
+            pca = PCA(n_components = self.M_run.shape[1])
+            W = pca.fit_transform(X_std)
+            H = pca.components_.T * np.sqrt(pca.explained_variance_)
+            
+            if self.rank > 0:
+                self.modrank = self.rank
+                evar = np.cumsum(pca.explained_variance_ratio_)[self.rank-1]
+                self.evar_dict[self.modrank] = evar
+
+            else:
+                evar_prev = 0
+                i = 1
+                for evar in np.cumsum(pca.explained_variance_ratio_):
+                    self.modrank = i
+                    # self.evar_list.append(evar)
+                    self.evar_dict[self.modrank] = evar
+                    if evar - evar_prev < 0.01:
+                        self.modrank = i-1
+                        evar = evar_prev
+                        break
+                    evar_prev = evar
+                    i += 1
+                
+            self.W = W[:,:self.modrank]
+            self.H = H[:self.modrank,:]
+        elif self.decomp == "nmf":
+        
+            if self.rank > 0:
+                model = self.NMFmod(self.rank)
+                self.modrank = self.rank
+                
+            elif self.rank == 0:
+                self.evarprev = 0
+                
+                for i in range(1,6):
+                    model = self.NMFmod(rank=i)
+                    model_fit = model()
+                    evar = model_fit.fit.evar()
+                    self.modrank = i
+            
+                    if(i > 2 and evar - evarprev < 0.001):
+                        model = self.NMFmod(rank=i-1)
+                        self.modrank = i-1
+                        break
+                    
+                    self.evar_dict[self.modrank] = evar
+                    evarprev = evar
+            
+            model_fit = model()
+            self.evar_dict[self.modrank] = model_fit.fit.evar()
+            self.W = model_fit.basis()
+            self.H = model_fit.coef()
+        
+    # Specify NMF model
+    # options can be added/modified per 
+    # http://nimfa.biolab.si/nimfa.methods.factorization.nmf.html  
+    def NMFmod(self, rank):
     
-    model_fit = model()
-    evar = model_fit.fit.evar()
-
-    W = model_fit.basis()
-    H = model_fit.coef()
-
-    out = collections.namedtuple('Out', 
-        ['W', 'H', 'evar', 'rank'])(W, H, evar, rankout)
-    return out
+        prng = np.random.RandomState(self.seed)
+        W_init = prng.rand(self.M_run.shape[0], rank)
+        H_init = prng.rand(rank, self.M_run.shape[1])
+        
+        model = nimfa.Nmf(self.M_run,
+            rank=rank,
+            # seed=None,
+            H=H_init,
+            W=W_init,
+            update="divergence",
+            objective='div',
+            n_run=1,
+            max_iter=200)
+        return model
 
 ###############################################################################
 # write M matrix
@@ -613,61 +578,60 @@ def writeH(H, H_path, subtypes_dict):
 ###############################################################################
 # Generate keep/drop lists
 ###############################################################################
-def detectOutliers(M, samples, filtermode, threshold, projdir):
+class DetectOutliers:
+    def __init__(self, M, samples, filtermode, threshold, projdir, seed):
 
-    # outlier detection
-    clf = LocalOutlierFactor(
-        n_neighbors=20, 
-        contamination=threshold)
-    y_pred = clf.fit_predict(M)
-    
-    cee = EllipticEnvelope(
-        contamination=threshold)
-    cee.fit(M)
-    scores_pred = cee.decision_function(M)
-    y_pred2 = cee.predict(M)
-    
-    cif = IsolationForest(
-        contamination=threshold)
-    cif.fit(M)
-    scores_pred = cif.decision_function(M)
-    y_pred3 = cif.predict(M)
-    
-    outlier_methods = ["lof", "ee", "if"]
-    ol_df = DataFrame(np.column_stack((y_pred, y_pred2, y_pred3)),
-               index=samples[0].tolist(),
-               columns=outlier_methods)
-
-    keep_samples, drop_samples, drop_indices = ([] for i in range(3))
-
-    omnibus_methods = ["any", "any2", "all"]
-    if filtermode in omnibus_methods:
-        dft = ol_df.sum(axis=1)
-        dft = DataFrame(dft)
-        if filtermode == "any":
-            drop_samples = dft[dft[0] != 3].index.values.tolist()
-            keep_samples = dft[dft[0] == 3].index.values.tolist()
-        elif filtermode == "any2":
-            drop_samples = dft[dft[0] <= -1].index.values.tolist()
-            keep_samples = dft[dft[0] > -1].index.values.tolist()
-        elif filtermode == "all":
-            drop_samples = dft[dft[0] == -3].index.values.tolist()
-            keep_samples = dft[dft[0] != -3].index.values.tolist()
+        # outlier detection
+        clf = LocalOutlierFactor(
+            n_neighbors=20, 
+            contamination=threshold)
+        y_pred = clf.fit_predict(M)
         
-    elif filtermode in outlier_methods:
-        drop_samples = ol_df[ol_df[filtermode] == -1].index.values.tolist()
-        keep_samples = ol_df[ol_df[filtermode] == 1].index.values.tolist()
+        cee = EllipticEnvelope(
+            contamination=threshold,
+            random_state=seed)
+        cee.fit(M)
+        scores_pred = cee.decision_function(M)
+        y_pred2 = cee.predict(M)
         
-    drop_bool = np.isin(samples[0], drop_samples)
-    drop_indices = np.where(drop_bool)[0].tolist()
+        cif = IsolationForest(
+            contamination=threshold,
+            random_state=seed)
+        cif.fit(M)
+        scores_pred = cif.decision_function(M)
+        y_pred3 = cif.predict(M)
         
-    out_handles = ['keep_samples',
-        'drop_samples',
-        'drop_indices']
-
-    out = collections.namedtuple('Out', out_handles) \
-        (keep_samples, drop_samples, drop_indices)
-    return out
+        outlier_methods = ["lof", "ee", "if"]
+        ol_df = DataFrame(np.column_stack((y_pred, y_pred2, y_pred3)),
+                   index=samples[0].tolist(),
+                   columns=outlier_methods)
+    
+        keep_samples, drop_samples, drop_indices = ([] for i in range(3))
+    
+        omnibus_methods = ["any", "any2", "all"]
+        if filtermode in omnibus_methods:
+            dft = ol_df.sum(axis=1)
+            dft = DataFrame(dft)
+            if filtermode == "any":
+                drop_samples = dft[dft[0] != 3].index.values.tolist()
+                keep_samples = dft[dft[0] == 3].index.values.tolist()
+            elif filtermode == "any2":
+                drop_samples = dft[dft[0] <= -1].index.values.tolist()
+                keep_samples = dft[dft[0] > -1].index.values.tolist()
+            elif filtermode == "all":
+                drop_samples = dft[dft[0] == -3].index.values.tolist()
+                keep_samples = dft[dft[0] != -3].index.values.tolist()
+            
+        elif filtermode in outlier_methods:
+            drop_samples = ol_df[ol_df[filtermode] == -1].index.values.tolist()
+            keep_samples = ol_df[ol_df[filtermode] == 1].index.values.tolist()
+            
+        drop_bool = np.isin(samples[0], drop_samples)
+        drop_indices = np.where(drop_bool)[0].tolist()
+        
+        self.keep = keep_samples
+        self.drop = drop_samples
+        self.drop_indices = drop_indices
 
 ###############################################################################
 # write yaml config for diagnostic reports

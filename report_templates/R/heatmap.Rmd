@@ -1,4 +1,4 @@
-```{r heatmap, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 12, fig.width = 10, dpi=100,  fig.align="center"}
+```{r heatmap, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 12, fig.width = 12, dpi=100,  fig.align="center"}
 
 # not sure why these are here....
 cutoff <- ifelse(ncol(spectra_rates)-1==6, 0.05, 0.005)
@@ -49,9 +49,35 @@ hrm <- heatmapr(outlier_r_m,
     label_names = c("ID", "subtype", "error"),
     hclust_method="ward.D2")
 
+col_branches = brewer.pal(ncl, "Set1")
+hrm$rows <- hrm$rows %>% color_branches(k = ncl, col = col_branches) %>% ladderize
+
 # get dataframe of cluster membership (i.e., leaf color) for each outlier
 cluster_mems <- data.frame(ID=labels(hrm$rows), 
-  col=get_leaves_branches_col(hrm$rows))
+  group=get_leaves_branches_col(hrm$rows))
+
+group_col_vals <- as.vector(unique(cluster_mems$group))
+
+# group_col_vals
+
+cluster_mems$group <- gsub("#", "c", cluster_mems$group)
+groups <- unique(cluster_mems$group)
+cl_ids <- paste0("outlier cluster ", 1:length(groups))
+names(cl_ids) <- groups
+cl_ids <- as.list(cl_ids)
+
+cluster_mems$group <- recode(cluster_mems$group, !!!cl_ids)
+
+# cluster_mems
+
+mat_row <- data.frame(group = cluster_mems$group)
+rownames(mat_row) <- cluster_mems$ID
+
+mat_colors <- list(group=group_col_vals)
+names(mat_colors$group) <- unique(mat_row$group)
+
+# library(dendsort)
+# sort_hclust <- function(...) as.hclust(dendsort(...))
 
 # switch between static plots using pheatmap and interactive plots using 
 # heatmaply (heatmaply's built-in static function using webshot is buggy)
@@ -60,15 +86,22 @@ if(staticplots){
   suppressWarnings(suppressMessages(require(pheatmap)))
 
   pheatmap(outlier_r_m, 
-         color=viridis::plasma(20),
-         clustering_method='ward.D2',
-         treeheight_col=0)
+        color=viridis::plasma(20),
+        border_color=NA,
+        annotation_row    = mat_row,
+        annotation_colors = mat_colors,
+        clustering_method='ward.D2',
+        cluster_rows=as.hclust(hrm$rows),
+        treeheight_row=10,
+        # cluster_rows=sort_hclust(hrm$rows),
+        treeheight_col=0)
 } else {
   # 
   hm <- suppressMessages(
           heatmaply(outlier_r_m,
-            k_row=ncl,
+            # k_row=ncl,
             Colv=TRUE,
+            Rowv=hrm$rows,
             return_ppxpy=TRUE,
             hclust_method="ward.D2",
             colors=plasma(20),

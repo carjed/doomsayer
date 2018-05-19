@@ -1,4 +1,4 @@
-```{r sigs, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 12, fig.width = 10}
+```{r sigs, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 12, fig.width = 12, dpi=100}
 
 contribution_plot <- sig_contribs2 %>%
   filter(ID %in% drop_ids$V1)
