@@ -92,6 +92,11 @@ parser.add_argument("-i", "--input",
                     metavar='/path/to/input.vcf',
                     default=sys.stdin)
 
+parser.add_argument("-w", "--rowwise",
+                    help="Compile mutation spectra matrix from VCF files \
+                        containing non-overlapping samples.",
+                    action="store_true")
+
 parser.add_argument("-f", "--fastafile",
                     help="reference fasta file",
                     nargs='?',
@@ -314,12 +319,20 @@ if args.mode == "vcf":
             (delayed(processVCF)(args, vcf, subtypes_dict, par) \
             for vcf in vcf_list)
 
-        nrow, ncol = results[1].shape
-        M = np.zeros((nrow, ncol))
-
-        for M_sub in results:
-            M = np.add(M, M_sub)
-        samples = np.array([getSamplesVCF(args, vcf_list[1])])
+        if args.rowwise:
+            M = np.vstack(results)
+            
+            samples = np.array([])
+            for vcf in vcf_list:
+                samples = np.append(samples, getSamplesVCF(args, vcf))
+            
+        else:
+            nrow, ncol = results[1].shape
+            M = np.zeros((nrow, ncol))
+    
+            for M_sub in results:
+                M = np.add(M, M_sub)
+            samples = np.array([getSamplesVCF(args, vcf_list[1])])
 
 elif args.mode == "txt":
     data = processTxt(args, subtypes_dict)
