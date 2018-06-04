@@ -4,6 +4,13 @@
 
 [![DOI](https://zenodo.org/badge/95728792.svg?style=flat)](https://zenodo.org/badge/latestdoi/95728792) [![Docs](https://img.shields.io/badge/docs-latest-blue.svg)](http://www.jedidiahcarlson.com/docs/doomsayer) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg?style=flat)](https://opensource.org/licenses/MIT)  [![Binder](https://img.shields.io/badge/launch-binder-d06681.svg?style=flat)](https://mybinder.org/v2/gh/carjed/doomsayer/master) [![Build Status](https://travis-ci.org/carjed/doomsayer.svg?style=flat?branch=master)](https://travis-ci.org/carjed/doomsayer)
 
+> I am the only being whose doom <br />
+No tongue would ask, no eye would mourn; <br />
+I never caused a thought of gloom, <br />
+A smile of joy, since I was born. 
+
+_(from 'I Am the Only Being Whose Doom' by Emily Bront&euml; [1818 - 1848])_
+
 # Introduction
 
 _**DOOMSAYER** ( **D**etection **O**f **O**utliers using **M**utation **S**pectrum **A**nal**Y**sis in **E**xtremely **R**are variants) is a utility for analyzing patterns of rare, single-nucleotide variants (SNVs) in whole-genome (WGS) or whole-exome sequencing (WES) data._
@@ -13,7 +20,6 @@ _The basic intuition behind Doomsayer is that the non-somatic mutation spectra o
 _In addition to its purpose as a quality control program, Doomsayer can be applied more generally to study between-sample differences in somatic and germline mutation signatures._
 
 <!-- ### Citation
-
 If you use DOOMSAYER in your research, please cite our [paper](#) (citation pending). -->
 
 ------------------------------------
