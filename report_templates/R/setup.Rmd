@@ -42,7 +42,15 @@ spectra <- read.table(M_path, header=T, stringsAsFactors=F)
 spectra_rates <- read.table(M_path_rates, header=T, stringsAsFactors=F)
 sig_contribs <- read.table(W_path, header=T, stringsAsFactors=F)
 sig_loads <- read.table(H_path, header=T, stringsAsFactors=F)
+
+if(exists("samples_path")){
+  samples <- read.table(samples_path, header=T, stringsAsFactors=F)
+}
 # rmse <- read.table(RMSE_path, header=F, stringsAsFactors=F)
+
+if(exists("svars")){
+  svars <- unlist(strsplit(svars, ","))
+}
 
 # function to ignore nuisance messages from ggplotly
 sggplotly <- function(p){
@@ -61,6 +69,8 @@ rank <- nrow(sig_loads)
 nsamples <- nrow(sig_contribs)
 nkeep <- nrow(keep_ids)
 ndrop <- nrow(drop_ids)
+
+outlier_IDs <- drop_ids$V1
 
 orderedcatsnc <- c("A>G", "A>C", "A>T",
   "C>T", "C>A", "C>G",

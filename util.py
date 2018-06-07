@@ -4,6 +4,11 @@
 from __future__ import print_function
 import os
 import sys
+import warnings
+
+# ignore nuisance warnings when loading nimfa package
+warnings.filterwarnings("ignore", category=UserWarning)
+
 from logging import StreamHandler, DEBUG, getLogger as realGetLogger, Formatter
 from colorama import Fore, Back, init, Style
 import textwrap
@@ -174,28 +179,37 @@ def indexSubtypes(motiflength):
     for subtype in sorted(subtypes_list):
         subtypes_dict[subtype] = i
         i += 1
-        util_log.debug("subtype " + str(i) + " of " + 
-            str(len(subtypes_dict.keys())) + " indexed: " + subtype)
+
+    util_log.debug(str(len(subtypes_dict.keys())) + " " + 
+        str(motiflength) + "-mer subtypes indexed")
 
     return subtypes_dict
 
 ###############################################################################
 # Build dictionary with sample ID as key, group ID as value
 ###############################################################################
-def indexGroups(groupfile):
+def indexGroups(samplefile, groupvar):
     sg_dict = {}
-    with open(groupfile) as sg_file:
-        for line in sg_file:
-           (key, val) = line.split()
-           sg_dict[key] = val
+    
+    f = open(samplefile, 'r', encoding = "utf-8")
+    reader = csv.DictReader(f, delimiter='\t')
 
-    samples = sorted(list(set(sg_dict.values())))
-    return samples
+    for row in reader:
+        sg_dict[row['ID']] = row[groupvar]
+    
+    # with open(groupfile) as sg_file:
+    #     for line in sg_file:
+    #       (key, val) = line.split()
+    #       sg_dict[key] = val
+    return sg_dict
+    # samples = sorted(list(set(sg_dict.values())))
+    # return samples
 
 ###############################################################################
 # get samples from VCF file
 ###############################################################################
 def getSamplesVCF(args, inputvcf):
+    
     if args.samplefile:
         with open(args.samplefile) as f:
             keep_samples = f.read().splitlines()
@@ -207,9 +221,10 @@ def getSamplesVCF(args, inputvcf):
         vcf_reader = VCF(inputvcf,
             mode='rb', gts012=True, lazy=True)
 
-    if args.groupfile:
+    if (args.samplefile and args.groupvar):
         all_samples = vcf_reader.samples
-        samples = indexGroups(args.groupfile)
+        samples = indexGroups(args.samplefile, args.groupvar)
+        # samples = sorted(list(set(indexGroups(args.samplefile, args.groupvar).values())))
     else:
         samples = vcf_reader.samples
 
@@ -225,11 +240,15 @@ def processVCF(args, inputvcf, subtypes_dict, par):
 
     # initialize vcf reader
     if args.samplefile:
-        with open(args.samplefile) as f:
-            keep_samples = f.read().splitlines()
-        util_log.debug("VCF will be subset to " +
-            str(len(keep_samples)) + "samples in " +
-            args.samplefile)
+        # f = open(args.input, 'r', encoding = "ISO-8859-1")
+        f = open(args.samplefile, 'r', encoding = "utf-8")
+        reader = csv.DictReader(f, delimiter='\t')
+        keep_samples = []
+        for row in reader:
+            keep_samples.append(row['ID'])
+            # util_log.debug(keep_samples[-1])
+        # with open(args.samplefile) as f:
+        #     keep_samples = f.read().splitlines()
 
         vcf_reader = VCF(inputvcf,
             mode='rb', gts012=True, lazy=True, samples=keep_samples)
@@ -241,9 +260,15 @@ def processVCF(args, inputvcf, subtypes_dict, par):
     nbp = (args.length-1)//2
 
     # index samples
-    if args.groupfile:
+    if (args.samplefile and args.groupvar):
         all_samples = vcf_reader.samples
-        samples = indexGroups(args.groupfile)
+        # util_log.debug(all_samples[0:10])
+
+        sg_dict = indexGroups(args.samplefile, args.groupvar)
+        samples = sorted(list(set(sg_dict.values())))
+        # util_log.debug()
+        util_log.debug(str(len(all_samples)) + " samples will be pooled into " +
+            str(len(samples)) + " groups: " +  ",".join(samples))
     else:
         samples = vcf_reader.samples
 
@@ -297,19 +322,30 @@ def processVCF(args, inputvcf, subtypes_dict, par):
                 if subtype in subtypes_dict:
                     st = subtypes_dict[subtype]
 
-                    if args.groupfile:
-                        sample = all_samples[record.gt_types.tolist().index(1)]
+                    # currently only works with singletons--
+                    if (args.samplefile and args.groupvar):
+                        tot = record.gt_types.sum()
+                        # util_log.debug(str(len(record.gt_types.tolist())))
+                        if tot > 0:
+                            carrier = all_samples[record.gt_types.tolist().index(1)]
+                            # sample = len(record.gt_types.tolist())
+                            # util_log.debug("Sample(s) carrying SNV: " + carrier)
+                        # else:
+                            # util_log.debug("SNV not found in any samples")
 
-                        if sample in sg_dict:
-                            sample_gp = sg_dict[sample]
-                            ind = samples.index(sample_gp)
-                            M[ind,st] += 1
+                            if carrier in sg_dict:
+                                sample_gp = sg_dict[carrier]
+                                ind = samples.index(sample_gp)
+                                M[ind,st] += 1
+                                numsites_keep += 1
+                        else:
+                            numsites_skip += 1
                     else:
                         gt_new = record.gt_types
                         gt_new[gt_new == 3] = 0
                         M[:,st] = M[:,st]+gt_new
 
-                    numsites_keep += 1
+                        numsites_keep += 1
 
                 else:
                     numsites_skip += 1
@@ -652,6 +688,9 @@ def writeReportConfig(paths, projdir, args):
         print(key + ": " + paths[key], file=yaml)
 
     print("staticplots: " + str(args.staticplots).lower(), file=yaml)
+    
+    if args.svars:
+        print("svars: " + str(args.svars), file=yaml)
 
 ###############################################################################
 # filter VCF input by kept samples
