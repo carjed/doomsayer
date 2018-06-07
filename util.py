@@ -206,14 +206,25 @@ def indexGroups(samplefile, groupvar):
     # return samples
 
 ###############################################################################
+# get list of samples to keep if samplefile supplied
+###############################################################################
+def parseSampleFile(samplefile):
+    # f = open(args.input, 'r', encoding = "ISO-8859-1")
+    f = open(samplefile, 'r', encoding = "utf-8")
+    reader = csv.DictReader(f, delimiter='\t')
+    keep_samples = []
+    for row in reader:
+        keep_samples.append(row['ID'])
+        
+    return keep_samples
+    
+###############################################################################
 # get samples from VCF file
 ###############################################################################
 def getSamplesVCF(args, inputvcf):
     
     if args.samplefile:
-        with open(args.samplefile) as f:
-            keep_samples = f.read().splitlines()
-
+        keep_samples = parseSampleFile(args.samplefile)
         vcf_reader = VCF(inputvcf,
             mode='rb', gts012=True, lazy=True, samples=keep_samples)
         # vcf_reader.set_samples(keep_samples) # <- set_samples() subsets VCF
@@ -240,15 +251,7 @@ def processVCF(args, inputvcf, subtypes_dict, par):
 
     # initialize vcf reader
     if args.samplefile:
-        # f = open(args.input, 'r', encoding = "ISO-8859-1")
-        f = open(args.samplefile, 'r', encoding = "utf-8")
-        reader = csv.DictReader(f, delimiter='\t')
-        keep_samples = []
-        for row in reader:
-            keep_samples.append(row['ID'])
-            # util_log.debug(keep_samples[-1])
-        # with open(args.samplefile) as f:
-        #     keep_samples = f.read().splitlines()
+        keep_samples = parseSampleFile(args.samplefile)
 
         vcf_reader = VCF(inputvcf,
             mode='rb', gts012=True, lazy=True, samples=keep_samples)
