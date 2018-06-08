@@ -66,7 +66,7 @@ parser.add_argument("-V", "--version",
 #-----------------------------------------------------------------------------
 # Input args
 #-----------------------------------------------------------------------------
-mode_opts = ["vcf", "agg", "txt"]
+mode_opts = ["vcf", "maf", "agg", "txt"]
 parser.add_argument("-M", "--mode",
                     help="Mode for parsing input. Must be one of \
                         {"+", ".join(mode_opts)+ "}. \
@@ -112,11 +112,14 @@ parser.add_argument("-s", "--samplefile",
                     type=str)
 
 parser.add_argument("-g", "--groupvar",
-                    help="if --samplefile is provided, specify column with the \
-                        grouping variable to pool samples by. Defaults to 'ID'",
+                    help="if --samplefile is provided with VCF input, or if \
+                        input is MAF file, specify column name of the \
+                        grouping variable to pool samples by. If no grouping \
+                        variable is provided, the matrix will be constructed \
+                        per sample ID as usual",
                     nargs='?',
                     type=str,
-                    metavar='STR')
+                    metavar='STR')  
 
 parser.add_argument("-q", "--svars",
                     help="If --samplefile is provided, pass comma-separated \
@@ -283,6 +286,9 @@ except:
     log.warning(version)
 log.info("----------------------------------")
 
+if (args.mode == "maf" and not args.groupvar):
+    args.groupvar = "Tumor_Sample_Barcode"
+
 log.debug("Running with the following options:")
 for arg in vars(args):
     log.debug("\t" + arg + ": " + str(getattr(args, arg)))
@@ -340,6 +346,11 @@ if args.mode == "vcf":
             for M_sub in results:
                 M = np.add(M, M_sub)
             samples = np.array([getSamplesVCF(args, vcf_list[1])])
+
+elif args.mode == "maf":
+    data = processMAF(args, subtypes_dict)
+    M = data.M
+    samples = np.array([data.samples], dtype=str)
 
 elif args.mode == "txt":
     data = processTxt(args, subtypes_dict)
