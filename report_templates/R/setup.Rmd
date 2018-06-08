@@ -72,11 +72,12 @@ ndrop <- nrow(drop_ids)
 
 outlier_IDs <- drop_ids$V1
 
-orderedcatsnc <- c("A>G", "A>C", "A>T",
-  "C>T", "C>A", "C>G",
-  "C>T", "C>A", "C>G")
+# old ordering
+# orderedcatsnc <- c("A>G", "A>C", "A>T", "C>T", "C>A", "C>G", "C>T", "C>A", "C>G")
+# orderedcatsnc_short <- c("A>G", "A>C", "A>T", "C>T", "C>A", "C>G")
 
-orderedcatsnc_short <- c("A>G", "A>C", "A>T", "C>T", "C>A", "C>G")
+orderedcatsnc <- c("C>A", "C>G", "C>T", "C>A", "C>G", "C>T", "T>A", "T>C", "T>G")
+orderedcatsnc_short <- c("C>A", "C>G", "C>T", "T>A", "T>C", "T>G")
 
 myPaletteCat <- colorRampPalette(brewer.pal(12, "Paired"))
 gp_cols <- myPaletteCat(12)[
