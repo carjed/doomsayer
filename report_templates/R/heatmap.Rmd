@@ -14,6 +14,8 @@ sig_contribs2 <- sig_contribs[complete.cases(sig_contribs),] %>%
   dplyr::select(-sumVar) %>%
   gather(signature, contribution, -c(ID,maxgp))
 
+# print(sig_contribs2)
+
 # for each subtype in each individual, get fold-difference from mean contribution
 spectra_r <- spectra_rates %>%
   mutate_at(vars(-1), funs(./mean(.))) %>%
@@ -119,6 +121,5 @@ if(staticplots){
   
   hm2
 }
-
 
 ```

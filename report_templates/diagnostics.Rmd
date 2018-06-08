@@ -26,6 +26,32 @@ params:
 ```{r child="R/setup.Rmd"}
 ```
 
+## Error profile heatmap
+
+### Plot description
+
+This plot shows the fold-difference in contribution per subtype for each outlier. Fold-differences are calculated relative to the mean contribution of that subtype across all samples. Scale is truncated to +/-5-fold difference. Both rows and columns are clustered using Ward's algorithm (`ward.D2` in R). Each outlier is assigned into one of `r I(rank)` groups according to their similarity. Outlier groups are indicated by the color of the branches (if using interactive mode) or by a colorbar under the dendrogram (if using static mode).
+
+### Interpreting this plot
+
+This heatmap shows patterns of similarity in the mutation spectra of flagged outliers. If there are batch effects that have affected the mutation spectra of certain samples, those rows should cluster together.
+
+Clustering of the columns indicates that, among the flagged outliers, multiple subtypes tend to be enriched or depleted together.
+
+Note that a lack of obvious clustering patterns does not necessarily mean the flagged outliers are free from error and were flagged due to random variation in the mutation spectra.
+
+```{r child="R/heatmap.Rmd"}
+```
+
+## Outlier QC statistic boxplots
+
+### Plot description
+
+If the user has included a file of sample-level summary statistics with the `--samplefile` option and has specified variables to analyze with the `--svars` option, this plot will show the distributions of those variables for the outliers in each cluster, compared to the inlier samples.
+
+```{r child="R/stat_boxplots.Rmd"}
+```
+
 ## Compare component distributions
 
 ### Plot description
@@ -44,24 +70,7 @@ If any component shows clear evidence of multimodality (see diagonal panels), co
 
 If you are using NMF decomposition and two or more components are perfectly correlated (see upper panels), consider running Doomsayer with a lower rank.
 
-```{r child="R/contribs_hist.Rmd"}
-```
-
-## Error profile heatmap
-
-### Plot description
-
-This plot shows the fold-difference in contribution per subtype for each outlier. Fold-differences are calculated relative to the mean contribution of that subtype across all samples. Scale is truncated to +/-5-fold difference. Both rows and columns are clustered using Ward's algorithm (`ward.D2` in R). Each outlier is assigned into one of `r I(rank)` groups according to their similarity. Outlier groups are indicated by the color of the branches (if using interactive mode) or by a colorbar under the dendrogram (if using static mode).
-
-### Interpreting this plot
-
-This heatmap shows patterns of similarity in the mutation spectra of flagged outliers. If there are batch effects that have affected the mutation spectra of certain samples, those rows should cluster together.
-
-Clustering of the columns indicates that, among the flagged outliers, multiple subtypes tend to be enriched or depleted together.
-
-Note that a lack of obvious clustering patterns does not necessarily mean the flagged outliers are free from error and were flagged due to random variation in the mutation spectra.
-
-```{r child="R/heatmap.Rmd"}
+```{r child="R/component_scatter.Rmd"}
 ```
 
 ## Mutation spectra plots

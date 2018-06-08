@@ -1,4 +1,4 @@
-```{r whist, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 8, fig.width = 12, dpi=100}
+```{r cdists, message=FALSE, warning=FALSE, echo=FALSE, fig.height = 8, fig.width = 12, dpi=100}
 # p<-sig_contribs %>% 
 #   gather(signature, value, -ID) %>% 
 #   ggplot(aes(x=value, fill=signature))+
@@ -10,10 +10,12 @@
 
 # sggplotly(p)
 
-outlier_IDs <- drop_ids$V1
 
-sc2 <- sig_contribs %>%
-    mutate(drop=ifelse(ID %in% outlier_IDs, "drop", "keep"))
+
+# sc2 <- sig_contribs %>%
+#     mutate(drop=ifelse(ID %in% outlier_IDs, "drop", "keep"))
+    
+sc2 <- sigs2
 
 # https://stackoverflow.com/questions/34975190
 my_dens <- function(data, mapping, ...) {
@@ -24,7 +26,8 @@ my_dens <- function(data, mapping, ...) {
 p2 <- ggpairs(
         sc2,
         columns = 2:ncol(sig_contribs),
-        mapping = ggplot2::aes(colour = drop, fill = drop),
+        # mapping = ggplot2::aes(colour = drop, fill = drop),
+        mapping = ggplot2::aes(colour = group, fill = group),
         diag = list(continuous = my_dens),
         # upper = list(continuous = "density"),
         lower = list(continuous = wrap("points", alpha = 0.3)))+
@@ -34,8 +37,10 @@ p2 <- ggpairs(
 for(i in 1:p2$nrow) {
   for(j in 1:p2$ncol){
     p2[i,j] <- p2[i,j] + 
-        scale_colour_manual(values=c("red", "black"))+
-        scale_fill_manual(values=c("red", "black"))
+        # scale_colour_manual(values=c("red", "black"))+
+        scale_colour_manual(values=c("gray30", group_col_vals))+
+        # scale_fill_manual(values=c("red", "black"))
+        scale_fill_manual(values=c("gray30", group_col_vals))
         # scale_fill_manual(values=c("#00AFBB", "#E7B800", "#FC4E07")) +
         # scale_color_manual(values=c("#00AFBB", "#E7B800", "#FC4E07"))  
   }
