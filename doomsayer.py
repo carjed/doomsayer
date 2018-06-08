@@ -66,7 +66,7 @@ parser.add_argument("-V", "--version",
 #-----------------------------------------------------------------------------
 # Input args
 #-----------------------------------------------------------------------------
-mode_opts = ["vcf", "agg", "txt"]
+mode_opts = ["vcf", "maf", "agg", "txt"]
 parser.add_argument("-M", "--mode",
                     help="Mode for parsing input. Must be one of \
                         {"+", ".join(mode_opts)+ "}. \
@@ -104,23 +104,33 @@ parser.add_argument("-f", "--fastafile",
                     metavar='/path/to/genome.fa',
                     default="chr20.fasta.gz")
 
-parser.add_argument("-g", "--groupfile",
-                    help="two-column tab-delimited file containing sample IDs \
-                        (column 1) and group membership (column 2) for pooled \
-                        analysis",
+parser.add_argument("-s", "--samplefile",
+                    help="tab-delimited text file with sample IDs in the first \
+                        column.",
                     nargs='?',
-                    metavar='/path/to/sample_batches.txt',
+                    metavar='/path/to/samples.txt',
                     type=str)
+
+parser.add_argument("-g", "--groupvar",
+                    help="if --samplefile is provided with VCF input, or if \
+                        input is MAF file, specify column name of the \
+                        grouping variable to pool samples by. If no grouping \
+                        variable is provided, the matrix will be constructed \
+                        per sample ID as usual",
+                    nargs='?',
+                    type=str,
+                    metavar='STR')  
+
+parser.add_argument("-q", "--svars",
+                    help="If --samplefile is provided, pass comma-separated \
+                        list of column names to query in report",
+                    nargs='?',
+                    type=str,
+                    metavar='COLUMN1,COLUMN2,COLUMN3')
 
 #-----------------------------------------------------------------------------
 # Pre-filtering args
 #-----------------------------------------------------------------------------
-parser.add_argument("-s", "--samplefile",
-                    help="file with sample IDs to include (one per line)",
-                    nargs='?',
-                    metavar='/path/to/kept_samples.txt',
-                    type=str)
-
 parser.add_argument("-C", "--minsnvs",
                     help="minimum # of SNVs per individual to be included \
                         in analysis. Default is 0.",
@@ -276,9 +286,12 @@ except:
     log.warning(version)
 log.info("----------------------------------")
 
+if (args.mode == "maf" and not args.groupvar):
+    args.groupvar = "Tumor_Sample_Barcode"
+
 log.debug("Running with the following options:")
 for arg in vars(args):
-    log.debug(arg + ": " + str(getattr(args, arg)))
+    log.debug("\t" + arg + ": " + str(getattr(args, arg)))
 
 random.seed(args.seed)
 log.info("random seed: " + str(args.seed))
@@ -333,6 +346,11 @@ if args.mode == "vcf":
             for M_sub in results:
                 M = np.add(M, M_sub)
             samples = np.array([getSamplesVCF(args, vcf_list[1])])
+
+elif args.mode == "maf":
+    data = processMAF(args, subtypes_dict)
+    M = data.M
+    samples = np.array([data.samples], dtype=str)
 
 elif args.mode == "txt":
     data = processTxt(args, subtypes_dict)
@@ -391,6 +409,19 @@ log.debug("M_f matrix (mutation spectra) saved to: " + paths['M_path_rates'])
 ###############################################################################
 # Get matrix decomposition
 ###############################################################################
+nsubtypes = len(subtypes_dict.keys())
+
+if (nsubtypes > samples.size and args.decomp == "pca"):
+
+    if(args.groupvar):
+        grouperr = " or use a grouping variable with >" + str(nsubtypes) + " levels"
+    else:
+        grouperr = ""
+    log.error("You are trying to run a PCA with more dimensions (" + 
+        str(nsubtypes) + ") than samples (" + 
+        str(samples.size) + ")---unable to proceed with outlier detection!" + 
+        " Try using NMF decomposition (--decomp nmf)" + grouperr)
+    exit()
 
 decomp_data = DecompModel(M_f, args.rank, args.seed, args.decomp)
 
@@ -415,7 +446,8 @@ log.debug("H matrix saved to: " + paths['H_path'])
 # Perform outlier detection
 ###############################################################################
 if args.filtermode == "none":
-    log.warning("No outlier detection will be performed")
+    log.warning("Using '--filtermode none'. " +
+        "No outlier detection will be performed")
 else:
     kd_lists = DetectOutliers(M_d, samples,
         args.filtermode, args.threshold, projdir, args.seed)
@@ -443,6 +475,12 @@ else:
 # auto-generate diagnostic report in R
 ###############################################################################
 if(args.report and args.matrixname == "subtype_count_matrix"):
+
+    if args.samplefile:
+        samplefile_dest = projdir + "/samplefile.txt" # <- change to actual filename
+        shutil.copy(args.samplefile, samplefile_dest)
+        log.debug("Sample file copied to " + samplefile_dest)
+        paths['samples_path'] = samplefile_dest
 
     writeReportConfig(paths, projdir, args)
     log.debug("Diagnostics config file written to: " + projdir + "/config.yaml")

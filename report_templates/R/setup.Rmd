@@ -42,7 +42,15 @@ spectra <- read.table(M_path, header=T, stringsAsFactors=F)
 spectra_rates <- read.table(M_path_rates, header=T, stringsAsFactors=F)
 sig_contribs <- read.table(W_path, header=T, stringsAsFactors=F)
 sig_loads <- read.table(H_path, header=T, stringsAsFactors=F)
+
+if(exists("samples_path")){
+  samples <- read.table(samples_path, header=T, stringsAsFactors=F)
+}
 # rmse <- read.table(RMSE_path, header=F, stringsAsFactors=F)
+
+if(exists("svars")){
+  svars <- unlist(strsplit(svars, ","))
+}
 
 # function to ignore nuisance messages from ggplotly
 sggplotly <- function(p){
@@ -62,11 +70,14 @@ nsamples <- nrow(sig_contribs)
 nkeep <- nrow(keep_ids)
 ndrop <- nrow(drop_ids)
 
-orderedcatsnc <- c("A>G", "A>C", "A>T",
-  "C>T", "C>A", "C>G",
-  "C>T", "C>A", "C>G")
+outlier_IDs <- drop_ids$V1
 
-orderedcatsnc_short <- c("A>G", "A>C", "A>T", "C>T", "C>A", "C>G")
+# old ordering
+# orderedcatsnc <- c("A>G", "A>C", "A>T", "C>T", "C>A", "C>G", "C>T", "C>A", "C>G")
+# orderedcatsnc_short <- c("A>G", "A>C", "A>T", "C>T", "C>A", "C>G")
+
+orderedcatsnc <- c("C>A", "C>G", "C>T", "C>A", "C>G", "C>T", "T>A", "T>C", "T>G")
+orderedcatsnc_short <- c("C>A", "C>G", "C>T", "T>A", "T>C", "T>G")
 
 myPaletteCat <- colorRampPalette(brewer.pal(12, "Paired"))
 gp_cols <- myPaletteCat(12)[
