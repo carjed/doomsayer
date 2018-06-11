@@ -17,12 +17,15 @@ if(exists("samples") & exists("svars")){
   
   # figure showing that simple cutoffs for quality indicators would not easily
   # differentiate inliers vs. Doomsayer's flagged outliers
-  ggplot(sumdat, aes(x=group, y=val, group=group, fill=group))+
+  p <- ggplot(sumdat, aes(x=group, y=val, group=group, fill=group))+
     geom_boxplot()+
     scale_fill_manual(values=c("gray30", group_col_vals))+
     facet_wrap(~var, scales="free")+
     theme_bw()+
     theme(axis.text.x=element_text(angle=45, hjust=1))
+    
+  sggplotly(p)
+  
 } else {
   sigs2 <- merge(sig_contribs, cluster_mems, by="ID", all.x=T) %>%
     mutate(outlier=ifelse(ID %in% outlier_IDs, T, F))
