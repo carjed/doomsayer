@@ -43,13 +43,10 @@ Note that a lack of obvious clustering patterns does not necessarily mean the fl
 ```{r child="R/heatmap.Rmd"}
 ```
 
-## Outlier QC statistic boxplots
+```{r child="R/stat_boxplots1.Rmd"}
+```
 
-### Plot description
-
-If the user has included a file of sample-level summary statistics with the `--samplefile` option and has specified variables to analyze with the `--svars` option, this plot will show the distributions of those variables for the outliers in each cluster, compared to the inlier samples.
-
-```{r child="R/stat_boxplots.Rmd"}
+```{r child="R/stat_boxplots2.Rmd"}
 ```
 
 ## Compare component distributions
@@ -77,7 +74,7 @@ If you are using NMF decomposition and two or more components are perfectly corr
 
 ### Plot description
 
-Each bar represents the fraction of observations contained within that K-mer subtype across all samples of a particular group. 
+Each bar represents the fraction of observations contained within that K-mer subtype across all samples of a particular group. Bars that are solid colors indicate the outliers in that group have a significantly higher or lower proportion of those SNVs compared to the inlier group (FDR-adjusted; Q-value < 0.05), whereas greyed-out bars indicate no significant difference.
 
 ```{r child="R/spectra.Rmd"}
 ```
