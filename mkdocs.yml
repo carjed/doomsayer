@@ -3,6 +3,7 @@ site_url: https://github.com/carjed/doomsayer
 repo_url: https://github.com/carjed/doomsayer
 pages:
   - Home: index.md
+  - Usage: usage.md
   - FAQ: faq.md
   - Support: support.md
 theme: cinder

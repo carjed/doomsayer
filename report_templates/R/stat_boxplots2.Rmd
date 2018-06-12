@@ -1,0 +1,28 @@
+```{r boxplots2, results='asis', message=FALSE, warning=FALSE, echo=FALSE, fig.height = 8, fig.width = 12, dpi=100,  fig.align="center"}
+
+if(exists("samples") & exists("svars")){
+
+  cat("### Plot description \n")
+
+  cat("The plot below shows the distributions of user-specified QC variables for the inlier samples compared to the outlier samples grouped according to the cluster assignment shown in the [heatmap](#error_profile_heatmap) \n \n")
+
+  cat("### Interpreting this plot \n")
+
+  cat("These boxplots tell us whether **specific groups** of outliers detected by *Doomsayer* show differences in other sample-level summary statistics. \n")
+
+  # figure showing that simple cutoffs for quality indicators would not easily
+  # differentiate inliers vs. Doomsayer's flagged outliers
+  p2 <- ggplot(sumdat, aes(x=group, y=val, group=group, fill=group))+
+    geom_boxplot()+
+    scale_fill_manual(values=c("gray30", group_col_vals))+
+    facet_wrap(~var, scales="free")+
+    theme_bw()+
+    theme(axis.text.x=element_text(angle=45, hjust=1),
+      axis.title.x=element_blank(),
+      legend.position="none")
+    
+  sggplotly(p2)
+  
+} 
+
+```
