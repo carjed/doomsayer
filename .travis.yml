@@ -28,4 +28,5 @@ install:
   - R --quiet -f install.r
 
 script:
-  - python doomsayer.py --mode agg --input tutorial_data/NMF_M_spectra.txt --verbose --rank 4 --report
+  - python doomsayer.py --mode agg --input data/bridges.subtype_count_matrix.txt --verbose --decomp nmf --rank 4 --report
+  - python doomsayer.py --mode agg --input data/bridges.subtype_count_matrix.txt --verbose --decomp pca --rank 4 --report --staticplots
