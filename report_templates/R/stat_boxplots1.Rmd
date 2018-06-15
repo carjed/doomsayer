@@ -1,4 +1,4 @@
-```{r boxplots1, results='asis', message=FALSE, warning=FALSE, echo=FALSE, fig.height = 8, fig.width = 12, dpi=100,  fig.align="center"}
+```{r boxplots1, results='asis', message=FALSE, warning=FALSE, echo=FALSE, fig.height = 6, fig.width = 12, dpi=100,  fig.align="center"}
 
 if(exists("samples") & exists("svars")){
 
@@ -12,7 +12,22 @@ if(exists("samples") & exists("svars")){
 
   cat("These boxplots tell us whether the outliers detected by *Doomsayer* show differences in other sample-level summary statistics. \n")
 
-  sigs2 <- merge(sig_contribs, samples, by="ID") %>%
+  titv <- spectra %>%
+    gather(subtype, count, 2:ncol(spectra)) %>%
+    separate(subtype, c("category", "motif"), sep = "[.]") %>%
+    mutate(type = ifelse(category %in% c("C_T", "T_C"), "ti", "tv")) %>%
+    group_by(ID, type) %>%
+    summarise(n=sum(count)) %>%
+    spread(type, n) %>%
+    mutate(titv = ti/tv) %>%
+    dplyr::select(ID, titv)
+  
+
+  # sigs2 <- merge(sig_contribs, samples, by="ID") %>%
+  #   mutate(outlier=ifelse(ID %in% outlier_IDs, T, F))
+  
+  sigs2 <- merge(sig_contribs, samples, by="ID")
+  sigs2 <- merge(sigs2, titv, by="ID") %>%
     mutate(outlier=ifelse(ID %in% outlier_IDs, T, F))
   
   sigs2 <- merge(sigs2, cluster_mems, by="ID", all.x=T)
@@ -21,9 +36,10 @@ if(exists("samples") & exists("svars")){
   sumdat <- sigs2 %>%
     # filter(sig!=2) %>%
     group_by(group) %>%
-    dplyr::select(c("ID","group",svars)) %>%
+    dplyr::select(c("ID","group",svars,"titv")) %>%
     # filter(coverage < 15) %>%
-    gather(var, val, svars[1]:svars[length(svars)]) %>%
+    # gather(var, val, svars[1]:svars[length(svars)]) %>%
+    gather(var, val, svars[1]:"titv") %>%
     group_by(group, var)
   
   # figure showing that simple cutoffs for quality indicators would not easily
@@ -32,14 +48,18 @@ if(exists("samples") & exists("svars")){
     ungroup() %>%
     mutate(group = gsub(" .*", "", group))
   
-  p1 <- ggplot(sumdat1, aes(x=group, y=val, group=group, fill=group))+
-    geom_boxplot()+
+  # p1 <- ggplot(sumdat1, aes(x=group, y=val, group=group, fill=group))+
+  p1 <- ggplot(sumdat1, aes(x=0, y=val))+
+    # geom_boxplot()+
+    geom_violin()+
     scale_fill_manual(values=c("gray30", "red"))+
     facet_wrap(~var, scales="free")+
     theme_bw()+
-    theme(axis.text.x=element_text(angle=45, hjust=1),
+    theme(#axis.text.x=element_text(angle=45, hjust=1),
+      strip.text.x=element_text(size=16),
+      axis.text.x=element_blank(),
       axis.title.x=element_blank(),
-      legend.position="none")
+      legend.position="bottom")
     
   sggplotly(p1)
 

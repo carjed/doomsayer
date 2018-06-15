@@ -1,4 +1,4 @@
-```{r boxplots2, results='asis', message=FALSE, warning=FALSE, echo=FALSE, fig.height = 8, fig.width = 12, dpi=100,  fig.align="center"}
+```{r boxplots2, results='asis', message=FALSE, warning=FALSE, echo=FALSE, fig.height = 6, fig.width = 12, dpi=100,  fig.align="center"}
 
 if(exists("samples") & exists("svars")){
 
@@ -17,9 +17,11 @@ if(exists("samples") & exists("svars")){
     scale_fill_manual(values=c("gray30", group_col_vals))+
     facet_wrap(~var, scales="free")+
     theme_bw()+
-    theme(axis.text.x=element_text(angle=45, hjust=1),
+    theme(#axis.text.x=element_text(angle=45, hjust=1),
+      strip.text.x=element_text(size=16),
+      axis.text.x=element_blank(),
       axis.title.x=element_blank(),
-      legend.position="none")
+      legend.position="bottom")
     
   sggplotly(p2)
   
