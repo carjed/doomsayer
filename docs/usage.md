@@ -37,6 +37,9 @@ optional arguments:
                         two-column tab-delimited file containing sample IDs
                         (column 1) and group membership (column 2) for pooled
                         analysis
+  -u, --impute          if using VCF input mode, missing genotypes (i.e.,
+                        "./.") will be imputed as the allele frequency of the
+                        samples with non-missing genotypes
   -s [/path/to/kept_samples.txt], --samplefile [/path/to/kept_samples.txt]
                         file with sample IDs to include (one per line)
   -C [INT], --minsnvs [INT]
@@ -144,6 +147,12 @@ If your input VCF file(s) contains samples that you do not wish to analyze, prov
 In some cases it may be necessary (or desired) to run *Doomsayer* with samples pooled together in some way. For example, if samples were sequenced on different dates and we want to explicitly look for batch effects, we can supply a file containing sample IDs in the `ID` column and the sequencing date in the `DATE`. If the `--groupvar DATE` option is used, *Doomsayer* will pool samples by the value present in the `DATE` column rather than the `ID` column. 
 
 Note that the `--samplefile` option will operate as above--only samples present in this file will be considered when generating the mutation spectra matrix.
+
+#### Impute missing genotypes
+
+`--impute`
+
+By default, when using VCF mode, samples with missing genotypes (i.e., "./.") are coded as a 0, and the mutation spectra matrix does not get incremented for those samples. The `--impute` option forces any missing genotypes to be set to the average allele frequency of the non-missing samples. For example, for a given site, if there are 11 samples in the VCF file with one sample missing a genotype, 5 samples homozygous for the reference allele and 5 heterozygous, this option will impute the alternative allele frequency for the missing sample as 0.5. Users should exercise caution when using this option, as assumptions about the allele frequency across samples may not be valid for VCF files containing individuals from heterogeneous ancestries.
 
 ### MAF mode
 

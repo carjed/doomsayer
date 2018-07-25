@@ -121,6 +121,12 @@ parser.add_argument("-g", "--groupvar",
                     type=str,
                     metavar='STR')  
 
+parser.add_argument("-u", "--impute",
+                    help="if using VCF input mode, missing genotypes \
+                        (i.e., \"./.\") will be imputed as the allele \
+                        frequency of the samples with non-missing genotypes",
+                    action="store_true")
+
 parser.add_argument("-q", "--svars",
                     help="If --samplefile is provided, pass comma-separated \
                         list of column names to query in report",
