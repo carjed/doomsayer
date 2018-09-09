@@ -43,6 +43,13 @@ spectra_rates <- read.table(M_path_rates, header=T, stringsAsFactors=F)
 sig_contribs <- read.table(W_path, header=T, stringsAsFactors=F)
 sig_loads <- read.table(H_path, header=T, stringsAsFactors=F)
 
+sig_contribs_norm <- sig_contribs %>%
+  gather(sig, value, -ID) %>% 
+  arrange(ID) %>% 
+  group_by(ID) %>% 
+  mutate_at(vars(-sig), funs(./sum(.))) %>% 
+  spread(sig, value)
+
 if(exists("samples_path")){
   samples <- read.table(samples_path, header=T, stringsAsFactors=F)
 }
@@ -90,7 +97,7 @@ sig_loads_long <- sig_loads %>%
   # dplyr::filter(sumVar>=500) %>%
   rowwise() %>%
   # mutate_each(funs(./sumVar), -Sig) %>%
-  mutate_at(vars(contains("_")), funs(./sumVar)) %>%
+  ## mutate_at(vars(contains("_")), funs(./sumVar)) %>%
   gather(subtype, loading, 2:ncol(sig_loads)) %>%
   separate(subtype, c("category", "motif"), sep = "[.]") %>%
   mutate(subtype=paste0(substr(motif,1,1), "[", category, "]", substr(motif,3,3))) %>%

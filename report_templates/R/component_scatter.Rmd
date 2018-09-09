@@ -14,8 +14,32 @@
 
 # sc2 <- sig_contribs %>%
 #     mutate(drop=ifelse(ID %in% outlier_IDs, "drop", "keep"))
-    
-sc2 <- sigs2
+
+if(min(sig_contribs$S1)<0){
+  to_merge <- sig_contribs
+} else {
+  to_merge <- sig_contribs_norm
+}
+
+sc2 <- merge(to_merge, cluster_mems, by="ID", all.x=T) %>%
+  mutate(outlier=ifelse(ID %in% outlier_IDs, T, F))
+sc2[is.na(sc2$group),]$group <- "keep"
+
+# sc2 <- sigs2
+
+# sc2 <- sig_contribs_norm %>%
+#   gather(sig, value, -ID) %>% 
+#   arrange(ID) %>% 
+#   group_by(ID) %>% 
+#   mutate_at(vars(-sig), funs(./sum(.))) %>% 
+#   spread(sig, value)
+
+# sc2 <- sc2 %>% 
+#   gather(sig, value, -c(ID, group)) %>% 
+#   arrange(ID) %>% 
+#   group_by(ID, group) %>% 
+#   mutate_at(vars(-c(ID, group, sig)), funs(./sum(.))) %>% 
+#   spread(sig, value)
 
 # https://stackoverflow.com/questions/34975190
 my_dens <- function(data, mapping, ...) {
