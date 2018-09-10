@@ -715,8 +715,13 @@ class DetectOutliers:
         scores_pred = cif.decision_function(M)
         y_pred3 = cif.predict(M)
         
-        outlier_methods = ["lof", "ee", "if"]
-        ol_df = DataFrame(np.column_stack((y_pred, y_pred2, y_pred3)),
+        # outlier_methods = ["lof", "ee", "if"]
+        # ol_df = DataFrame(np.column_stack((y_pred, y_pred2, y_pred3)),
+        #           index=samples[0].tolist(),
+        #           columns=outlier_methods)
+    
+        outlier_methods = ["ee", "if"]
+        ol_df = DataFrame(np.column_stack((y_pred2, y_pred3)),
                    index=samples[0].tolist(),
                    columns=outlier_methods)
     
@@ -727,14 +732,14 @@ class DetectOutliers:
             dft = ol_df.sum(axis=1)
             dft = DataFrame(dft)
             if filtermode == "any":
-                drop_samples = dft[dft[0] != 3].index.values.tolist()
-                keep_samples = dft[dft[0] == 3].index.values.tolist()
+                drop_samples = dft[dft[0] != len(outlier_methods)].index.values.tolist()
+                keep_samples = dft[dft[0] == len(outlier_methods)].index.values.tolist()
             elif filtermode == "any2":
                 drop_samples = dft[dft[0] <= -1].index.values.tolist()
                 keep_samples = dft[dft[0] > -1].index.values.tolist()
             elif filtermode == "all":
-                drop_samples = dft[dft[0] == -3].index.values.tolist()
-                keep_samples = dft[dft[0] != -3].index.values.tolist()
+                drop_samples = dft[dft[0] == -len(outlier_methods)].index.values.tolist()
+                keep_samples = dft[dft[0] != -len(outlier_methods)].index.values.tolist()
             
         elif filtermode in outlier_methods:
             drop_samples = ol_df[ol_df[filtermode] == -1].index.values.tolist()
@@ -743,9 +748,16 @@ class DetectOutliers:
         drop_bool = np.isin(samples[0], drop_samples)
         drop_indices = np.where(drop_bool)[0].tolist()
         
+        self.ols = ol_df
         self.keep = keep_samples
         self.drop = drop_samples
         self.drop_indices = drop_indices
+
+###############################################################################
+# write outlier status
+###############################################################################
+def writeOutliers(ol_df, ol_path):
+    ol_df.to_csv(ol_path, index_label="ID", sep="\t")
 
 ###############################################################################
 # write yaml config for diagnostic reports

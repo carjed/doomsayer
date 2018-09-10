@@ -477,6 +477,9 @@ else:
         log.info(str(len(kd_lists.drop)) + " potential outliers found")
         log.info(str(len(kd_lists.keep)) + " samples OK")
 
+paths['ol_path'] = projdir + "/ol_status.txt"
+writeOutliers(kd_lists.ols, paths['ol_path'])
+
 ###############################################################################
 # auto-generate diagnostic report in R
 ###############################################################################
