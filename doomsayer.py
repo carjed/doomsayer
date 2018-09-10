@@ -455,8 +455,14 @@ if args.filtermode == "none":
     log.warning("Using '--filtermode none'. " +
         "No outlier detection will be performed")
 else:
-    kd_lists = DetectOutliers(M_d, samples,
-        args.filtermode, args.threshold, projdir, args.seed)
+    
+    if args.threshold == 0:
+        threshold = EstThreshold(M, args.seed).threshold
+    else:
+        threshold = args.threshold
+    
+    kd_lists = DetectOutliers(decomp_data.W, samples,
+        args.filtermode, threshold, projdir, args.seed)
 
     paths['keep_path'] = projdir + "/doomsayer_keep.txt"
     keep_fh = open(paths['keep_path'], 'wt')

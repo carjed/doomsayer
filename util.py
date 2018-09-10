@@ -690,6 +690,36 @@ def writeH(H, H_path, subtypes_dict):
     H_out.to_csv(H_path, index_label="Sig", sep="\t")
 
 ###############################################################################
+# Estimate outlier detection threshold
+###############################################################################
+class EstThreshold:
+    def __init__(self, M, seed):
+        
+        util_log.debug("Estimating stringency threshold")
+        
+        nsig = 0
+        for row in M:
+            tot_spectrum = np.sum(M, axis=0)
+            tot_spectrum_1 = np.subtract(tot_spectrum, row)
+            avg_spectrum = tot_spectrum_1/sum(tot_spectrum_1)
+            exp_spectrum = avg_spectrum*sum(row)
+            
+            pval = chisquare(row, f_exp=exp_spectrum)[1]
+            if pval < 0.05/M.shape[0]:
+                nsig += 1
+            
+        util_log.info(str(nsig) + " of " + str(M.shape[0]) + " samples significant")
+        
+        fracsig = nsig/M.shape[0]
+        if fracsig < 0.01:
+            self.threshold = 0.01
+        elif fracsig > 0.05:
+            self.threshold = 0.05
+        else:
+            self.threshold = fracsig
+        util_log.info("setting stringency threshold to " + str(self.threshold))
+
+###############################################################################
 # Generate keep/drop lists
 ###############################################################################
 class DetectOutliers:
