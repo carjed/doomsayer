@@ -70,6 +70,8 @@ cl_ids <- as.list(cl_ids)
 
 cluster_mems$group <- recode(cluster_mems$group, !!!cl_ids)
 
+write.table(cluster_mems, "cluster_mems.txt", col.names=T, row.names=F, sep="\t")
+
 # cluster_mems
 
 mat_row <- data.frame(group = cluster_mems$group)
