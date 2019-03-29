@@ -42,12 +42,12 @@ from pyfaidx import Fasta
 from Bio.Seq import Seq
 from Bio.Alphabet import IUPAC
 
+
 ###############################################################################
 # Configure color stream handler
 # https://gist.github.com/jonaprieto/a61d9cade3ba19487f98
 ###############################################################################
 class ColourStreamHandler(StreamHandler):
-
     """ A colorized output StreamHandler """
 
     # Some basic colour scheme defaults
@@ -64,17 +64,15 @@ class ColourStreamHandler(StreamHandler):
     def emit(self, record):
         try:
             message = self.format(record)
-            self.stream.write(
-                self.colours[record.levelname] + 
-                message + 
-                Style.RESET_ALL
-            )
+            self.stream.write(self.colours[record.levelname] + message +
+                              Style.RESET_ALL)
             self.stream.write(getattr(self, 'terminator', '\n'))
             self.flush()
         except (KeyboardInterrupt, SystemExit):
             raise
         except:
             self.handleError(record)
+
 
 ###############################################################################
 # configure logger
@@ -83,9 +81,10 @@ class initLogger:
     def __init__(level):
         self.level = level
 
-def getLogger(name=None, 
-    fmt='[%(name)s::%(funcName)s] %(levelname)s %(message)s', 
-    level='INFO'):
+
+def getLogger(name=None,
+              fmt='[%(name)s::%(funcName)s] %(levelname)s %(message)s',
+              level='INFO'):
     """ Get and initialize a colourised logging instance if the system supports
     it as defined by the log.has_colour
     :param name: Name of the logger
@@ -97,7 +96,7 @@ def getLogger(name=None,
     """
     log = realGetLogger(name)
     # Only enable colour if support was loaded properly
-    handler = ColourStreamHandler() 
+    handler = ColourStreamHandler()
     handler.setLevel(level)
     handler.setFormatter(Formatter(fmt))
     log.addHandler(handler)
@@ -105,7 +104,9 @@ def getLogger(name=None,
     log.propagate = 0  # Don't bubble up to the root logger
     return log
 
+
 util_log = getLogger(__name__, level="DEBUG")
+
 
 ###############################################################################
 # collapse mutation types per strand symmetry
@@ -128,13 +129,14 @@ def getCategory(mu_type):
         category = "unknown"
     return category
 
+
 ###############################################################################
 # query reference genome for local sequence motif
 ###############################################################################
 def getMotif(pos, sequence):
     motif = Seq(sequence, IUPAC.unambiguous_dna)
     altmotif = motif.reverse_complement()
-    central_base = (len(motif)-1)//2
+    central_base = (len(motif) - 1) // 2
 
     m1 = motif[central_base]
     m2 = altmotif[central_base]
@@ -146,16 +148,17 @@ def getMotif(pos, sequence):
 
     return motif_a
 
+
 ###############################################################################
 # define k-mer mutation subtypes
 ###############################################################################
 def indexSubtypes(motiflength):
     categories = ["T_G", "T_C", "T_A", "C_G", "C_T", "C_A"]
     bases = ["A", "C", "G", "T"]
-    flank = (motiflength-1)//2
+    flank = (motiflength - 1) // 2
 
     if motiflength > 1:
-        kmers = itertools.product(bases, repeat=motiflength-1)
+        kmers = itertools.product(bases, repeat=motiflength - 1)
 
         subtypes_list = []
 
@@ -171,8 +174,8 @@ def indexSubtypes(motiflength):
                 subtypes_list.append(subtype)
     else:
         ext = [".T", ".C"]
-        extr = list(np.repeat(ext,3))
-        subtypes_list = [m+n for m,n in zip(categories,extr)]
+        extr = list(np.repeat(ext, 3))
+        subtypes_list = [m + n for m, n in zip(categories, extr)]
 
     i = 0
     subtypes_dict = {}
@@ -180,23 +183,25 @@ def indexSubtypes(motiflength):
         subtypes_dict[subtype] = i
         i += 1
 
-    util_log.debug(str(len(subtypes_dict.keys())) + " " + 
-        str(motiflength) + "-mer subtypes indexed")
+    util_log.debug(
+        str(len(subtypes_dict.keys())) + " " + str(motiflength) +
+        "-mer subtypes indexed")
 
     return subtypes_dict
+
 
 ###############################################################################
 # Build dictionary with sample ID as key, group ID as value
 ###############################################################################
 def indexGroups(samplefile, groupvar):
     sg_dict = {}
-    
-    f = open(samplefile, 'r', encoding = "utf-8")
+
+    f = open(samplefile, 'r', encoding="utf-8")
     reader = csv.DictReader(f, delimiter='\t')
 
     for row in reader:
         sg_dict[row['ID']] = row[groupvar]
-    
+
     # with open(groupfile) as sg_file:
     #     for line in sg_file:
     #       (key, val) = line.split()
@@ -205,32 +210,33 @@ def indexGroups(samplefile, groupvar):
     # samples = sorted(list(set(sg_dict.values())))
     # return samples
 
+
 ###############################################################################
 # get list of samples to keep if samplefile supplied
 ###############################################################################
 def parseSampleFile(samplefile):
     # f = open(args.input, 'r', encoding = "ISO-8859-1")
-    f = open(samplefile, 'r', encoding = "utf-8")
+    f = open(samplefile, 'r', encoding="utf-8")
     reader = csv.DictReader(f, delimiter='\t')
     keep_samples = []
     for row in reader:
         keep_samples.append(row['ID'])
-        
+
     return keep_samples
-    
+
+
 ###############################################################################
 # get samples from VCF file
 ###############################################################################
 def getSamplesVCF(args, inputvcf):
-    
+
     if args.samplefile:
         keep_samples = parseSampleFile(args.samplefile)
-        vcf_reader = VCF(inputvcf,
-            mode='rb', gts012=True, lazy=True, samples=keep_samples)
+        vcf_reader = VCF(
+            inputvcf, mode='rb', gts012=True, lazy=True, samples=keep_samples)
         # vcf_reader.set_samples(keep_samples) # <- set_samples() subsets VCF
     else:
-        vcf_reader = VCF(inputvcf,
-            mode='rb', gts012=True, lazy=True)
+        vcf_reader = VCF(inputvcf, mode='rb', gts012=True, lazy=True)
 
     if (args.samplefile and args.groupvar):
         all_samples = vcf_reader.samples
@@ -240,6 +246,7 @@ def getSamplesVCF(args, inputvcf):
         samples = vcf_reader.samples
 
     return samples
+
 
 ###############################################################################
 # Main function for parsing VCF
@@ -253,14 +260,13 @@ def processVCF(args, inputvcf, subtypes_dict, par):
     if args.samplefile:
         keep_samples = parseSampleFile(args.samplefile)
 
-        vcf_reader = VCF(inputvcf,
-            mode='rb', gts012=True, lazy=True, samples=keep_samples)
+        vcf_reader = VCF(
+            inputvcf, mode='rb', gts012=True, lazy=True, samples=keep_samples)
         # vcf_reader.set_samples(keep_samples) # <- set_samples() subsets VCF
     else:
-        vcf_reader = VCF(inputvcf,
-            mode='rb', gts012=True, lazy=True)
+        vcf_reader = VCF(inputvcf, mode='rb', gts012=True, lazy=True)
 
-    nbp = (args.length-1)//2
+    nbp = (args.length - 1) // 2
 
     # index samples
     if (args.samplefile and args.groupvar):
@@ -270,8 +276,9 @@ def processVCF(args, inputvcf, subtypes_dict, par):
         sg_dict = indexGroups(args.samplefile, args.groupvar)
         samples = sorted(list(set(sg_dict.values())))
         # util_log.debug()
-        util_log.debug(str(len(all_samples)) + " samples will be pooled into " +
-            str(len(samples)) + " groups: " +  ",".join(samples))
+        util_log.debug(
+            str(len(all_samples)) + " samples will be pooled into " +
+            str(len(samples)) + " groups: " + ",".join(samples))
     else:
         samples = vcf_reader.samples
 
@@ -298,14 +305,15 @@ def processVCF(args, inputvcf, subtypes_dict, par):
 
         # Filter by allele count, SNP status, and FILTER column
         # if len(record.ALT[0])==1:
-        if record.is_snp and len(record.ALT)==1:
+        if record.is_snp and len(record.ALT) == 1:
             # eprint("SNP check: PASS")
             acval = record.INFO['AC']
-#             eprint(record.POS, acval)
+            #             eprint(record.POS, acval)
 
-            if ((acval<=args.maxac or args.maxac==0) and record.FILTER is None):
+            if ((acval <= args.maxac or args.maxac == 0)
+                    and record.FILTER is None):
                 # eprint(record.CHROM, record.POS, record.REF, record.ALT[0],
-                    # acval, record.FILTER)
+                # acval, record.FILTER)
 
                 # check and update chromosome sequence
                 if record.CHROM != chrseq:
@@ -313,9 +321,10 @@ def processVCF(args, inputvcf, subtypes_dict, par):
                     chrseq = record.CHROM
 
                 if nbp > 0:
-                    lseq = sequence[record.POS-(nbp+1):record.POS+nbp].seq
+                    lseq = sequence[record.POS - (nbp + 1):record.POS +
+                                    nbp].seq
                 else:
-                    lseq = sequence[record.POS-1].seq
+                    lseq = sequence[record.POS - 1].seq
 
                 mu_type = record.REF + str(record.ALT[0])
                 category = getCategory(mu_type)
@@ -330,45 +339,44 @@ def processVCF(args, inputvcf, subtypes_dict, par):
                         tot = record.gt_types.sum()
                         # util_log.debug(str(len(record.gt_types.tolist())))
                         if tot > 0:
-                            carrier = all_samples[record.gt_types.tolist().index(1)]
+                            carrier = all_samples[
+                                record.gt_types.tolist().index(1)]
                             # sample = len(record.gt_types.tolist())
                             # util_log.debug("Sample(s) carrying SNV: " + carrier)
-                        # else:
+                            # else:
                             # util_log.debug("SNV not found in any samples")
 
                             if carrier in sg_dict:
                                 sample_gp = sg_dict[carrier]
                                 ind = samples.index(sample_gp)
-                                M[ind,st] += 1
+                                M[ind, st] += 1
                                 numsites_keep += 1
                         else:
                             numsites_skip += 1
                     else:
                         gt_new = record.gt_types
                         if (args.impute and 3 in gt_new):
-                            gt_complete = gt_new[gt_new!=3]
-                            freq = sum(gt_complete)/len(gt_complete)
+                            gt_complete = gt_new[gt_new != 3]
+                            freq = sum(gt_complete) / len(gt_complete)
                             gt_new[gt_new == 3] = freq
                         else:
                             gt_new[gt_new == 3] = 0
-                        M[:,st] = M[:,st]+gt_new
+                        M[:, st] = M[:, st] + gt_new
                         numsites_keep += 1
 
                 else:
                     numsites_skip += 1
 
-                if (numsites_keep%1000000 == 0):
-                    util_log.debug(inputvcf + ": " + 
-                        str(numsites_keep) + " sites counted")
+                if (numsites_keep % 1000000 == 0):
+                    util_log.debug(inputvcf + ": " + str(numsites_keep) +
+                                   " sites counted")
                     # util_log.debug(str(numsites_skip) + " sites skipped")
 
             else:
                 numsites_skip += 1
 
-    util_log.info(inputvcf + ": " + 
-        str(numsites_keep) + " sites counted")
-    util_log.info(inputvcf + ": " + 
-        str(numsites_skip) + " sites skipped")
+    util_log.info(inputvcf + ": " + str(numsites_keep) + " sites counted")
+    util_log.info(inputvcf + ": " + str(numsites_skip) + " sites skipped")
 
     out = collections.namedtuple('Out', ['M', 'samples'])(M, samples)
 
@@ -377,14 +385,15 @@ def processVCF(args, inputvcf, subtypes_dict, par):
     else:
         return out
 
+
 ###############################################################################
 # process MAF files
 ###############################################################################
 def processMAF(args, subtypes_dict):
-    
+
     fasta_reader = Fasta(args.fastafile, read_ahead=1000000)
-    
-    nbp = (args.length-1)//2
+
+    nbp = (args.length - 1) // 2
     samples_dict = {}
 
     # M = np.zeros((len(samples), len(subtypes_dict)))
@@ -392,30 +401,31 @@ def processMAF(args, subtypes_dict):
     numsites_skip = 0
     chrseq = '0'
 
-    f = open(args.input, 'r', encoding = "ISO-8859-1")
+    f = open(args.input, 'r', encoding="ISO-8859-1")
 
-    reader = csv.DictReader(filter(lambda row: row[0]!='#', f), delimiter='\t')
+    reader = csv.DictReader(
+        filter(lambda row: row[0] != '#', f), delimiter='\t')
     counter = 0
     for row in reader:
 
-        if(row['Variant_Type'] == "SNP"):
-            
+        if (row['Variant_Type'] == "SNP"):
+
             pos = int(row['Start_position'])
             ref = row['Reference_Allele']
             alt = row['Tumor_Seq_Allele2']
             sample = row[args.groupvar]
-            
+
             if row['Chromosome'] != chrseq:
                 sequence = fasta_reader[row['Chromosome']]
                 chrseq = row['Chromosome']
-            
+
             counter += 1
             mu_type = ref + alt
             category = getCategory(mu_type)
             if nbp > 0:
-                lseq = sequence[pos-(nbp+1):pos+nbp].seq
+                lseq = sequence[pos - (nbp + 1):pos + nbp].seq
             else:
-                lseq = sequence[pos-1].seq
+                lseq = sequence[pos - 1].seq
                 # eprint("lseq:", lseq)
             motif_a = getMotif(pos, lseq)
             subtype = str(category + "." + motif_a)
@@ -429,15 +439,16 @@ def processMAF(args, subtypes_dict):
             else:
                 samples_dict[sample][subtype] += 1
 
-            if (counter%1000 == 0):
-                util_log.debug(args.input + ": " + 
-                    str(counter) + " sites counted")
+            if (counter % 1000 == 0):
+                util_log.debug(args.input + ": " + str(counter) +
+                               " sites counted")
 
     M = DataFrame(samples_dict).T.fillna(0).values
     samples = sorted(samples_dict)
 
     out = collections.namedtuple('Out', ['M', 'samples'])(M, samples)
     return out
+
 
 ###############################################################################
 # process tab-delimited text file, containing the following columns:
@@ -447,7 +458,7 @@ def processTxt(args, subtypes_dict):
 
     fasta_reader = Fasta(args.fastafile, read_ahead=1000000)
 
-    nbp = (args.length-1)//2
+    nbp = (args.length - 1) // 2
     samples_dict = {}
 
     # M = np.zeros((len(samples), len(subtypes_dict)))
@@ -469,13 +480,13 @@ def processTxt(args, subtypes_dict):
                 sequence = fasta_reader[chrom]
                 chrseq = chrom
 
-            if(len(alt) == 1 and len(ref)==1):
+            if (len(alt) == 1 and len(ref) == 1):
                 mu_type = ref + alt
                 category = getCategory(mu_type)
                 if nbp > 0:
-                    lseq = sequence[pos-(nbp+1):pos+nbp].seq
+                    lseq = sequence[pos - (nbp + 1):pos + nbp].seq
                 else:
-                    lseq = sequence[pos-1].seq
+                    lseq = sequence[pos - 1].seq
                     # eprint("lseq:", lseq)
                 motif_a = getMotif(pos, lseq)
                 subtype = str(category + "-" + motif_a)
@@ -495,19 +506,18 @@ def processTxt(args, subtypes_dict):
     out = collections.namedtuple('Out', ['M', 'samples'])(M, samples)
     return out
 
+
 ###############################################################################
 # get samples from input M matrix when using aggregation mode
 ###############################################################################
 def getSamples(fh):
-    samples = np.loadtxt(fh,
-        dtype='S20',
-        skiprows=1,
-        delimiter='\t',
-        usecols=(0,))
-        
+    samples = np.loadtxt(
+        fh, dtype='S20', skiprows=1, delimiter='\t', usecols=(0, ))
+
     util_log.debug(fh + " contains " + str(len(samples)) + " samples")
 
     return samples
+
 
 ###############################################################################
 # aggregate M matrices from list of input files
@@ -515,10 +525,10 @@ def getSamples(fh):
 def aggregateM(inputM, subtypes_dict):
     colnames = ["ID"]
     M_colnames = colnames + list(sorted(subtypes_dict.keys()))
-    colrange = range(1,len(M_colnames))
+    colrange = range(1, len(M_colnames))
 
-    if (inputM.lower().endswith('m_samples.txt') or 
-            inputM.lower().endswith('m_regions.txt')):
+    if (inputM.lower().endswith('m_samples.txt')
+            or inputM.lower().endswith('m_regions.txt')):
         with open(inputM) as f:
             file_list = f.read().splitlines()
 
@@ -542,7 +552,7 @@ def aggregateM(inputM, subtypes_dict):
         elif inputM.lower().endswith('m_regions.txt'):
             samples = getSamples(file_list[0])
 
-            M_out = np.zeros((len(samples), len(M_colnames)-1))
+            M_out = np.zeros((len(samples), len(M_colnames) - 1))
             for mfile in file_list:
                 M_it = np.loadtxt(mfile, skiprows=1, usecols=colrange)
                 M_out = np.add(M_out, M_it)
@@ -557,6 +567,7 @@ def aggregateM(inputM, subtypes_dict):
     out = collections.namedtuple('Out', ['M', 'samples'])(M, samples)
     return out
 
+
 ###############################################################################
 # Class for fitting PCA or NMF models
 ###############################################################################
@@ -566,25 +577,26 @@ class DecompModel:
         self.rank = rank
         self.seed = seed
         self.decomp = decomp
-        
+
         self.evar_dict = {}
-        
+
         if self.decomp == "pca":
             # standarize input matrix
             X_std = StandardScaler().fit_transform(self.M_run)
-            
+
             # run PCA
-            pca = PCA(n_components = self.M_run.shape[1])
+            pca = PCA(n_components=self.M_run.shape[1])
             W = pca.fit_transform(X_std)
             H = pca.components_.T * np.sqrt(pca.explained_variance_)
-            
+
             if self.rank > 0:
                 self.modrank = self.rank
-                evar = np.cumsum(pca.explained_variance_ratio_)[self.rank-1]
+                evar = np.cumsum(pca.explained_variance_ratio_)[self.rank - 1]
                 self.evar_dict[self.modrank] = evar
 
             elif self.rank == 0:
-                util_log.debug("Finding optimal rank for " + decomp + " decomposition")
+                util_log.debug("Finding optimal rank for " + decomp +
+                               " decomposition")
                 evar_prev = 0
                 i = 1
                 for evar in np.cumsum(pca.explained_variance_ratio_):
@@ -592,58 +604,60 @@ class DecompModel:
                     # self.evar_list.append(evar)
                     self.evar_dict[self.modrank] = evar
                     if evar - evar_prev < 0.01:
-                        self.modrank = i-1
+                        self.modrank = i - 1
                         evar = evar_prev
                         break
                     evar_prev = evar
-                    util_log.debug("Explained variance for first " + 
-                        str(i) + " " + decomp.upper() + " components: " + 
-                        str(evar))
+                    util_log.debug("Explained variance for first " + str(i) +
+                                   " " + decomp.upper() + " components: " +
+                                   str(evar))
                     i += 1
-                
-            self.W = W[:,:self.modrank]
-            self.H = H[:self.modrank,:]
+
+            self.W = W[:, :self.modrank]
+            self.H = H[:self.modrank, :]
         elif self.decomp == "nmf":
-        
+
             if self.rank > 0:
                 model = self.NMFmod(self.rank)
                 self.modrank = self.rank
-                
+
             elif self.rank == 0:
-                util_log.debug("Finding optimal rank for " + decomp + " decomposition")
+                util_log.debug("Finding optimal rank for " + decomp +
+                               " decomposition")
                 self.evarprev = 0
-                for i in range(1,6):
+                for i in range(1, 6):
                     model = self.NMFmod(rank=i)
                     model_fit = model()
                     evar = model_fit.fit.evar()
                     self.modrank = i
-            
-                    if(i > 2 and evar - evarprev < 0.001):
-                        model = self.NMFmod(rank=i-1)
-                        self.modrank = i-1
+
+                    if (i > 2 and evar - evarprev < 0.001):
+                        model = self.NMFmod(rank=i - 1)
+                        self.modrank = i - 1
                         break
-                    
+
                     self.evar_dict[self.modrank] = evar
                     evarprev = evar
-                    util_log.debug("Explained variance for first " + 
-                        str(i) + " " + decomp.upper() + " components: " + 
-                        str(evar))
-            
+                    util_log.debug("Explained variance for first " + str(i) +
+                                   " " + decomp.upper() + " components: " +
+                                   str(evar))
+
             model_fit = model()
             self.evar_dict[self.modrank] = model_fit.fit.evar()
             self.W = model_fit.basis()
             self.H = model_fit.coef()
-        
+
     # Specify NMF model
-    # options can be added/modified per 
-    # http://nimfa.biolab.si/nimfa.methods.factorization.nmf.html  
+    # options can be added/modified per
+    # http://nimfa.biolab.si/nimfa.methods.factorization.nmf.html
     def NMFmod(self, rank):
-    
+
         prng = np.random.RandomState(self.seed)
         W_init = prng.rand(self.M_run.shape[0], rank)
         H_init = prng.rand(rank, self.M_run.shape[1])
-        
-        model = nimfa.Nmf(self.M_run,
+
+        model = nimfa.Nmf(
+            self.M_run,
             rank=rank,
             # seed=None,
             H=H_init,
@@ -654,63 +668,69 @@ class DecompModel:
             max_iter=200)
         return model
 
+
 ###############################################################################
 # write M matrix
 ###############################################################################
 def writeM(M, M_path, subtypes_dict, samples):
 
-    M_out = DataFrame(data=M,
-                index=samples[0],
-                columns=list(sorted(subtypes_dict.keys())))
+    M_out = DataFrame(
+        data=M, index=samples[0], columns=list(sorted(subtypes_dict.keys())))
 
     M_out.to_csv(M_path, index_label="ID", sep="\t")
+
 
 ###############################################################################
 # write W matrix
 ###############################################################################
 def writeW(W, W_path, samples):
-    
+
     num_samples, num_sigs = W.shape
-    W_out = DataFrame(data=W,
-                index=samples[0],
-                columns=["S" + str(i) for i in range(1,num_sigs+1)])
-    
+    W_out = DataFrame(
+        data=W,
+        index=samples[0],
+        columns=["S" + str(i) for i in range(1, num_sigs + 1)])
+
     W_out.to_csv(W_path, index_label="ID", sep="\t")
+
 
 ###############################################################################
 # write H matrix
 ###############################################################################
 def writeH(H, H_path, subtypes_dict):
-    
+
     num_sigs, num_subtypes = H.shape
-    H_out = DataFrame(data=H,
-                index=["S" + str(i) for i in range(1,num_sigs+1)],
-                columns=list(sorted(subtypes_dict.keys())))
+    H_out = DataFrame(
+        data=H,
+        index=["S" + str(i) for i in range(1, num_sigs + 1)],
+        columns=list(sorted(subtypes_dict.keys())))
 
     H_out.to_csv(H_path, index_label="Sig", sep="\t")
+
 
 ###############################################################################
 # Estimate outlier detection threshold
 ###############################################################################
 class EstThreshold:
     def __init__(self, M, seed):
-        
+
         util_log.debug("Estimating stringency threshold")
-        
+
         nsig = 0
         for row in M:
             tot_spectrum = np.sum(M, axis=0)
             tot_spectrum_1 = np.subtract(tot_spectrum, row)
-            avg_spectrum = tot_spectrum_1/sum(tot_spectrum_1)
-            exp_spectrum = avg_spectrum*sum(row)
-            
+            avg_spectrum = tot_spectrum_1 / sum(tot_spectrum_1)
+            exp_spectrum = avg_spectrum * sum(row)
+
             pval = chisquare(row, f_exp=exp_spectrum)[1]
-            if pval < 0.05/M.shape[0]:
+            if pval < 0.05 / M.shape[0]:
                 nsig += 1
-            
-        util_log.info(str(nsig) + " of " + str(M.shape[0]) + " samples significant")
-        
-        fracsig = nsig/M.shape[0]
+
+        util_log.info(
+            str(nsig) + " of " + str(M.shape[0]) + " samples significant")
+
+        fracsig = nsig / M.shape[0]
         if fracsig < 0.01:
             self.threshold = 0.01
         elif fracsig > 0.05:
@@ -719,6 +739,7 @@ class EstThreshold:
             self.threshold = fracsig
         util_log.info("setting stringency threshold to " + str(self.threshold))
 
+
 ###############################################################################
 # Generate keep/drop lists
 ###############################################################################
@@ -726,68 +747,69 @@ class DetectOutliers:
     def __init__(self, M, samples, filtermode, threshold, projdir, seed):
 
         # outlier detection
-        clf = LocalOutlierFactor(
-            n_neighbors=20, 
-            contamination=threshold)
+        clf = LocalOutlierFactor(n_neighbors=20, contamination=threshold)
         y_pred = clf.fit_predict(M)
-        
-        cee = EllipticEnvelope(
-            contamination=threshold,
-            random_state=seed)
+
+        cee = EllipticEnvelope(contamination=threshold, random_state=seed)
         cee.fit(M)
         scores_pred = cee.decision_function(M)
         y_pred2 = cee.predict(M)
-        
-        cif = IsolationForest(
-            contamination=threshold,
-            random_state=seed)
+
+        cif = IsolationForest(contamination=threshold, random_state=seed)
         cif.fit(M)
         scores_pred = cif.decision_function(M)
         y_pred3 = cif.predict(M)
-        
+
         # outlier_methods = ["lof", "ee", "if"]
         # ol_df = DataFrame(np.column_stack((y_pred, y_pred2, y_pred3)),
         #           index=samples[0].tolist(),
         #           columns=outlier_methods)
-    
+
         outlier_methods = ["ee", "if"]
-        ol_df = DataFrame(np.column_stack((y_pred2, y_pred3)),
-                   index=samples[0].tolist(),
-                   columns=outlier_methods)
-    
+        ol_df = DataFrame(
+            np.column_stack((y_pred2, y_pred3)),
+            index=samples[0].tolist(),
+            columns=outlier_methods)
+
         keep_samples, drop_samples, drop_indices = ([] for i in range(3))
-    
+
         omnibus_methods = ["any", "any2", "all"]
         if filtermode in omnibus_methods:
             dft = ol_df.sum(axis=1)
             dft = DataFrame(dft)
             if filtermode == "any":
-                drop_samples = dft[dft[0] != len(outlier_methods)].index.values.tolist()
-                keep_samples = dft[dft[0] == len(outlier_methods)].index.values.tolist()
+                drop_samples = dft[
+                    dft[0] != len(outlier_methods)].index.values.tolist()
+                keep_samples = dft[dft[0] == len(
+                    outlier_methods)].index.values.tolist()
             elif filtermode == "any2":
                 drop_samples = dft[dft[0] <= -1].index.values.tolist()
                 keep_samples = dft[dft[0] > -1].index.values.tolist()
             elif filtermode == "all":
-                drop_samples = dft[dft[0] == -len(outlier_methods)].index.values.tolist()
-                keep_samples = dft[dft[0] != -len(outlier_methods)].index.values.tolist()
-            
+                drop_samples = dft[
+                    dft[0] == -len(outlier_methods)].index.values.tolist()
+                keep_samples = dft[
+                    dft[0] != -len(outlier_methods)].index.values.tolist()
+
         elif filtermode in outlier_methods:
             drop_samples = ol_df[ol_df[filtermode] == -1].index.values.tolist()
             keep_samples = ol_df[ol_df[filtermode] == 1].index.values.tolist()
-            
+
         drop_bool = np.isin(samples[0], drop_samples)
         drop_indices = np.where(drop_bool)[0].tolist()
-        
+
         self.ols = ol_df
         self.keep = keep_samples
         self.drop = drop_samples
         self.drop_indices = drop_indices
+
 
 ###############################################################################
 # write outlier status
 ###############################################################################
 def writeOutliers(ol_df, ol_path):
     ol_df.to_csv(ol_path, index_label="ID", sep="\t")
+
 
 ###############################################################################
 # write yaml config for diagnostic reports
@@ -796,14 +818,15 @@ def writeReportConfig(paths, projdir, args):
     yaml_path = projdir + "/config.yaml"
     yaml = open(yaml_path, "w+")
     print("# Config file for doomsayer_diagnostics.r", file=yaml)
-    
+
     for key in paths.keys():
         print(key + ": " + paths[key], file=yaml)
 
     print("staticplots: " + str(args.staticplots).lower(), file=yaml)
-    
+
     if args.svars:
         print("svars: " + str(args.svars), file=yaml)
+
 
 ###############################################################################
 # filter VCF input by kept samples
@@ -813,13 +836,14 @@ def filterVCF(inputvcf, keep_samples):
 
     print(vcf.raw_header.rstrip())
     for v in vcf:
-        v.INFO['AC'] = str(v.num_het + v.num_hom_alt*2)
+        v.INFO['AC'] = str(v.num_het + v.num_hom_alt * 2)
 
         if int(v.INFO['AC']) > 0:
             v.INFO['NS'] = str(v.num_called)
-            v.INFO['AN'] = str(2*v.num_called)
+            v.INFO['AN'] = str(2 * v.num_called)
             v.INFO['DP'] = str(np.sum(v.format('DP')))
             print(str(v).rstrip())
+
 
 ###############################################################################
 # filter txt input by kept samples
